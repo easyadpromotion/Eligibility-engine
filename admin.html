@@ -2,355 +2,244 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Super Admin Dashboard</title>
+    <title>Super Admin Dashboard (Secured)</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; height: 100vh; }
         
-        /* SIDEBAR */
-        .sidebar { width: 260px; background: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); }
-        .sidebar h2 { margin-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px; }
-        .nav-item { padding: 15px; cursor: pointer; border-radius: 6px; margin-bottom: 5px; transition: 0.3s; color: rgba(255,255,255,0.8); }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+        /* --- 1. LOGIN OVERLAY (SECURITY) --- */
+        #adminLoginOverlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #004a99; z-index: 9999; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+        .login-box { 
+            background: white; padding: 40px; border-radius: 10px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+        }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing:border-box; }
+        .login-box button { width: 100%; padding: 12px; background: #d32f2f; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
 
-        /* MAIN CONTENT */
+        /* --- 2. ADMIN DASHBOARD (HIDDEN BY DEFAULT) --- */
+        #adminDashboard { display: none; width: 100%; height: 100%; display: flex; } /* Flex needed for sidebar layout */
+        
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; }
+        .nav-item { padding: 15px; cursor: pointer; border-radius: 6px; margin-bottom: 5px; color: rgba(255,255,255,0.8); }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h1 { color: #1a237e; margin-top: 0; }
-        h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; }
+        .hidden { display: none; }
 
-        /* TABLES */
+        /* TABLES & FORMS */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background: #f8f9fa; color: #555; }
         .status-badge { padding: 5px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .status-pending { background: #fff3e0; color: #ef6c00; }
         .status-active { background: #e8f5e9; color: #2e7d32; }
         .status-inactive { background: #eeeeee; color: #757575; }
-        .status-rejected { background: #ffebee; color: #c62828; }
-
-        /* BUTTONS */
         .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 5px; }
         .btn-green { background: #28a745; color: white; }
         .btn-red { background: #dc3545; color: white; }
         .btn-blue { background: #007bff; color: white; }
-        .btn-grey { background: #6c757d; color: white; }
         .btn-orange { background: #ff9800; color: white; }
-        .btn-save { background: #1a237e; color: white; width: 100%; padding: 15px; font-size: 18px; margin-top: 30px; }
-
-        /* FORM STYLES */
+        
         .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .program-container { border: 1px dashed #1a237e; padding: 15px; margin-bottom: 10px; border-radius: 6px; background: #fff; }
         .custom-field-row { background: #f9f9f9; padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #eee; }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>Admin Panel</h2>
-        <div class="nav-item active" onclick="showTab('dsaTab')">👥 Manage Users (DSA)</div>
-        <div class="nav-item" onclick="showTab('policyTab')">🏦 Policy Library</div>
-        <div class="nav-item" onclick="showTab('editorTab'); resetForm()">➕ Create New Policy</div>
+    <div id="adminLoginOverlay">
+        <div class="login-box">
+            <h2 style="margin-top:0; color:#d32f2f">🛡️ Admin Access</h2>
+            <p style="font-size:13px; color:#666">Restricted Area. Authorized Personnel Only.</p>
+            <input type="text" id="adminUser" placeholder="Username">
+            <input type="password" id="adminPass" placeholder="Password">
+            <button onclick="adminLogin()">Unlock Dashboard</button>
+            <p id="loginError" style="color:red; font-size:13px; margin-top:10px"></p>
+        </div>
     </div>
 
-    <div class="main-content">
-        
-        <div id="dsaTab">
-            <h1>DSA User Management</h1>
-            <div class="card">
-                <div id="userTableContainer">Loading users...</div>
-            </div>
+    <div id="adminDashboard" style="display:none"> <div class="sidebar">
+            <h2>Super Admin</h2>
+            <div class="nav-item active" onclick="showTab('dsaTab')">👥 Manage Users</div>
+            <div class="nav-item" onclick="showTab('policyTab')">🏦 Policy Library</div>
+            <div class="nav-item" onclick="showTab('editorTab'); resetForm()">➕ Create New Policy</div>
+            <div class="nav-item" style="margin-top:auto; background:#d32f2f; text-align:center" onclick="adminLogout()">🔒 Logout</div>
         </div>
 
-        <div id="policyTab" class="hidden">
-            <h1>Bank Policy Library</h1>
-            <div class="card">
-                <p>Use the <b>Activate / Deactivate</b> buttons to control which policies appear in the User App.</p>
-                <div id="policyTableContainer">No policies saved.</div>
+        <div class="main-content">
+            
+            <div id="dsaTab">
+                <h1 style="color:#1a237e">DSA User Management</h1>
+                <div class="card"><div id="userTableContainer">Loading...</div></div>
             </div>
-        </div>
 
-        <div id="editorTab" class="hidden">
-            <h1 id="editorTitle">Create New Policy</h1>
-            <div class="card">
-                <input type="hidden" id="editIndex"> 
-                
-                <label>Bank / NBFC Name</label>
-                <input type="text" id="bankName" placeholder="Enter Bank Name (e.g. HDFC)">
+            <div id="policyTab" class="hidden">
+                <h1 style="color:#1a237e">Bank Policy Library</h1>
+                <div class="card">
+                    <p>Activate multiple policies at once.</p>
+                    <div id="policyTableContainer">Loading...</div>
+                </div>
+            </div>
 
-                <h3>🔹 A. Basic Product Details</h3>
-                <div class="grid-row">
-                    <div><label>Product Type</label><select id="prodType"><option>Small Ticket</option><option>Big Ticket</option></select></div>
-                    <div><label>Loan Type</label><select id="loanType"><option>Term Loan</option><option>OD</option></select></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>Loan Min (Lakhs)</label><input type="number" id="loanMin"></div>
-                    <div><label>Loan Max (Lakhs)</label><input type="number" id="loanMax"></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>Tenure Min (Months)</label><input type="number" id="tenureMin"></div>
-                    <div><label>Tenure Max (Months)</label><input type="number" id="tenureMax"></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>ROI Min (%)</label><input type="number" id="roiMin"></div>
-                    <div><label>ROI Max (%)</label><input type="number" id="roiMax"></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>PF Min (%)</label><input type="number" id="pfMin"></div>
-                    <div><label>PF Max (%)</label><input type="number" id="pfMax"></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>Geo Limit (KM)</label><input type="number" id="geoLimit"></div>
-                </div>
+            <div id="editorTab" class="hidden">
+                <h1 style="color:#1a237e" id="editorTitle">Create New Policy</h1>
+                <div class="card">
+                    <input type="hidden" id="editIndex"> 
+                    <label>Bank Name</label><input type="text" id="bankName" placeholder="e.g. Piramal Small Ticket">
+                    
+                    <h3>A. Basics</h3>
+                    <div class="grid-row"><div><label>Product</label><select id="prodType"><option>Small Ticket</option><option>Big Ticket</option></select></div><div><label>Type</label><select id="loanType"><option>Term Loan</option><option>OD</option></select></div></div>
+                    <div class="grid-row"><div><label>Loan Min</label><input type="number" id="loanMin"></div><div><label>Loan Max</label><input type="number" id="loanMax"></div></div>
+                    <div class="grid-row"><div><label>Tenure Min</label><input type="number" id="tenureMin"></div><div><label>Tenure Max</label><input type="number" id="tenureMax"></div></div>
+                    <div class="grid-row"><div><label>ROI Min</label><input type="number" id="roiMin"></div><div><label>ROI Max</label><input type="number" id="roiMax"></div></div>
+                    <div class="grid-row"><div><label>PF Min</label><input type="number" id="pfMin"></div><div><label>PF Max</label><input type="number" id="pfMax"></div></div>
+                    <div class="grid-row"><div><label>Geo Limit</label><input type="number" id="geoLimit"></div></div>
 
-                <h3>🔹 B. Applicant Rules</h3>
-                <div class="grid-row">
-                    <div><label>Applicant Age Min</label><input type="number" id="ageMin"></div>
-                    <div><label>Applicant Age Max</label><input type="number" id="ageMax"></div>
-                </div>
-                <div class="grid-row">
-                    <div style="width:100%"><label>Co-Applicant Mandatory?</label>
-                        <select id="coAppStatus" onchange="toggleVis('coAppStatus','coAppFields','Yes')">
-                            <option value="No">No</option><option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="coAppFields" class="grid-row hidden">
-                    <div><label>Co-App Age Min</label><input type="number" id="coAppMin"></div>
-                    <div><label>Co-App Age Max</label><input type="number" id="coAppMax"></div>
-                </div>
-                <div class="grid-row">
-                    <div style="width:100%"><label>Own House Required?</label>
-                        <select id="houseStatus" onchange="toggleVis('houseStatus','houseFields','Need')">
-                            <option value="Not Need">Not Need</option><option value="Need">Need</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="houseFields" class="grid-row hidden">
-                    <div><label>Own House Geo</label><select id="houseGeo"><option>Local</option><option>Anywhere India</option></select></div>
-                </div>
+                    <h3>B. Applicant</h3>
+                    <div class="grid-row"><div><label>Age Min</label><input type="number" id="ageMin"></div><div><label>Age Max</label><input type="number" id="ageMax"></div></div>
+                    <div class="grid-row"><div style="width:100%"><label>Co-App Mandatory?</label><select id="coAppStatus" onchange="toggleVis('coAppStatus','coAppFields','Yes')"><option value="No">No</option><option value="Yes">Yes</option></select></div></div>
+                    <div id="coAppFields" class="grid-row hidden"><div><label>Co-App Age Min</label><input type="number" id="coAppMin"></div><div><label>Co-App Age Max</label><input type="number" id="coAppMax"></div></div>
+                    <div class="grid-row"><div style="width:100%"><label>Own House?</label><select id="houseStatus" onchange="toggleVis('houseStatus','houseFields','Need')"><option value="Not Need">Not Need</option><option value="Need">Need</option></select></div></div>
+                    <div id="houseFields" class="grid-row hidden"><div><label>Geo</label><select id="houseGeo"><option>Local</option><option>Anywhere India</option></select></div></div>
 
-                <h3>🔹 C. Business & Banking</h3>
-                <div class="grid-row">
-                    <div><label>Vintage (Years)</label><input type="number" id="vintage"></div>
-                    <div><label>Turnover Min (Lakhs)</label><input type="number" id="turnoverMin"></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>ABB Min (Lakhs)</label><input type="number" id="abbMin"></div>
-                    <div><label>Allowed Banking</label>
-                        <select id="bankingType">
-                            <option>All (SA+CA+OD/CC)</option><option>SA Only</option><option>CA Only</option><option>OD/CC Only</option><option>SA + CA</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-row">
-                    <div><label>ITR Required?</label>
-                        <select id="itrStatus" onchange="toggleVis('itrStatus','itrFields','Yes')">
-                            <option value="No">No</option><option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                    <div id="itrFields" class="hidden"><label>Min ITR Turnover (Lakhs)</label><input type="number" id="itrTurnover"></div>
-                </div>
-                <div class="grid-row">
-                    <div><label>GST Required?</label>
-                        <select id="gstStatus" onchange="toggleVis('gstStatus','gstFields','Yes')">
-                            <option value="No">No</option><option value="Yes">Yes</option>
-                        </select>
-                    </div>
-                    <div id="gstFields" class="hidden"><label>Min GST Turnover (Lakhs)</label><input type="number" id="gstTurnover"></div>
-                </div>
+                    <h3>C. Business</h3>
+                    <div class="grid-row"><div><label>Vintage</label><input type="number" id="vintage"></div><div><label>Turnover Min</label><input type="number" id="turnoverMin"></div></div>
+                    <div class="grid-row"><div><label>ABB Min</label><input type="number" id="abbMin"></div><div><label>Banking</label><select id="bankingType"><option>All (SA+CA+OD/CC)</option><option>SA Only</option><option>CA Only</option><option>OD/CC Only</option><option>SA + CA</option></select></div></div>
+                    <div class="grid-row"><div><label>ITR Required?</label><select id="itrStatus" onchange="toggleVis('itrStatus','itrFields','Yes')"><option value="No">No</option><option value="Yes">Yes</option></select></div><div id="itrFields" class="hidden"><label>Min ITR</label><input type="number" id="itrTurnover"></div></div>
+                    <div class="grid-row"><div><label>GST Required?</label><select id="gstStatus" onchange="toggleVis('gstStatus','gstFields','Yes')"><option value="No">No</option><option value="Yes">Yes</option></select></div><div id="gstFields" class="hidden"><label>Min GST</label><input type="number" id="gstTurnover"></div></div>
 
-                <h3>🔹 D. Credit Rules</h3>
-                <div class="grid-row">
-                    <div><label>CIBIL Min</label><input type="number" id="cibilMin"></div>
-                    <div><label>CIBIL Max</label><input type="number" id="cibilMax"></div>
+                    <h3>D. Credit</h3>
+                    <div class="grid-row"><div><label>CIBIL Min</label><input type="number" id="cibilMin"></div><div><label>CIBIL Max</label><input type="number" id="cibilMax"></div></div>
+                    <div class="grid-row"><div><label>Max Active Loans</label><input type="number" id="activeMax"></div><div><label>Max Enquiries</label><input type="number" id="enq6m"></div></div>
+
+                    <h3>E. Programs</h3>
+                    <div id="programsWrapper"></div>
+                    <br>
+                    <button class="btn btn-blue" onclick="addProgramHTML(null, 'Turnover Method')">+ Turnover</button>
+                    <button class="btn btn-blue" onclick="addProgramHTML(null, 'GST Method')">+ GST</button>
+                    <button class="btn btn-blue" onclick="addProgramHTML(null, 'Banking Method')">+ ABB</button>
+
+                    <h3>F. Remarks</h3>
+                    <div id="customFieldsWrapper"></div>
+                    <button class="btn btn-green" style="margin-bottom:10px" onclick="addCustomField()">+ Custom Field</button>
+                    <textarea id="remarks" rows="3"></textarea>
+
+                    <button class="btn" style="background:#1a237e;color:white;width:100%;padding:15px;margin-top:20px" onclick="saveToLibrary()">💾 Save Policy</button>
                 </div>
-                <div class="grid-row">
-                    <div><label>Max Active Loans</label><input type="number" id="activeMax"></div>
-                    <div><label>Max Enquiries (6m)</label><input type="number" id="enq6m"></div>
-                </div>
-
-                <h3>🔹 E. Programs (Ranges)</h3>
-                <div id="programsWrapper"></div>
-                <br>
-                <button class="btn btn-blue" onclick="addProgramHTML(null, 'Turnover Method')">+ Turnover Program</button>
-                <button class="btn btn-blue" onclick="addProgramHTML(null, 'GST Method')">+ GST Program</button>
-                <button class="btn btn-blue" onclick="addProgramHTML(null, 'Banking Method')">+ ABB Program</button>
-
-                <h3>🔹 F. Additional & Remarks</h3>
-                <label>Custom Policy Fields</label>
-                <div id="customFieldsWrapper"></div>
-                <button class="btn btn-green" style="margin-bottom:15px;" onclick="addCustomField()">+ Add New Field</button>
-                
-                <label>Remarks / Notes</label>
-                <textarea id="remarks" rows="3"></textarea>
-
-                <button class="btn btn-save" onclick="saveToLibrary()">💾 Save Policy to Library</button>
             </div>
         </div>
     </div>
 
 <script>
-    // --- UTILS ---
-    function toggleVis(trigger, target, val) {
-        document.getElementById(target).style.display = (document.getElementById(trigger).value === val) ? 'grid' : 'none';
+    // --- 1. SECURITY LOGIC ---
+    // Change your Admin Password here!
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "admin123";
+
+    function checkSession() {
+        if(sessionStorage.getItem("adminAuth") === "true") {
+            document.getElementById("adminLoginOverlay").style.display = "none";
+            document.getElementById("adminDashboard").style.display = "flex";
+        } else {
+            document.getElementById("adminLoginOverlay").style.display = "flex";
+            document.getElementById("adminDashboard").style.display = "none";
+        }
     }
 
-    // --- NAVIGATION ---
-    function showTab(tabId) {
-        ['dsaTab', 'policyTab', 'editorTab'].forEach(t => document.getElementById(t).classList.add('hidden'));
-        document.getElementById(tabId).classList.remove('hidden');
-        if(tabId === 'dsaTab') renderDSATable();
-        if(tabId === 'policyTab') renderPolicyTable();
+    function adminLogin() {
+        const u = document.getElementById("adminUser").value;
+        const p = document.getElementById("adminPass").value;
+        if(u === ADMIN_USER && p === ADMIN_PASS) {
+            sessionStorage.setItem("adminAuth", "true");
+            checkSession();
+        } else {
+            document.getElementById("loginError").innerText = "❌ Incorrect Username or Password";
+        }
     }
 
-    // --- 1. DSA MANAGEMENT ---
-    function renderDSATable() {
-        const users = JSON.parse(localStorage.getItem('dsaUsers')) || [];
-        const container = document.getElementById('userTableContainer');
-        if (users.length === 0) { container.innerHTML = "No registered users."; return; }
-
-        let html = `<table><tr><th>Username</th><th>Status</th><th>Actions</th></tr>`;
-        users.forEach((u, i) => {
-            let badge = u.status === 'Active' ? 'status-active' : (u.status === 'Rejected' ? 'status-rejected' : 'status-pending');
-            let actions = u.status === 'Pending' ? 
-                `<button class="btn btn-green" onclick="updateDSA(${i},'Active')">Approve</button><button class="btn btn-red" onclick="updateDSA(${i},'Rejected')">Reject</button>` : '';
-            actions += `<button class="btn btn-grey" onclick="deleteDSA(${i})">Delete</button>`;
-            html += `<tr><td>${u.username}</td><td><span class="status-badge ${badge}">${u.status}</span></td><td>${actions}</td></tr>`;
-        });
-        container.innerHTML = html + "</table>";
+    function adminLogout() {
+        sessionStorage.removeItem("adminAuth");
+        location.reload();
     }
-    function updateDSA(i, s) { let u=JSON.parse(localStorage.getItem('dsaUsers')); u[i].status=s; localStorage.setItem('dsaUsers',JSON.stringify(u)); renderDSATable(); }
-    function deleteDSA(i) { if(confirm("Delete user?")){ let u=JSON.parse(localStorage.getItem('dsaUsers')); u.splice(i,1); localStorage.setItem('dsaUsers',JSON.stringify(u)); renderDSATable(); }}
+    
+    // Run Security Check on Load
+    checkSession();
 
-    // --- 2. POLICY LIBRARY (MULTI ACTIVE) ---
-    function renderPolicyTable() {
-        const library = JSON.parse(localStorage.getItem('bankPolicyLibrary')) || [];
-        const container = document.getElementById('policyTableContainer');
-        if (library.length === 0) { container.innerHTML = "No policies in library."; return; }
 
-        let html = `<table><tr><th>Bank Name</th><th>Status</th><th>Actions</th></tr>`;
-        library.forEach((p, i) => {
+    // --- 2. ADMIN PANEL LOGIC (Same as before) ---
+    function toggleVis(trigger,target,val){ document.getElementById(target).style.display=(document.getElementById(trigger).value===val)?'grid':'none'; }
+    function showTab(t){ ['dsaTab','policyTab','editorTab'].forEach(x=>document.getElementById(x).classList.add('hidden')); document.getElementById(t).classList.remove('hidden'); if(t==='dsaTab') renderDSA(); if(t==='policyTab') renderPol(); }
+
+    function renderPol() {
+        const lib = JSON.parse(localStorage.getItem('bankPolicyLibrary')) || [];
+        const cont = document.getElementById('policyTableContainer');
+        if(lib.length===0){ cont.innerHTML="No policies."; return; }
+        let html = `<table><tr><th>Bank</th><th>Status</th><th>Actions</th></tr>`;
+        lib.forEach((p,i)=>{
             let status = p.isActive ? `<span class="status-badge status-active">ACTIVE</span>` : `<span class="status-badge status-inactive">INACTIVE</span>`;
             let toggleBtn = p.isActive ? 
                 `<button class="btn btn-orange" onclick="toggleStatus(${i}, false)">Deactivate</button>` : 
                 `<button class="btn btn-green" onclick="toggleStatus(${i}, true)">Activate</button>`;
-            
-            html += `<tr><td>${p.bankName}</td><td>${status}</td>
-                <td>${toggleBtn} <button class="btn btn-blue" onclick="editPolicy(${i})">Edit</button> <button class="btn btn-red" onclick="deletePolicy(${i})">Delete</button></td></tr>`;
+            html+=`<tr><td>${p.bankName}</td><td>${status}</td><td>${toggleBtn} <button class="btn btn-blue" onclick="editPol(${i})">Edit</button> <button class="btn btn-red" onclick="delPol(${i})">Del</button></td></tr>`;
         });
-        container.innerHTML = html + "</table>";
+        cont.innerHTML=html+"</table>";
     }
-    function toggleStatus(i, status) {
+
+    function toggleStatus(index, status) {
         let lib = JSON.parse(localStorage.getItem('bankPolicyLibrary'));
-        lib[i].isActive = status;
+        lib[index].isActive = status;
         localStorage.setItem('bankPolicyLibrary', JSON.stringify(lib));
-        renderPolicyTable();
-    }
-    function deletePolicy(i) {
-        if(confirm("Delete policy?")) {
-            let lib = JSON.parse(localStorage.getItem('bankPolicyLibrary'));
-            lib.splice(i, 1);
-            localStorage.setItem('bankPolicyLibrary', JSON.stringify(lib));
-            renderPolicyTable();
-        }
+        renderPol();
     }
 
-    // --- 3. EDITOR ---
-    function addProgramHTML(data, type) {
-        const wrapper = document.getElementById('programsWrapper');
-        const div = document.createElement('div');
-        div.className = 'program-container';
-        div.setAttribute('data-type', type || data.type);
-        const min = data ? data.minLoan : '';
-        const max = data ? data.maxLoan : '';
-        div.innerHTML = `<div style="font-weight:bold; color:#1a237e">${type||data.type} <button class="btn btn-red" style="float:right; padding:2px 8px;" onclick="this.parentElement.parentElement.remove()">X</button></div>
-            <div class="grid-row"><div><label>Min Loan</label><input type="number" class="p-min" value="${min}"></div><div><label>Max Loan</label><input type="number" class="p-max" value="${max}"></div></div>`;
-        wrapper.appendChild(div);
-    }
-    function addCustomField(label='', value='') {
-        document.getElementById('customFieldsWrapper').insertAdjacentHTML('beforeend', 
-        `<div class="grid-row custom-field-row"><input class="c-label" placeholder="Field Name" value="${label}"><input class="c-value" placeholder="Value" value="${value}"><button class="btn btn-red" style="width:auto;" onclick="this.parentElement.remove()">X</button></div>`);
-    }
+    function delPol(i){ if(confirm("Delete?")){ let lib=JSON.parse(localStorage.getItem('bankPolicyLibrary')); lib.splice(i,1); localStorage.setItem('bankPolicyLibrary',JSON.stringify(lib)); renderPol(); } }
 
-    function resetForm() {
-        document.getElementById('editIndex').value = "";
-        document.getElementById('programsWrapper').innerHTML = "";
-        document.getElementById('customFieldsWrapper').innerHTML = "";
-        document.querySelectorAll('input, select, textarea').forEach(el => el.value = "");
-        document.getElementById('coAppStatus').value = "No"; toggleVis('coAppStatus','coAppFields','Yes');
-        document.getElementById('houseStatus').value = "Not Need"; toggleVis('houseStatus','houseFields','Need');
-        document.getElementById('gstStatus').value = "No"; toggleVis('gstStatus','gstFields','Yes');
-        document.getElementById('itrStatus').value = "No"; toggleVis('itrStatus','itrFields','Yes');
+    function addProgramHTML(d,t){ const w=document.getElementById('programsWrapper'); const div=document.createElement('div'); div.className='program-container'; div.setAttribute('data-type',t||d.type); div.innerHTML=`<b>${t||d.type}</b> <button style="float:right;color:red" onclick="this.parentElement.parentElement.remove()">X</button><div class="grid-row"><div><label>Min</label><input type="number" class="p-min" value="${d?d.minLoan:''}"></div><div><label>Max</label><input type="number" class="p-max" value="${d?d.maxLoan:''}"></div></div>`; w.appendChild(div); }
+    function addCustomField(l='',v=''){ document.getElementById('customFieldsWrapper').insertAdjacentHTML('beforeend', `<div class="grid-row custom-field-row"><input class="c-label" placeholder="Label" value="${l}"><input class="c-value" placeholder="Value" value="${v}"><button style="color:red" onclick="this.parentElement.remove()">X</button></div>`); }
+
+    function resetForm(){ document.getElementById('editIndex').value=""; document.getElementById('programsWrapper').innerHTML=""; document.getElementById('customFieldsWrapper').innerHTML=""; document.querySelectorAll('input,select,textarea').forEach(e=>e.value=""); document.getElementById('coAppStatus').value="No"; toggleVis('coAppStatus','coAppFields','Yes'); }
+    
+    function editPol(i){
+        let lib=JSON.parse(localStorage.getItem('bankPolicyLibrary')); let p=lib[i]; resetForm(); showTab('editorTab'); document.getElementById('editIndex').value=i; document.getElementById('bankName').value=p.bankName;
+        const ids=['prodType','loanType','loanMin','loanMax','tenureMin','tenureMax','roiMin','roiMax','pfMin','pfMax','geoLimit','ageMin','ageMax','vintage','turnoverMin','abbMin','bankingType','cibilMin','cibilMax','activeMax','enq6m','remarks','coAppMin','coAppMax','houseGeo','itrTurnover','gstTurnover'];
+        ids.forEach(k=>{ if(document.getElementById(k)) document.getElementById(k).value=p[k]||''; });
+        document.getElementById('coAppStatus').value=p.coAppRequired; toggleVis('coAppStatus','coAppFields','Yes');
+        document.getElementById('houseStatus').value=p.houseRequired; toggleVis('houseStatus','houseFields','Need');
+        document.getElementById('itrStatus').value=p.itrRequired; toggleVis('itrStatus','itrFields','Yes');
+        document.getElementById('gstStatus').value=p.gstRequired; toggleVis('gstStatus','gstFields','Yes');
+        if(p.programs) p.programs.forEach(x=>addProgramHTML(x));
+        if(p.customFields) p.customFields.forEach(x=>addCustomField(x.label,x.value));
     }
 
-    function editPolicy(index) {
-        const lib = JSON.parse(localStorage.getItem('bankPolicyLibrary'));
-        const p = lib[index];
-        resetForm();
-        showTab('editorTab');
-        document.getElementById('editorTitle').innerText = `Editing: ${p.bankName}`;
-        document.getElementById('editIndex').value = index;
-
-        const set = (id, val) => { if(document.getElementById(id)) document.getElementById(id).value = val; };
-        
-        set('bankName', p.bankName); set('prodType', p.prodType); set('loanType', p.loanType);
-        set('loanMin', p.loanMin); set('loanMax', p.loanMax); set('tenureMin', p.tenureMin); set('tenureMax', p.tenureMax);
-        set('roiMin', p.roiMin); set('roiMax', p.roiMax); set('pfMin', p.pfMin); set('pfMax', p.pfMax); set('geoLimit', p.geoLimit);
-        
-        set('ageMin', p.ageMin); set('ageMax', p.ageMax);
-        set('coAppStatus', p.coAppRequired); toggleVis('coAppStatus','coAppFields','Yes'); set('coAppMin', p.coAppMin); set('coAppMax', p.coAppMax);
-        set('houseStatus', p.houseRequired); toggleVis('houseStatus','houseFields','Need'); set('houseGeo', p.houseGeo);
-        
-        set('vintage', p.vintage); set('turnoverMin', p.turnoverMin); set('abbMin', p.abbMin); set('bankingType', p.bankingType);
-        set('itrStatus', p.itrRequired); toggleVis('itrStatus','itrFields','Yes'); set('itrTurnover', p.itrTurnover);
-        set('gstStatus', p.gstRequired); toggleVis('gstStatus','gstFields','Yes'); set('gstTurnover', p.gstTurnover);
-        
-        set('cibilMin', p.cibilMin); set('cibilMax', p.cibilMax); set('activeMax', p.activeMax); set('enq6m', p.enq6m);
-        set('remarks', p.remarks);
-
-        if(p.programs) p.programs.forEach(x => addProgramHTML(x));
-        if(p.customFields) p.customFields.forEach(x => addCustomField(x.label, x.value));
-    }
-
-    function saveToLibrary() {
-        const val = (id) => document.getElementById(id).value;
-        const num = (id) => parseFloat(val(id)) || 0;
-
-        let data = {
-            bankName: val('bankName'), isActive: true,
-            prodType: val('prodType'), loanType: val('loanType'),
-            loanMin: num('loanMin'), loanMax: num('loanMax'), tenureMin: num('tenureMin'), tenureMax: num('tenureMax'),
-            roiMin: num('roiMin'), roiMax: num('roiMax'), pfMin: num('pfMin'), pfMax: num('pfMax'), geoLimit: num('geoLimit'),
-            ageMin: num('ageMin'), ageMax: num('ageMax'),
-            coAppRequired: val('coAppStatus'), coAppMin: num('coAppMin'), coAppMax: num('coAppMax'),
-            houseRequired: val('houseStatus'), houseGeo: val('houseGeo'),
-            vintage: num('vintage'), turnoverMin: num('turnoverMin'), abbMin: num('abbMin'), bankingType: val('bankingType'),
-            itrRequired: val('itrStatus'), itrTurnover: num('itrTurnover'), gstRequired: val('gstStatus'), gstTurnover: num('gstTurnover'),
-            cibilMin: num('cibilMin'), cibilMax: num('cibilMax'), activeMax: num('activeMax'), enq6m: num('enq6m'),
-            remarks: val('remarks'), programs: [], customFields: []
+    function saveToLibrary(){
+        const val=(id)=>document.getElementById(id).value; const num=(id)=>parseFloat(val(id))||0;
+        let data={
+            bankName:val('bankName'), isActive:true,
+            prodType:val('prodType'), loanType:val('loanType'), loanMin:num('loanMin'), loanMax:num('loanMax'),
+            tenureMin:num('tenureMin'), tenureMax:num('tenureMax'), roiMin:num('roiMin'), roiMax:num('roiMax'), pfMin:num('pfMin'), pfMax:num('pfMax'), geoLimit:num('geoLimit'),
+            ageMin:num('ageMin'), ageMax:num('ageMax'), coAppRequired:val('coAppStatus'), coAppMin:num('coAppMin'), coAppMax:num('coAppMax'),
+            houseRequired:val('houseStatus'), houseGeo:val('houseGeo'), vintage:num('vintage'), turnoverMin:num('turnoverMin'), abbMin:num('abbMin'), bankingType:val('bankingType'),
+            itrRequired:val('itrStatus'), itrTurnover:num('itrTurnover'), gstRequired:val('gstStatus'), gstTurnover:num('gstTurnover'),
+            cibilMin:num('cibilMin'), cibilMax:num('cibilMax'), activeMax:num('activeMax'), enq6m:num('enq6m'), remarks:val('remarks'),
+            programs:[], customFields:[]
         };
+        document.querySelectorAll('.program-container').forEach(b=>data.programs.push({type:b.getAttribute('data-type'),minLoan:parseFloat(b.querySelector('.p-min').value)||0,maxLoan:parseFloat(b.querySelector('.p-max').value)||0}));
+        document.querySelectorAll('.custom-field-row').forEach(b=>data.customFields.push({label:b.querySelector('.c-label').value,value:b.querySelector('.c-value').value}));
 
-        document.querySelectorAll('.program-container').forEach(b => {
-            data.programs.push({ type: b.getAttribute('data-type'), minLoan: parseFloat(b.querySelector('.p-min').value)||0, maxLoan: parseFloat(b.querySelector('.p-max').value)||0 });
-        });
-        document.querySelectorAll('.custom-field-row').forEach(b => {
-            data.customFields.push({ label: b.querySelector('.c-label').value, value: b.querySelector('.c-value').value });
-        });
-
-        if(!data.bankName) { alert("Bank Name Required!"); return; }
-
-        let lib = JSON.parse(localStorage.getItem('bankPolicyLibrary')) || [];
-        let idx = document.getElementById('editIndex').value;
-        
-        if (idx !== "") { data.isActive = lib[idx].isActive; lib[idx] = data; alert("Updated!"); }
-        else { lib.push(data); alert("Saved to Library!"); }
-        
-        localStorage.setItem('bankPolicyLibrary', JSON.stringify(lib));
+        if(!data.bankName){ alert("Name Required"); return; }
+        let lib=JSON.parse(localStorage.getItem('bankPolicyLibrary'))||[];
+        let idx=document.getElementById('editIndex').value;
+        if(idx!==""){ data.isActive=lib[idx].isActive; lib[idx]=data; } else { lib.push(data); }
+        localStorage.setItem('bankPolicyLibrary',JSON.stringify(lib));
         showTab('policyTab');
     }
+
+    function renderDSA(){ const u=JSON.parse(localStorage.getItem('dsaUsers'))||[]; document.getElementById('userTableContainer').innerHTML=u.length?`<table><tr><th>User</th><th>Status</th><th>Action</th></tr>${u.map((x,i)=>`<tr><td>${x.username}</td><td>${x.status}</td><td>${x.status==='Pending'?`<button class="btn btn-green" onclick="updDSA(${i},'Active')">Approve</button>`:''}<button class="btn btn-grey" onclick="delDSA(${i})">Del</button></td></tr>`).join('')}</table>`:"No Users"; }
+    function updDSA(i,s){ let u=JSON.parse(localStorage.getItem('dsaUsers')); u[i].status=s; localStorage.setItem('dsaUsers',JSON.stringify(u)); renderDSA(); }
+    function delDSA(i){ if(confirm("Del?")){ let u=JSON.parse(localStorage.getItem('dsaUsers')); u.splice(i,1); localStorage.setItem('dsaUsers',JSON.stringify(u)); renderDSA(); } }
+
     showTab('dsaTab');
 </script>
 </body>
