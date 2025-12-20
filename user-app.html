@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Engine Pro</title>
+    <title>Credit Engine Pro - Multi Policy</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* --- CORE STYLES --- */
@@ -23,14 +23,15 @@
         /* CENTER: Form Area */
         .form-area { flex: 1; padding: 30px; overflow-y: auto; }
         
-        /* RIGHT: Policy Panel (The Requested Feature) */
-        .right-panel { width: 300px; background: white; border-left: 1px solid #ddd; padding: 20px; overflow-y: auto; box-shadow: -2px 0 10px rgba(0,0,0,0.05); display: block; }
+        /* RIGHT: Policy Panel */
+        .right-panel { width: 320px; background: white; border-left: 1px solid #ddd; padding: 20px; overflow-y: auto; box-shadow: -2px 0 10px rgba(0,0,0,0.05); display: block; }
         .panel-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 15px; border-bottom: 2px solid #1a237e; padding-bottom: 5px; }
         
         /* Policy Mini Cards */
-        .policy-mini-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 13px; }
-        .policy-mini-card strong { color: #1a237e; display: block; margin-bottom: 5px; font-size: 14px; }
+        .policy-mini-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 12px; }
+        .policy-mini-card strong { color: #1a237e; display: block; margin-bottom: 5px; font-size: 13px; text-transform: uppercase; }
         .mini-stat { display: flex; justify-content: space-between; margin-bottom: 3px; color: #555; }
+        .tag-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; float: right; }
 
         /* --- FORM STYLES --- */
         .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
@@ -44,8 +45,6 @@
         input, select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; box-sizing: border-box; }
         
         .hidden-field { display: none; }
-        .add-field-btn { background: none; border: 1px dashed #1a237e; color: #1a237e; padding: 8px; width: 100%; margin-top: 15px; cursor: pointer; border-radius: 4px; font-size: 13px; }
-        
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
         .submit-btn:hover { background-color: #1b5e20; }
 
@@ -91,7 +90,7 @@
                     <div class="form-grid">
                         <div class="form-group"><label>Business Name</label><input type="text" id="bizName"></div>
                         <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" placeholder="e.g. 5"></div>
-                        <div class="form-group"><label>Annual Turnover (₹ Lakhs)</label><input type="number" id="turnover" placeholder="e.g. 100"></div>
+                        <div class="form-group"><label>Annual Turnover (₹ Lakhs)</label><input type="number" id="turnover" placeholder="e.g. 150"></div>
                         <div class="form-group"><label>Entity Type</label><select id="entityType"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
                         <div class="form-group"><label>Business Sector</label>
                             <select id="sector">
@@ -151,12 +150,12 @@
                 </div>
             </div>
 
-            <button class="submit-btn" onclick="runEligibilityEngine()">⚡ Check Eligibility</button>
+            <button class="submit-btn" onclick="runEligibilityEngine()">⚡ Check Eligibility (All Policies)</button>
             <div id="resultsArea"></div>
         </div>
 
         <div class="right-panel">
-            <div class="panel-title">📋 Saved Policies</div>
+            <div class="panel-title">📋 Active Admin Policies</div>
             <div id="policySideList">
                 </div>
         </div>
@@ -170,7 +169,7 @@
             <p><strong>Customer:</strong> <span id="certClientName"></span></p>
             <hr>
             <h1 id="certBank" style="color:#2e7d32; font-size:28px;"></h1>
-            <p><strong>Program:</strong> <span id="certProg"></span></p>
+            <p><strong>Product:</strong> <span id="certProg"></span></p>
             <p><strong>Approved Amount:</strong> <span id="certAmt" style="font-weight:bold; font-size:20px;"></span></p>
             <p><strong>Tenure:</strong> <span id="certTenure"></span> | <strong>ROI:</strong> <span id="certRoi"></span></p>
             <br>
@@ -182,26 +181,46 @@
     </div>
 
     <script>
-        // --- 1. SAVED POLICIES DATA ---
+        // --- 1. FULL POLICY DATABASE (FROM ADMIN SCREENSHOT) ---
+        // I have added the list of banks from your screenshot image_181831.png
         const bankPolicies = [
-            { bank: "HDFC Bank", minVintage: 3, minCibil: 700, maxUnsecured: 2, maxEnquiries: 4, roi: 18, maxTenure: 36 },
-            { bank: "Bajaj Finserv", minVintage: 2, minCibil: 680, maxUnsecured: 4, maxEnquiries: 6, roi: 20, maxTenure: 30 },
-            { bank: "ICICI Bank", minVintage: 4, minCibil: 725, maxUnsecured: 1, maxEnquiries: 2, roi: 16, maxTenure: 48 },
-            { bank: "Axis Bank", minVintage: 3, minCibil: 710, maxUnsecured: 2, maxEnquiries: 3, roi: 17.5, maxTenure: 60 }
+            // Standard Policies
+            { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsecured: 2, roi: 18, maxTenure: 36, minTurnover: 20 },
+            { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 710, maxUnsecured: 2, roi: 17.5, maxTenure: 36, minTurnover: 25 },
+            { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 720, maxUnsecured: 3, roi: 16.5, maxTenure: 48, minTurnover: 40 },
+            
+            // High Ticket / Premium Policies (Require Higher Turnover)
+            { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 725, maxUnsecured: 4, roi: 14, maxTenure: 60, minTurnover: 200 }, 
+            { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minVintage: 4, minCibil: 725, maxUnsecured: 3, roi: 13.5, maxTenure: 60, minTurnover: 250 },
+            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, maxUnsecured: 2, roi: 19, maxTenure: 36, minTurnover: 30 },
+            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 730, maxUnsecured: 1, roi: 15, maxTenure: 48, minTurnover: 100 },
+
+            // Overdraft / Drop Line OD
+            { bank: "ADITYA BIRLA DROPLINE OD", type:"OD", minVintage: 3, minCibil: 740, maxUnsecured: 2, roi: 12, maxTenure: 12, minTurnover: 100 },
+            { bank: "TATA CAPITAL DROPLINE OD", type:"OD", minVintage: 3, minCibil: 740, maxUnsecured: 2, roi: 12.5, maxTenure: 12, minTurnover: 100 },
+            { bank: "BAJAJ FINANCE FLEXI OD", type:"OD", minVintage: 2, minCibil: 725, maxUnsecured: 3, roi: 14.5, maxTenure: 24, minTurnover: 50 },
+            
+            // Others
+            { bank: "CLIX CAPITAL", type:"NBFC", minVintage: 2, minCibil: 680, maxUnsecured: 5, roi: 21, maxTenure: 30, minTurnover: 15 }
         ];
 
-        // --- 2. INITIALIZE RIGHT SIDE PANEL ---
+        // --- 2. INITIALIZE RIGHT PANEL ---
         window.onload = function() {
             const list = document.getElementById('policySideList');
             let html = "";
             bankPolicies.forEach(p => {
+                // Color code the tags
+                let bg = "#555";
+                if(p.type === 'HTBL') bg = "#7b1fa2"; // Purple for High Ticket
+                if(p.type === 'OD') bg = "#0288d1";   // Blue for OD
+                if(p.type === 'STBL') bg = "#2e7d32"; // Green for STBL
+
                 html += `
                 <div class="policy-mini-card">
-                    <strong>${p.bank}</strong>
-                    <div class="mini-stat"><span>Min Vintage:</span> <span>${p.minVintage} Yrs</span></div>
+                    <strong>${p.bank} <span class="tag-type" style="background:${bg}">${p.type}</span></strong>
+                    <div class="mini-stat"><span>Min Turn:</span> <span>₹${p.minTurnover}L</span></div>
                     <div class="mini-stat"><span>Min CIBIL:</span> <span>${p.minCibil}</span></div>
                     <div class="mini-stat"><span>ROI:</span> <span>${p.roi}%</span></div>
-                    <div class="mini-stat"><span>Tenure:</span> <span>${p.maxTenure}m</span></div>
                 </div>`;
             });
             list.innerHTML = html;
@@ -216,7 +235,7 @@
             document.getElementById(id).style.display = show ? 'block' : 'none';
         }
 
-        // --- 4. CALCULATION LOGIC (PV) ---
+        // --- 4. ENGINE LOGIC ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -226,6 +245,7 @@
             // Inputs
             const vintage = parseFloat(document.getElementById('vintage').value) || 0;
             const turnover = (parseFloat(document.getElementById('turnover').value) || 0) * 100000;
+            const turnoverLakhs = turnover / 100000;
             const sector = document.getElementById('sector').value;
             const abb = parseFloat(document.getElementById('abb').value) || 0;
             const cibil = parseFloat(document.getElementById('cibil').value) || 0;
@@ -237,36 +257,43 @@
             let margin = (sector.includes('Manufacturing')) ? 0.09 : (sector.includes('Service') ? 0.11 : 0.07);
             const netIncome = Math.max(0, (turnover/12 * margin) - currentEMI);
 
-            let html = `<h3>Calculation Results (Net Income: ₹${Math.round(netIncome)})</h3>`;
+            let html = `<h3>Engine Results (Net Income: ₹${Math.round(netIncome)})</h3>`;
 
             bankPolicies.forEach(p => {
                 let isEligible = true, reasons = [];
+                
+                // CRITERIA CHECKS
                 if (vintage < p.minVintage) { isEligible = false; reasons.push(`Vintage < ${p.minVintage}`); }
                 if (cibil < p.minCibil) { isEligible = false; reasons.push(`CIBIL < ${p.minCibil}`); }
                 if (unsecLoans > p.maxUnsecured) { isEligible = false; reasons.push(`Unsec Loans > ${p.maxUnsecured}`); }
-                if (enquiries > p.maxEnquiries) { isEligible = false; reasons.push(`High Enquiries`); }
+                if (turnoverLakhs < p.minTurnover) { isEligible = false; reasons.push(`Turnover < ${p.minTurnover}L`); }
 
                 if (isEligible) {
                     const mRate = (p.roi/100)/12;
-                    const loanABB = calculatePV(mRate, p.maxTenure, abb);
+                    // ABB Multiplier logic (simplified)
+                    const loanABB = calculatePV(mRate, p.maxTenure, abb); 
+                    // Income Based
                     const loanInc = calculatePV(mRate, p.maxTenure, netIncome);
 
                     html += `
                     <div class="result-card approved">
-                        <div style="font-weight:bold; margin-bottom:5px;">✅ ${p.bank}</div>
+                        <div style="font-weight:bold; margin-bottom:5px; display:flex; justify-content:space-between;">
+                            <span>✅ ${p.bank}</span>
+                            <span style="font-size:11px; color:#555;">${p.type}</span>
+                        </div>
                         <div class="program-row">
                             <span>ABB Program: ₹${(loanABB/100000).toFixed(2)} L</span>
-                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', 'ABB Program', '₹${(loanABB/100000).toFixed(2)} Lakhs', '${p.maxTenure}m', '${p.roi}%')">PDF</button>
+                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', '${p.type} (ABB)', '₹${(loanABB/100000).toFixed(2)} Lakhs', '${p.maxTenure}m', '${p.roi}%')">PDF</button>
                         </div>
                         <div class="program-row">
                             <span>Income Program: ₹${(loanInc/100000).toFixed(2)} L</span>
-                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', 'Income Program', '₹${(loanInc/100000).toFixed(2)} Lakhs', '${p.maxTenure}m', '${p.roi}%')">PDF</button>
+                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', '${p.type} (Income)', '₹${(loanInc/100000).toFixed(2)} Lakhs', '${p.maxTenure}m', '${p.roi}%')">PDF</button>
                         </div>
                     </div>`;
                 } else {
                     html += `<div class="result-card declined">
                                 <div>❌ ${p.bank}</div>
-                                <div style="font-size:12px; color:#d32f2f;">${reasons.join(', ')}</div>
+                                <div style="font-size:11px; color:#d32f2f;">${reasons.join(', ')}</div>
                              </div>`;
                 }
             });
