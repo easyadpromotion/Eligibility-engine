@@ -317,7 +317,27 @@
     });
   };
 
-  // --- PDF GENERATOR ---
-  window.printPDF = (bank, amt, prog, tenure) => {
-    document.getElementById('pdfDate').innerText = new Date().toLocaleDateString();
-    document.getElementById('pdfBank').innerText
+ // --- PDF GENERATOR ---
+window.printPDF = (bank, amt, prog, tenure) => {
+    // 1. Fill in the data
+    const dateEl = document.getElementById('pdfDate');
+    if(dateEl) dateEl.innerText = new Date().toLocaleDateString();
+
+    const bankEl = document.getElementById('pdfBank');
+    if(bankEl) bankEl.innerText = bank;
+    
+    // (Add other fields if you have them, like Amount or Program)
+    // document.getElementById('pdfAmt').innerText = amt;
+
+    // 2. OPEN THE MODAL (Show the PDF)
+    // Make sure you have a <div id="pdfModal"> in your HTML
+    const modal = document.getElementById('pdfModal');
+    if(modal) {
+        modal.style.display = 'block'; // This opens the view
+    } else {
+        console.error("Error: Could not find <div id='pdfModal'> in your HTML");
+    }
+    
+    // Optional: Auto-trigger browser print dialog
+    // window.print(); 
+};
