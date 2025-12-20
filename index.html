@@ -40,24 +40,25 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+  // YOUR SPECIFIC KEYS
   const firebaseConfig = {
-    apiKey: "AIzaSyAqc4OiR26dNzop2pUWvx_eLzNhHsaEBRE",
-    authDomain: "credit-engine-2ffba.firebaseapp.com",
-    projectId: "credit-engine-2ffba",
-    storageBucket: "credit-engine-2ffba.firebasestorage.app",
-    messagingSenderId: "432392785380",
-    appId: "1:432392785380:web:52d87b4a5548cea9954bf1",
-    measurementId: "G-TVQ7TXJXPV"
+    apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
+    authDomain: "credir-engine-new.firebaseapp.com",
+    projectId: "credir-engine-new",
+    storageBucket: "credir-engine-new.firebasestorage.app",
+    messagingSenderId: "249073295308",
+    appId: "1:249073295308:web:e3db899190a4d2506d0769",
+    measurementId: "G-YBXMM1J129"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // UI Toggle
+  // Toggle Forms
   document.getElementById('showReg').onclick = () => { document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; };
   document.getElementById('showLogin').onclick = () => { document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; };
 
-  // REGISTER
+  // REGISTER FUNCTION
   document.getElementById('btnReg').onclick = async () => {
     const u = document.getElementById('regUser').value.trim();
     const p = document.getElementById('regPass').value.trim();
@@ -73,10 +74,10 @@
 
         await addDoc(collection(db, "users"), { username: u, password: p, status: "Pending" });
         msg.innerText = "✅ Request Sent! Wait for Admin."; msg.style.color="green";
-    } catch(e) { console.error(e); msg.innerText = "Error connecting to cloud."; }
+    } catch(e) { console.error(e); msg.innerText = "Connection Error. Check Database Rules."; }
   };
 
-  // LOGIN
+  // LOGIN FUNCTION
   document.getElementById('btnLogin').onclick = async () => {
     const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value.trim();
@@ -100,7 +101,5 @@
     } catch(e) { console.error(e); msg.innerText = "Connection Error"; }
   };
 </script>
-
 </body>
 </html>
-
