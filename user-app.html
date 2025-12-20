@@ -3,80 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSA Dashboard</title>
+    <title>DSA Loan Calculator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; height: 100vh; color: #333; }
-        .sidebar { width: 250px; background: #004a99; color: white; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; margin: 0; display: flex; height: 100vh; color: #333; }
+        .sidebar { width: 260px; background: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .status-badge { background: #e3f2fd; color: #004a99; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; border: 1px solid #004a99; }
-        .section-card { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow: hidden; }
-        .section-header { padding: 15px 20px; background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: #004a99; border-bottom: 1px solid #f0f0f0; }
-        .section-body { padding: 20px; display: none; } .section-body.open { display: block; }
+        
+        /* CARDS */
+        .section-card { background: white; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; overflow: hidden; }
+        .section-header { padding: 15px 20px; background: #fff; cursor: pointer; display: flex; justify-content: space-between; font-weight: 600; color: #1a237e; border-bottom: 1px solid #f0f0f0; }
+        .section-body { padding: 25px; display: none; } .section-body.open { display: block; }
+
+        /* INPUTS */
         .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555; }
         input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #555; }
-        .hidden { display: none; }
-        .check-btn { background: #004a99; color: white; border: none; padding: 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        
+        /* RESULTS */
+        .check-btn { background: #1a237e; color: white; width: 100%; padding: 16px; font-size: 18px; margin-top: 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .bank-result-card { background: white; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-left: 6px solid #ccc; }
         .bank-result-header { padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items:center; }
-        .bank-result-body { padding: 15px; border-top: 1px solid #eee; }
+        .bank-result-body { padding: 15px; border-top: 1px solid #eee; background: #fafafa; }
+        
         .status-eligible { border-left-color: #28a745; } .status-eligible .bank-result-header { background: #e8f5e9; color: #2e7d32; }
         .status-rejected { border-left-color: #dc3545; } .status-rejected .bank-result-header { background: #ffebee; color: #c62828; }
-        .pdf-btn { background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight:bold; }
-        #letterTemplate { display: none; padding: 40px; font-family: 'Times New Roman', serif; background: white; width: 700px; color: #000; }
-        .letter-box { border: 1px solid #333; padding: 15px; margin: 20px 0; background: #f9f9f9; }
+        
+        .offer-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+        .pdf-btn { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .bank-options { display: flex; gap: 10px; } .bank-opt { padding: 8px 15px; border: 1px solid #ccc; border-radius: 20px; cursor: pointer; background: #f9f9f9; font-size: 13px; } .bank-opt.selected { background: #1a237e; color: white; border-color: #1a237e; }
+        .hidden { display: none; }
+        
+        /* PDF TEMPLATE */
+        #letterTemplate { display: none; padding: 40px; font-family: serif; background: white; color: black; line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2>Credit Engine</h2>
-        <div style="padding:10px; color:white; font-weight:bold; cursor:pointer">📝 New Application</div>
-        <div style="padding:10px; color:#ffcccb; cursor:pointer; margin-top:auto" id="btnLogout">🚪 Logout</div>
+        <h2 style="border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:15px">🚀 Credit Engine</h2>
+        <div style="padding:12px; cursor:pointer" onclick="location.reload()">📝 New Application</div>
+        <div style="padding:12px; cursor:pointer; margin-top:auto; background:#c62828; text-align:center; font-weight:bold" id="btnLogout">🚪 Logout</div>
     </div>
 
     <div class="main-content">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px">
-            <h1>Eligibility Check</h1>
-            <div id="statusBadge" class="status-badge">Connecting to Cloud...</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+            <h1 style="margin:0; color:#1a237e">Eligibility Calculator</h1>
+            <div id="statusBadge" style="background:#e8f5e9; color:#2e7d32; padding:8px 15px; border-radius:20px; font-weight:bold; border:1px solid #c8e6c9">Connecting...</div>
         </div>
 
-        <div class="section-card"><div class="section-header" onclick="toggle('sec1')">1. Business Details ▼</div><div id="sec1" class="section-body open">
-            <div class="grid-row"><div><label>Customer Name</label><input type="text" id="custName"></div><div><label>Vintage (Years)</label><input type="number" id="vintage"></div></div>
-            <div class="grid-row"><div><label>Turnover (Lakhs)</label><input type="number" id="turnover"></div><div><label>Entity</label><select><option>Proprietorship</option><option>Pvt Ltd</option></select></div></div>
-        </div></div>
+        <div class="section-card">
+            <div class="section-header" onclick="toggle('sec1')"><span>1. Business Details</span> <span>▼</span></div>
+            <div id="sec1" class="section-body open">
+                <div class="grid-row">
+                    <div><label>Business Name</label><input type="text" id="custName"></div>
+                    <div><label>Vintage (Years)</label><input type="number" id="vintage"></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Annual Turnover (Lakhs)</label><input type="number" id="turnover"></div>
+                    <div><label>Entity Type</label><select id="entityType"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>Ltd</option><option>LLP</option></select></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Business Sector (Margin)</label>
+                        <select id="bizSector">
+                            <option value="Trading">Trading (7% Margin)</option>
+                            <option value="Manufacturing">Manufacturing (9% Margin)</option>
+                            <option value="Service">Service (11% Margin)</option>
+                        </select>
+                    </div>
+                    <div><label>Premises Type</label><select><option>Rented</option><option>Leased</option><option>Owned</option></select></div>
+                </div>
+            </div>
+        </div>
 
-        <div class="section-card"><div class="section-header" onclick="toggle('sec2')">2. Banking ▼</div><div id="sec2" class="section-body">
-            <div class="grid-row"><div><label>ABB (Rupees)</label><input type="number" id="abb"></div><div><label>Banking Type</label><select><option>All</option><option>SA</option><option>CA</option></select></div></div>
-            <div class="grid-row"><div><label>GST Registered?</label><select id="gstStatus"><option value="No">No</option><option value="Yes">Yes</option></select></div><div><label>GST Turnover</label><input type="number" id="gstTurnover"></div></div>
-        </div></div>
+        <div class="section-card">
+            <div class="section-header" onclick="toggle('sec2')"><span>2. Banking & Docs</span> <span>▼</span></div>
+            <div id="sec2" class="section-body">
+                <div class="grid-row">
+                    <div><label>ABB (Average Bank Balance ₹)</label><input type="number" id="abb"></div>
+                    <div><label>Bank Facilities</label>
+                        <div class="bank-options">
+                            <div class="bank-opt" onclick="togBank(this)">SA</div><div class="bank-opt" onclick="togBank(this)">CA</div><div class="bank-opt" onclick="togBank(this)">OD</div><div class="bank-opt" onclick="togBank(this)">CC</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-row">
+                    <div><label>GST Registered?</label><select id="gstStatus" onchange="togVis('gstStatus','gstField')"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                    <div id="gstField" class="hidden"><label>GST Turnover (Lakhs)</label><input type="number" id="gstTurnover"></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>ITR Filed?</label><select id="itrStatus" onchange="togVis('itrStatus','itrField')"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                    <div id="itrField" class="hidden"><label>ITR Income (Lakhs)</label><input type="number" id="itrIncome"></div>
+                </div>
+            </div>
+        </div>
 
-        <div class="section-card"><div class="section-header" onclick="toggle('sec3')">3. Credit ▼</div><div id="sec3" class="section-body">
-            <div class="grid-row"><div><label>CIBIL</label><input type="number" id="cibil"></div><div><label>Active Loans</label><input type="number" id="activeLoans"></div></div>
-            <div class="grid-row"><div><label>EMI Current</label><input type="number" id="existingEmi"></div><div><label>EMI Closing</label><input type="number" id="closingEmi"></div></div>
-        </div></div>
+        <div class="section-card">
+            <div class="section-header" onclick="toggle('sec3')"><span>3. Credit Profile</span> <span>▼</span></div>
+            <div id="sec3" class="section-body">
+                <div class="grid-row">
+                    <div><label>CIBIL Score</label><input type="number" id="cibil"></div>
+                    <div><label>Total Active Loans</label><input type="number" id="activeLoans"></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Current Monthly EMI (₹)</label><input type="number" id="currentEmi"></div>
+                    <div><label>Unsecured Loans Count</label><input type="number" id="unsecLoans"></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Loans Closing (Next 6m)</label><input type="number" id="closingLoans"></div>
+                    <div><label>EMI of Closing Loans (Next 6m)</label><input type="number" id="reducedEmi"></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Enquiries (Last 3m)</label><input type="number" id="enquiries"></div>
+                </div>
+            </div>
+        </div>
 
-        <div class="section-card"><div class="section-header" onclick="toggle('sec4')">4. Applicant ▼</div><div id="sec4" class="section-body">
-            <div class="grid-row"><div><label>Age</label><input type="number" id="age"></div></div>
-        </div></div>
+        <div class="section-card">
+            <div class="section-header" onclick="toggle('sec4')"><span>4. Applicant</span> <span>▼</span></div>
+            <div id="sec4" class="section-body">
+                <div class="grid-row">
+                    <div><label>Applicant Age</label><input type="number" id="age"></div>
+                    <div><label>Gender</label><select><option>Male</option><option>Female</option></select></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Co-Applicant?</label><select id="coAppStatus" onchange="togVis('coAppStatus','coAppField')"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                    <div id="coAppField" class="hidden"><label>Co-Applicant Age</label><input type="number" id="coAppAge"></div>
+                </div>
+                <div class="grid-row">
+                    <div><label>Own House?</label><select id="houseStatus" onchange="togVis('houseStatus','houseField')"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                    <div id="houseField" class="hidden"><label>House Pincode</label><input type="number"></div>
+                </div>
+            </div>
+        </div>
 
-        <button class="check-btn" id="btnCheck">⚡ Check All Banks</button>
+        <button class="check-btn" id="btnCheck">⚡ Check Eligibility (All Banks)</button>
         <div id="resultsArea"></div>
     </div>
 
     <div id="letterTemplate">
         <center><h2>IN-PRINCIPLE SANCTION</h2></center><hr>
+        <p><b>Date:</b> <span id="pdfDate"></span></p>
+        <p><b>To:</b> <span id="pdfCust"></span></p>
         <p><b>Bank:</b> <span id="pdfBank"></span></p>
-        <p><b>Customer:</b> <span id="pdfCust"></span></p>
-        <div class="letter-box"><h3>Approved: ₹<span id="pdfAmt"></span> Lakhs</h3><p>Program: <span id="pdfProg"></span></p></div>
+        <div style="border:2px solid #000; padding:20px; margin:20px 0; background:#f9f9f9;">
+            <h3 style="margin-top:0">✅ Approved Amount: ₹<span id="pdfAmt"></span> Lakhs</h3>
+            <p><b>Program:</b> <span id="pdfProg"></span></p>
+            <p><b>Tenure:</b> <span id="pdfTenure"></span> Months</p>
+        </div>
+        <p><i>*This is a system generated estimate based on basic parameters. Final approval subject to credit verification.</i></p>
     </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  // YOUR SPECIFIC KEYS
+  // --- CONFIG ---
   const firebaseConfig = {
     apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
     authDomain: "credir-engine-new.firebaseapp.com",
@@ -92,82 +174,150 @@
 
   if(!sessionStorage.getItem('currentUser')) window.location.href="index.html";
   document.getElementById('btnLogout').onclick = () => { sessionStorage.clear(); window.location.href="index.html"; };
-  
-  window.toggle = (id) => { const el=document.getElementById(id); el.style.display=(el.style.display==='block')?'none':'block'; };
 
-  // FETCH ACTIVE POLICIES
+  // --- UI UTILS ---
+  window.toggle = (id) => { const el=document.getElementById(id); el.style.display=(el.style.display==='block')?'none':'block'; };
+  window.togVis = (s,t) => { document.getElementById(t).style.display=(document.getElementById(s).value==='Yes')?'block':'none'; };
+  window.togBank = (el) => { el.classList.toggle('selected'); };
+
+  // --- FINANCIAL FORMULA (PV) ---
+  function calculateLoanPV(ratePerMonth, tenureMonths, monthlyCapacity) {
+    if(ratePerMonth <= 0) return 0;
+    // PV = Pmt * (1 - (1 + r)^-n) / r
+    return monthlyCapacity * (1 - Math.pow(1 + ratePerMonth, -tenureMonths)) / ratePerMonth;
+  }
+
+  // --- FETCH DATA ---
   let activePolicies = [];
   (async function() {
       try {
         const q = query(collection(db, "policies"), where("isActive", "==", true));
         const snap = await getDocs(q);
         snap.forEach(d => activePolicies.push(d.data()));
-        document.getElementById('statusBadge').innerText = `${activePolicies.length} Banks Connected (Cloud)`;
-      } catch(e) { console.error(e); }
+        document.getElementById('statusBadge').innerText = `${activePolicies.length} Banks Connected`;
+      } catch(e) { console.error(e); document.getElementById('statusBadge').innerText = "Offline"; }
   })();
 
+  // --- MAIN LOGIC ENGINE ---
   document.getElementById('btnCheck').onclick = () => {
-    if(activePolicies.length === 0) { alert("No active policies in cloud!"); return; }
-    
+    if(activePolicies.length === 0) { alert("No Policies found in Cloud."); return; }
+
+    // 1. GATHER INPUTS
     const d = {
-        name: document.getElementById('custName').value,
-        vintage: parseFloat(document.getElementById('vintage').value)||0,
+        name: document.getElementById('custName').value || 'Customer',
+        sector: document.getElementById('bizSector').value,
         turnover: parseFloat(document.getElementById('turnover').value)||0,
-        gst: parseFloat(document.getElementById('gstTurnover').value)||0,
         abb: parseFloat(document.getElementById('abb').value)||0,
-        cibil: parseFloat(document.getElementById('cibil').value)||0,
-        age: parseFloat(document.getElementById('age').value)||0,
-        emi: parseFloat(document.getElementById('existingEmi').value)||0,
-        closing: parseFloat(document.getElementById('closingEmi').value)||0,
-        activeLoans: parseFloat(document.getElementById('activeLoans').value)||0
-    };
-    const netObs = Math.max(0, d.emi - d.closing);
-    const resArea = document.getElementById('resultsArea'); resArea.innerHTML = "";
-
-    activePolicies.forEach(p => {
-        let reasons = [], offers = [];
-        if(d.cibil < p.cibilMin) reasons.push(`CIBIL Low`);
-        if(d.vintage < p.vintage) reasons.push(`Vintage Low`);
-        if(d.turnover < p.turnoverMin) reasons.push(`Turnover Low`);
         
-        // Logic
-        if(reasons.length === 0) {
-            let adminFOIR = 0.60; 
-            if(p.programs) {
-                p.programs.forEach(prog => {
-                    let base = 0;
-                    if(prog.type.includes('Turnover')) base = d.turnover;
-                    if(prog.type.includes('GST')) base = d.gst;
-                    if(prog.type.includes('Banking')) base = (d.abb * 12)/100000;
+        cibil: parseFloat(document.getElementById('cibil').value)||0,
+        activeLoans: parseFloat(document.getElementById('activeLoans').value)||0,
+        unsecLoans: parseFloat(document.getElementById('unsecLoans').value)||0,
+        enquiries: parseFloat(document.getElementById('enquiries').value)||0,
+        vintage: parseFloat(document.getElementById('vintage').value)||0,
+        age: parseFloat(document.getElementById('age').value)||0,
+        
+        // Obligations
+        currentEmi: parseFloat(document.getElementById('currentEmi').value)||0,
+        reducedEmi: parseFloat(document.getElementById('reducedEmi').value)||0,
 
-                    if(base > 0) {
-                        let profit = (base * 100000 * 0.10) / 12;
-                        let maxEMI = profit * adminFOIR;
-                        let loan = (maxEMI - netObs) / 2500;
-                        let final = Math.min(loan, prog.maxLoan);
-                        if(final >= prog.minLoan) offers.push({type: prog.type, amt: final.toFixed(2)});
-                    }
-                });
-            }
-            if(offers.length===0) reasons.push("High Debt / No Offer");
+        // Statuses
+        gstStatus: document.getElementById('gstStatus').value,
+        itrStatus: document.getElementById('itrStatus').value,
+        coAppStatus: document.getElementById('coAppStatus').value,
+        houseStatus: document.getElementById('houseStatus').value
+    };
+
+    // 2. CALCULATE FINANCIALS (NET INCOME)
+    let margin = 0.11; // Default Service
+    if(d.sector === 'Trading') margin = 0.07;
+    if(d.sector === 'Manufacturing') margin = 0.09;
+
+    let monthlyProfit = (d.turnover * 100000 * margin) / 12; // Turnover to Rupees
+    let netObligation = Math.max(0, d.currentEmi - d.reducedEmi);
+    let disposableIncome = Math.max(0, monthlyProfit - netObligation);
+
+    const resArea = document.getElementById('resultsArea'); 
+    resArea.innerHTML = "";
+
+    // 3. LOOP THROUGH EVERY POLICY
+    activePolicies.forEach(p => {
+        let reasons = [];
+        let offers = [];
+
+        // --- STEP A: PARAMETER GATEKEEPER (REJECTION LOGIC) ---
+        // If any of these fail, we STOP for this bank.
+        
+        if(d.cibil < p.cibilMin) reasons.push(`CIBIL Low (${d.cibil} < ${p.cibilMin})`);
+        if(d.vintage < p.vintage) reasons.push(`Vintage Low (${d.vintage} < ${p.vintage})`);
+        if(d.turnover < p.turnoverMin) reasons.push(`Turnover Low (${d.turnover} < ${p.turnoverMin})`);
+        if(d.activeLoans > p.activeMax) reasons.push(`Excess Active Loans (${d.activeLoans})`);
+        if(d.enquiries > p.enq6m) reasons.push(`Excess Enquiries (${d.enquiries})`);
+        if(d.age < p.ageMin || d.age > p.ageMax) reasons.push(`Age Mismatch`);
+
+        // Hard Stops
+        if(p.gstRequired === 'Yes' && d.gstStatus === 'No') reasons.push("GST Required");
+        if(p.itrRequired === 'Yes' && d.itrStatus === 'No') reasons.push("ITR Required");
+        if(p.coAppRequired === 'Yes' && d.coAppStatus === 'No') reasons.push("Co-App Required");
+        if(p.houseRequired === 'Need' && d.houseStatus === 'No') reasons.push("Own House Required");
+
+        // --- STEP B: FINANCIAL FORMULAS (ONLY IF PASSED GATEKEEPER) ---
+        if(reasons.length === 0 && p.programs) {
+            
+            // Get ROI and Tenure from Policy
+            let annualRoi = p.roiMin || 18; 
+            let monthlyRate = (annualRoi / 100) / 12;
+            let tenure = p.tenureMax || 36;
+
+            p.programs.forEach(prog => {
+                let loanAmt = 0;
+
+                // 1. ABB PROGRAM (Using PV Formula on ABB Balance)
+                // Assuming ABB is net capacity for EMI
+                if(prog.type.includes('Banking') || prog.type.includes('ABB')) {
+                    loanAmt = calculateLoanPV(monthlyRate, tenure, d.abb); 
+                }
+
+                // 2. DSCR / TURNOVER PROGRAM (Using PV Formula on Net Disposable Income)
+                else if(prog.type.includes('Turnover') || prog.type.includes('GST')) {
+                    loanAmt = calculateLoanPV(monthlyRate, tenure, disposableIncome);
+                }
+
+                // Convert to Lakhs & Apply Limits
+                let finalLakhs = loanAmt / 100000;
+                let cap = Math.min(p.loanMax, prog.maxLoan || 999);
+                finalLakhs = Math.min(finalLakhs, cap);
+
+                // Add to offers if > Min Loan
+                if(finalLakhs >= p.loanMin && finalLakhs > 0) {
+                    offers.push({ type: prog.type, amt: finalLakhs.toFixed(2), tenure: tenure });
+                }
+            });
+
+            if(offers.length === 0) reasons.push("Eligibility Zero (Low Income/ABB)");
         }
 
+        // --- STEP C: DISPLAY RESULT ---
         let html = `<div class="bank-result-card ${offers.length>0?'status-eligible':'status-rejected'}">
-        <div class="bank-result-header"><span>${offers.length>0?'✅':'❌'} ${p.bankName}</span> 
-        ${offers.length>0 ? `<button class="pdf-btn" onclick="window.printPDF('${p.bankName}','${offers[0].amt}','${offers[0].type}')">PDF</button>`:''}</div>
-        <div class="bank-result-body">${offers.length>0 ? offers[0].type+': ₹'+offers[0].amt+'L' : reasons.join(', ')}</div></div>`;
+            <div class="bank-result-header">
+                <span>${offers.length>0?'✅':'❌'} ${p.bankName}</span>
+                ${offers.length>0 ? `<button class="pdf-btn" onclick="window.printPDF('${p.bankName}','${offers[0].amt}','${offers[0].type}','${offers[0].tenure}')">📄 PDF</button>`:''}
+            </div>
+            <div class="bank-result-body">`;
+        
+        if(offers.length > 0) {
+            offers.forEach(o => {
+                html += `<div class="offer-row"><span><b>${o.type}</b></span> <span>₹${o.amt} Lakhs</span></div>`;
+            });
+        } else {
+            // Show the exact rejection reasons
+            html += `<div style="color:#c62828; font-size:13px"><b>Declined:</b> ${reasons.join(', ')}</div>`;
+        }
+        html += `</div></div>`;
         resArea.insertAdjacentHTML('beforeend', html);
     });
   };
 
-  window.printPDF = (bank, amt, prog) => {
-    document.getElementById('pdfBank').innerText = bank;
-    document.getElementById('pdfCust').innerText = document.getElementById('custName').value;
-    document.getElementById('pdfAmt').innerText = amt;
-    document.getElementById('pdfProg').innerText = prog;
-    let el = document.getElementById('letterTemplate'); el.style.display='block';
-    html2pdf().from(el).save('Sanction.pdf').then(()=>el.style.display='none');
-  };
-</script>
-</body>
-</html>
+  // --- PDF GENERATOR ---
+  window.printPDF = (bank, amt, prog, tenure) => {
+    document.getElementById('pdfDate').innerText = new Date().toLocaleDateString();
+    document.getElementById('pdfBank').innerText
