@@ -3,168 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Loan Eligibility Engine</title>
+    <title>Credit Engine - Business Loans</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* --- GENERAL STYLES --- */
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
+        /* --- CSS STYLES --- */
+        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; }
         
-        /* Form Sections */
-        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        /* Sidebar */
+        .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .logo { font-size: 24px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .nav-item { padding: 12px; margin-bottom: 10px; cursor: pointer; border-radius: 4px; }
+        .nav-item.active { background-color: #3949ab; }
+        .logout { margin-top: auto; background-color: #c62828; padding: 12px; text-align: center; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* Main Content */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         
-        /* Action Buttons */
-        .action-btn { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 5px; margin-top: 20px; }
-        .action-btn:hover { background-color: #218838; }
+        /* Accordion Sections */
+        .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow: hidden; }
+        .accordion-header { padding: 20px; font-weight: bold; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #eee; }
+        .accordion-header:hover { background-color: #f9f9f9; }
+        .accordion-body { padding: 20px; display: none; background-color: #fff; }
+        .accordion-body.open { display: block; } 
 
-        /* --- RESULT STYLES (From your Screenshot) --- */
-        #resArea { margin-top: 30px; }
-        .bank-result-body { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 5px; }
-        .offer-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .pdf-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; font-size: 12px; float: right; }
+        /* Form Grids */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        
+        /* Button & Results */
+        .submit-btn { width: 100%; padding: 15px; background-color: #1a237e; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+        .submit-btn:hover { background-color: #0d1b60; }
 
-        /* --- PDF MODAL (The Missing Part) --- */
-        #pdfModal {
-            display: none; /* Hidden by default */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5); /* Black background with opacity */
-            z-index: 1000;
-        }
-        .pdf-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 20px;
-            width: 80%;
-            max-width: 600px;
-            border-radius: 8px;
-            text-align: center;
-            border: 5px double #333;
-        }
-        .certificate-title { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 20px; text-decoration: underline; }
-        .close-btn { background: #dc3545; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 20px; }
-        .print-btn { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 20px; margin-left: 10px; }
+        #resultsArea { margin-top: 30px; }
+        .bank-card { background: white; border-left: 5px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .bank-card.approved { border-left-color: #2e7d32; }
+        .bank-card.declined { border-left-color: #c62828; }
+        .bank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; }
+        .tag-success { background: #2e7d32; }
+        .tag-danger { background: #c62828; }
+        .offer-details { display: flex; justify-content: space-between; background: #f1f8e9; padding: 10px; border-radius: 4px; margin-top: 5px; }
+        .pdf-btn { background: #1976d2; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+        /* PDF Modal */
+        #pdfModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .pdf-box { background: white; width: 600px; padding: 30px; border-radius: 8px; text-align: center; position: relative; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Business Loan Eligibility Checker</h2>
-
-    <div class="section">
-        <h3>Business Details</h3>
-        <label>Annual Turnover (₹ Lakhs)</label>
-        <input type="number" id="turnover" placeholder="e.g. 150">
-        
-        <label>Business Vintage (Years)</label>
-        <input type="number" id="vintage" placeholder="e.g. 3">
+    <div class="sidebar">
+        <div class="logo">🚀 Credit Engine</div>
+        <div class="nav-item active">📄 New Application</div>
+        <div class="nav-item">📊 Dashboard</div>
+        <div class="logout">🚪 Logout</div>
     </div>
 
-    <button class="action-btn" onclick="runEligibility()">Check Eligibility</button>
-
-    <div id="resArea"></div>
-</div>
-
-<div id="pdfModal">
-    <div class="pdf-content" id="printableArea">
-        <div class="certificate-title">PROVISIONAL ELIGIBILITY CERTIFICATE</div>
-        <p><strong>Date:</strong> <span id="pdfDate"></span></p>
-        <hr>
-        <p>This certifies that the applicant is eligible for a business loan from:</p>
-        <h2 id="pdfBank" style="color:#28a745;"></h2>
+    <div class="main-content">
         
-        <p><strong>Approved Amount:</strong> ₹<span id="pdfAmt"></span> Lakhs</p>
-        <p><strong>Program Type:</strong> <span id="pdfProg"></span></p>
-        <p><strong>Tenure:</strong> <span id="pdfTenure"></span> Months</p>
-        <hr>
-        <p style="font-size: 12px; color: grey;">*Final approval is subject to document verification.</p>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleSection('sec1')">
+                1. Business Details <span>▼</span>
+            </div>
+            <div id="sec1" class="accordion-body open"> 
+                <div class="form-grid">
+                    <div class="form-group"><label>Business Name</label><input type="text" id="bizName" placeholder="Enter Company Name"></div>
+                    <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" placeholder="e.g. 3"></div>
+                    <div class="form-group"><label>Annual Turnover (₹ Lakhs)</label><input type="number" id="turnover" placeholder="e.g. 150"></div>
+                    <div class="form-group"><label>Entity Type</label>
+                        <select id="entityType"><option value="Proprietorship">Proprietorship</option><option value="Partnership">Partnership</option><option value="Pvt Ltd">Pvt Ltd</option></select>
+                    </div>
+                    <div class="form-group"><label>Business Sector</label>
+                        <select id="sector"><option value="Trading">Trading</option><option value="Manufacturing">Manufacturing</option><option value="Service">Service</option></select>
+                    </div>
+                    <div class="form-group"><label>Premises Type</label>
+                        <select id="premises"><option value="Owned">Owned</option><option value="Rented">Rented</option></select>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <br>
-        <button class="close-btn" onclick="document.getElementById('pdfModal').style.display='none'">Close</button>
-        <button class="print-btn" onclick="window.print()">Print Certificate</button>
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleSection('sec2')">
+                2. Banking & Docs <span>▼</span>
+            </div>
+            <div id="sec2" class="accordion-body">
+                <div class="form-grid">
+                    <div class="form-group"><label>Average Bank Balance (ABB) ₹</label><input type="number" id="abb" placeholder="Last 12 months avg"></div>
+                    <div class="form-group"><label>Inward Cheque Returns (Last 6m)</label><input type="number" id="chequeReturns" value="0"></div>
+                    <div class="form-group"><label>GST Registered?</label><select id="gstStatus"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+                    <div class="form-group"><label>ITR Filing Status</label><select id="itrStatus"><option value="Audited">Audited</option><option value="Non-Audited">Non-Audited</option></select></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleSection('sec3')">
+                3. Credit Profile <span>▼</span>
+            </div>
+            <div id="sec3" class="accordion-body">
+                <div class="form-grid">
+                    <div class="form-group"><label>CIBIL Score (Applicant)</label><input type="number" id="cibil" placeholder="e.g. 750"></div>
+                    <div class="form-group"><label>Current Monthly EMIs (₹)</label><input type="number" id="currentEmi" value="0"></div>
+                    <div class="form-group"><label>Any DPD in last 6 months?</label><select id="dpdStatus"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                    <div class="form-group"><label>Total Existing Loans (₹ Lakhs)</label><input type="number" id="existingLoans" value="0"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleSection('sec4')">
+                4. Applicant <span>▼</span>
+            </div>
+            <div id="sec4" class="accordion-body">
+                <div class="form-grid">
+                    <div class="form-group"><label>Applicant Age</label><input type="number" id="age" placeholder="e.g. 35"></div>
+                    <div class="form-group"><label>Residence Ownership</label><select id="residenceType"><option value="Owned">Owned</option><option value="Rented">Rented</option></select></div>
+                    <div class="form-group"><label>Marital Status</label><select id="marital"><option value="Married">Married</option><option value="Single">Single</option></select></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleSection('sec5')">
+                5. Loan Requirement <span>▼</span>
+            </div>
+            <div id="sec5" class="accordion-body">
+                <div class="form-grid">
+                    <div class="form-group"><label>Required Loan Amount (₹ Lakhs)</label><input type="number" id="reqAmount" placeholder="e.g. 50"></div>
+                    <div class="form-group"><label>Purpose of Loan</label>
+                        <select id="purpose"><option value="Working Capital">Working Capital</option><option value="Expansion">Business Expansion</option><option value="Purchase Assets">Purchase Assets</option></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="submit-btn" onclick="checkEligibility()">⚡ Check Eligibility (All Banks)</button>
+
+        <div id="resultsArea"></div>
+
     </div>
-</div>
 
-<script>
-    // --- 1. SAMPLE DATA (Simulating your calculation engine) ---
-    // In your real code, this data comes from your logic. 
-    function runEligibility() {
-        const resArea = document.getElementById('resArea');
-        resArea.innerHTML = "<h3>Calculating Offers...</h3>";
+    <div id="pdfModal">
+        <div class="pdf-box">
+            <h2 style="color:#1a237e;">Eligibility Certificate</h2>
+            <hr>
+            <p><strong>Bank:</strong> <span id="pdfBank"></span></p>
+            <p><strong>Approved Amount:</strong> ₹<span id="pdfAmt"></span> Lakhs</p>
+            <p><strong>Program:</strong> <span id="pdfProg"></span></p>
+            <p><strong>Tenure:</strong> <span id="pdfTenure"></span> Months</p>
+            <br>
+            <button class="pdf-btn" style="background:#c62828;" onclick="document.getElementById('pdfModal').style.display='none'">Close</button>
+            <button class="pdf-btn" onclick="window.print()">Print / Save PDF</button>
+        </div>
+    </div>
 
-        // MOCK DATA: Simulating what your engine produces
-        const mockResults = [
-            {
-                bankName: "HDFC Bank",
-                offers: [
-                    { type: "Banking Surrogate", amt: "15.00", tenure: 36 },
-                    { type: "GST Surrogate", amt: "12.50", tenure: 48 }
-                ]
-            },
-            {
-                bankName: "Bajaj Finserv",
-                offers: [], // Empty offers (Rejected)
-                reasons: ["Turnover too low", "Vintage less than 3 years"]
+    <script>
+        // --- 1. ACCORDION LOGIC ---
+        function toggleSection(id) {
+            const section = document.getElementById(id);
+            if (section.style.display === 'block') {
+                section.style.display = 'none';
+            } else {
+                section.style.display = 'block';
             }
+        }
+
+        // --- 2. POLICY ENGINE ---
+        const bankPolicies = [
+            { bank: "HDFC Bank", minTurnover: 40, minVintage: 3, minCibil: 700, maxReturns: 1, prog: "Banking Surrogate", mult: 0.10, tenure: 48 },
+            { bank: "Bajaj Finserv", minTurnover: 20, minVintage: 2, minCibil: 680, maxReturns: 2, prog: "GST Surrogate", mult: 0.15, tenure: 36 },
+            { bank: "ICICI Bank", minTurnover: 100, minVintage: 3, minCibil: 725, maxReturns: 0, prog: "Eligibility Program", mult: 0.12, tenure: 60 }
         ];
 
-        // Clear area
-        resArea.innerHTML = "";
+        // --- 3. CHECK ELIGIBILITY ---
+        function checkEligibility() {
+            // Inputs
+            const turnover = parseFloat(document.getElementById('turnover').value) || 0;
+            const vintage = parseFloat(document.getElementById('vintage').value) || 0;
+            const cibil = parseFloat(document.getElementById('cibil').value) || 0;
+            const returns = parseFloat(document.getElementById('chequeReturns').value) || 0;
+            const reqAmount = parseFloat(document.getElementById('reqAmount').value) || 0;
 
-        // --- 2. THE LOGIC FROM YOUR SCREENSHOT ---
-        mockResults.forEach(p => {
-            let offers = p.offers || [];
-            let reasons = p.reasons || [];
+            const resultsArea = document.getElementById('resultsArea');
+            resultsArea.innerHTML = '<h3>Calculating Offers...</h3>';
             
-            // Header for the Bank Card
-            let html = `
-            <div class="bank-result-body">
-                <div style="background: #eee; padding: 10px; font-weight: bold; display: flex; justify-content: space-between;">
-                    <span>${offers.length > 0 ? '✅' : '❌'} ${p.bankName}</span>
+            let htmlOutput = '';
+
+            bankPolicies.forEach(policy => {
+                let isEligible = true;
+                let reasons = [];
+
+                // Rules Check
+                if (turnover < policy.minTurnover) { isEligible = false; reasons.push(`Turnover < ${policy.minTurnover}L`); }
+                if (vintage < policy.minVintage) { isEligible = false; reasons.push(`Vintage < ${policy.minVintage} Yrs`); }
+                if (cibil < policy.minCibil) { isEligible = false; reasons.push(`CIBIL < ${policy.minCibil}`); }
+                if (returns > policy.maxReturns) { isEligible = false; reasons.push(`Cheque Returns > ${policy.maxReturns}`); }
+
+                if (isEligible) {
+                    // Calculation
+                    let offerAmt = (turnover * policy.mult).toFixed(2);
                     
-                    ${offers.length > 0 ? 
-                        `<button class="pdf-btn" onclick="window.printPDF('${p.bankName}', '${offers[0].amt}', '${offers[0].type}', '${offers[0].tenure}')">Download PDF</button>` 
-                        : ''}
-                </div>
-                <div style="padding: 10px;">`;
+                    // Logic: If user asked for LESS than offer, show what they asked. If more, show max offer.
+                    if(reqAmount > 0 && reqAmount < offerAmt) {
+                        offerAmt = reqAmount + " (Qualified for " + offerAmt + ")";
+                    }
 
-            // Offers Logic
-            if (offers.length > 0) {
-                offers.forEach(o => {
-                    html += `<div class="offer-row">
-                                <span><b>${o.type}</b></span> 
-                                <span>₹${o.amt} Lakhs (${o.tenure} Months)</span>
-                             </div>`;
-                });
-            } else {
-                // Rejection Logic
-                html += `<div style="color:#c62828; font-size:13px;">
-                            <b>Declined:</b> ${reasons.join(', ')}
-                         </div>`;
-            }
+                    htmlOutput += `
+                    <div class="bank-card approved">
+                        <div class="bank-header">
+                            <span style="font-size:18px; font-weight:bold;">✅ ${policy.bank}</span>
+                            <span class="tag tag-success">Approved</span>
+                        </div>
+                        <div class="offer-details">
+                            <div>
+                                <strong>Amount:</strong> ₹${offerAmt} Lakhs<br>
+                                <small>${policy.prog}</small>
+                            </div>
+                            <div style="text-align:right;">
+                                <strong>Tenure:</strong> ${policy.tenure} Months<br>
+                                <button class="pdf-btn" onclick="openPDF('${policy.bank}', '${parseFloat(offerAmt)}', '${policy.prog}', '${policy.tenure}')">📄 PDF</button>
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    htmlOutput += `
+                    <div class="bank-card declined">
+                        <div class="bank-header">
+                            <span style="font-size:18px; font-weight:bold;">❌ ${policy.bank}</span>
+                            <span class="tag tag-danger">Declined</span>
+                        </div>
+                        <div style="font-size: 13px; color: #c62828;">Reason: ${reasons.join(', ')}</div>
+                    </div>`;
+                }
+            });
 
-            html += `</div></div>`; // Close inner div and main card
-            resArea.insertAdjacentHTML('beforeend', html);
-        });
-    }
+            resultsArea.innerHTML = htmlOutput;
+        }
 
-    // --- 3. PDF GENERATOR (FIXED) ---
-    window.printPDF = (bank, amt, prog, tenure) => {
-        // A. Fill Data into the Modal
-        document.getElementById('pdfDate').innerText = new Date().toLocaleDateString();
-        
-        // FIX: Assigning the value to innerText (This was missing in your screenshot)
-        document.getElementById('pdfBank').innerText = bank; 
-        document.getElementById('pdfAmt').innerText = amt;
-        document.getElementById('pdfProg').innerText = prog;
-        document.getElementById('pdfTenure').innerText = tenure;
-
-        // B. Show the Modal
-        document.getElementById('pdfModal').style.display = 'block';
-    };
-
-</script>
+        // --- 4. PDF LOGIC ---
+        function openPDF(bank, amt, prog, tenure) {
+            document.getElementById('pdfBank').innerText = bank;
+            document.getElementById('pdfAmt').innerText = amt;
+            document.getElementById('pdfProg').innerText = prog;
+            document.getElementById('pdfTenure').innerText = tenure;
+            document.getElementById('pdfModal').style.display = 'flex';
+        }
+    </script>
 
 </body>
 </html>
