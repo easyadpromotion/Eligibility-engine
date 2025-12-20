@@ -3,75 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Credit Engine & Dashboard</title>
+    <title>Credit Engine Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* --- CORE STYLES --- */
-        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
+        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar */
-        .sidebar { width: 260px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
-        .logo { font-size: 22px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
-        .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        /* SIDEBAR (Left) */
+        .sidebar { width: 240px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0; }
+        .logo { font-size: 20px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; font-size: 14px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
         .logout { margin-top: auto; background-color: #d32f2f; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        /* Main Content */
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        /* MAIN LAYOUT (Split Center & Right) */
+        .main-wrapper { flex: 1; display: flex; overflow: hidden; }
         
-        /* VIEWS (Toggle between App Form and Dashboard) */
-        .view-section { display: none; } 
-        .view-section.active-view { display: block; } 
-
-        /* --- DASHBOARD STYLES --- */
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-bottom: 4px solid #1a237e; }
-        .stat-number { font-size: 28px; font-weight: bold; color: #333; }
-        .stat-label { font-size: 13px; color: #666; text-transform: uppercase; }
-
-        .policy-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .policy-table th { background: #1a237e; color: white; padding: 15px; text-align: left; font-size: 14px; }
-        .policy-table td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 14px; color: #333; }
-        .policy-table tr:hover { background-color: #f5f5f5; }
+        /* CENTER: Form Area */
+        .form-area { flex: 1; padding: 30px; overflow-y: auto; }
+        
+        /* RIGHT: Policy Panel (The Requested Feature) */
+        .right-panel { width: 300px; background: white; border-left: 1px solid #ddd; padding: 20px; overflow-y: auto; box-shadow: -2px 0 10px rgba(0,0,0,0.05); display: block; }
+        .panel-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 15px; border-bottom: 2px solid #1a237e; padding-bottom: 5px; }
+        
+        /* Policy Mini Cards */
+        .policy-mini-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 13px; }
+        .policy-mini-card strong { color: #1a237e; display: block; margin-bottom: 5px; font-size: 14px; }
+        .mini-stat { display: flex; justify-content: space-between; margin-bottom: 3px; color: #555; }
 
         /* --- FORM STYLES --- */
         .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
-        .accordion-header { padding: 18px 25px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .accordion-body { padding: 25px; display: none; border-top: 1px solid #eee; }
+        .accordion-header { padding: 15px 20px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .accordion-body { padding: 20px; display: none; border-top: 1px solid #eee; }
         .accordion-body.open { display: block; }
         
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .form-group { margin-bottom: 5px; }
-        label { display: block; margin-bottom: 6px; font-size: 13px; color: #555; font-weight: 500; }
-        input, select { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; box-sizing: border-box; }
+        label { display: block; margin-bottom: 6px; font-size: 12px; color: #555; font-weight: 500; }
+        input, select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; box-sizing: border-box; }
         
         .hidden-field { display: none; }
         .add-field-btn { background: none; border: 1px dashed #1a237e; color: #1a237e; padding: 8px; width: 100%; margin-top: 15px; cursor: pointer; border-radius: 4px; font-size: 13px; }
-        .bank-options { display: flex; gap: 10px; flex-wrap: wrap; }
-        .bank-opt { padding: 8px 15px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 13px; user-select: none; }
-        .bank-opt.selected { background-color: #1a237e; color: white; border-color: #1a237e; }
-
-        .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
+        
+        .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
         .submit-btn:hover { background-color: #1b5e20; }
 
-        /* --- RESULTS & PDF BUTTONS --- */
-        #resultsArea { margin-top: 40px; }
-        .result-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 6px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        /* --- RESULTS & PDF --- */
+        #resultsArea { margin-top: 30px; }
+        .result-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 6px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .result-card.approved { border-left-color: #2e7d32; }
         .result-card.declined { border-left-color: #d32f2f; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .bank-logo { font-size: 18px; font-weight: 700; color: #333; }
         
-        .program-row { display: flex; justify-content: space-between; background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 8px; align-items: center; }
-        .pdf-download-btn { background-color: #0288d1; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 10px; }
-        .pdf-download-btn:hover { background-color: #01579b; }
+        .program-row { display: flex; justify-content: space-between; background: #f9f9f9; padding: 10px; border-radius: 6px; margin-bottom: 8px; align-items: center; font-size: 13px; }
+        .pdf-download-btn { background-color: #0288d1; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-left: 10px; }
 
-        /* --- PDF MODAL OVERLAY --- */
+        /* PDF MODAL */
         #pdfModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-        .pdf-paper { background: white; width: 600px; padding: 40px; border-radius: 2px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); border: 10px solid #eee; }
+        .pdf-paper { background: white; width: 600px; padding: 40px; border-radius: 2px; text-align: center; border: 10px solid #eee; }
         
-        /* Print Specifics: Hide everything else when printing */
         @media print {
             body * { visibility: hidden; }
             #pdfModal, #pdfModal * { visibility: visible; }
@@ -85,169 +75,114 @@
 
     <div class="sidebar">
         <div class="logo">🚀 Credit Engine</div>
-        <div class="nav-item active" onclick="switchView('appView', this)">📄 New Application</div>
-        <div class="nav-item" onclick="switchView('dashView', this)">📊 Dashboard</div>
+        <div class="nav-item active">📄 New Application</div>
+        <div class="nav-item">📊 Dashboard</div>
         <div class="logout">🚪 Logout</div>
     </div>
 
-    <div class="main-content">
+    <div class="main-wrapper">
         
-        <div id="appView" class="view-section active-view">
-            <h2 style="color:#333;">New Loan Application</h2>
+        <div class="form-area">
+            <h2 style="color:#333; margin-top:0;">New Loan Application</h2>
             
             <div class="accordion">
-                <div class="accordion-header" onclick="toggleSection('sec1')">Section 1: Business Details <span>▼</span></div>
+                <div class="accordion-header" onclick="toggleSection('sec1')">1. Business Details <span>▼</span></div>
                 <div id="sec1" class="accordion-body open">
                     <div class="form-grid">
-                        <div class="form-group"><label>Customer/Business Name</label><input type="text" id="bizName"></div>
-                        <div class="form-group"><label>Business Vintage (Years)</label><input type="number" id="vintage" placeholder="e.g. 5"></div>
+                        <div class="form-group"><label>Business Name</label><input type="text" id="bizName"></div>
+                        <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" placeholder="e.g. 5"></div>
                         <div class="form-group"><label>Annual Turnover (₹ Lakhs)</label><input type="number" id="turnover" placeholder="e.g. 100"></div>
-                        <div class="form-group"><label>Entity Type</label>
-                            <select id="entityType"><option>Proprietorship</option><option>Partnership</option><option>LLP</option><option>Pvt Ltd</option></select>
-                        </div>
-                        <div class="form-group"><label>Business Sector (Margin)</label>
+                        <div class="form-group"><label>Entity Type</label><select id="entityType"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
+                        <div class="form-group"><label>Business Sector</label>
                             <select id="sector">
                                 <option value="Trading">Trading (7% Margin)</option>
                                 <option value="Manufacturing">Manufacturing (9% Margin)</option>
                                 <option value="Service">Service (11% Margin)</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Premises Type</label>
-                            <select id="premises"><option>Owned</option><option>Rented</option><option>Leased</option></select>
-                        </div>
+                        <div class="form-group"><label>Premises Type</label><select id="premises"><option>Owned</option><option>Rented</option></select></div>
                     </div>
-                    <button class="add-field-btn" onclick="addCustomField('sec1')">+ Add Field</button>
                 </div>
             </div>
 
             <div class="accordion">
-                <div class="accordion-header" onclick="toggleSection('sec2')">Section 2: Banking & Docs <span>▼</span></div>
+                <div class="accordion-header" onclick="toggleSection('sec2')">2. Banking & Docs <span>▼</span></div>
                 <div id="sec2" class="accordion-body">
                     <div class="form-grid">
-                        <div class="form-group"><label>ABB (Average Bank Balance) ₹</label><input type="number" id="abb" placeholder="e.g. 50000"></div>
-                        <div class="form-group">
-                            <label>Bank Statements Available</label>
-                            <div class="bank-options">
-                                <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
-                                <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
-                                <div class="bank-opt" onclick="toggleBankOpt(this)">OD</div>
-                                <div class="bank-opt" onclick="toggleBankOpt(this)">CC</div>
-                            </div>
-                        </div>
-                        <div class="form-group"><label>GST Registered?</label>
-                            <select onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
-                        </div>
+                        <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" placeholder="e.g. 50000"></div>
+                        <div class="form-group"><label>GST Registered?</label><select onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="gstDetails"><label>GST Number</label><input type="text"></div>
-                        <div class="form-group"><label>ITR Filed?</label>
-                            <select onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
-                        </div>
-                        <div class="form-group hidden-field" id="itrDetails"><label>ITR Amount</label><input type="number"></div>
                     </div>
-                    <button class="add-field-btn" onclick="addCustomField('sec2')">+ Add Field</button>
                 </div>
             </div>
 
             <div class="accordion">
-                <div class="accordion-header" onclick="toggleSection('sec3')">Section 3: Credit Profile <span>▼</span></div>
+                <div class="accordion-header" onclick="toggleSection('sec3')">3. Credit Profile <span>▼</span></div>
                 <div id="sec3" class="accordion-body">
                     <div class="form-grid">
                         <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" placeholder="e.g. 750"></div>
-                        <div class="form-group"><label>No. of Active Loans</label><input type="number" id="activeLoans" value="0"></div>
-                        <div class="form-group"><label>Monthly EMI Obligation (₹)</label><input type="number" id="monthlyEmi" value="0"></div>
-                        <div class="form-group"><label>No. of Unsecured Loans</label><input type="number" id="unsecLoans" value="0"></div>
-                        <div class="form-group"><label>Loans Taken (Last 6m)</label><input type="number" id="loansTaken6m" value="0"></div>
-                        <div class="form-group"><label>Loans Closing (Next 6m)</label><input type="number" id="loansClosed6m" value="0"></div>
-                        <div class="form-group"><label>Reduced EMI (Next 6m) (₹)</label><input type="number" id="reducedEmi" value="0"></div>
-                        <div class="form-group"><label>No. of Enquiries (Last 3m)</label><input type="number" id="enquiries" value="0"></div>
+                        <div class="form-group"><label>Monthly Obligations (₹)</label><input type="number" id="monthlyEmi" value="0"></div>
+                        <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" value="0"></div>
+                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" value="0"></div>
                     </div>
-                    <button class="add-field-btn" onclick="addCustomField('sec3')">+ Add Field</button>
                 </div>
             </div>
 
             <div class="accordion">
-                <div class="accordion-header" onclick="toggleSection('sec4')">Section 4: Applicant Details <span>▼</span></div>
+                <div class="accordion-header" onclick="toggleSection('sec4')">4. Applicant Details <span>▼</span></div>
                 <div id="sec4" class="accordion-body">
                     <div class="form-grid">
                         <div class="form-group"><label>Applicant Age</label><input type="number" id="age"></div>
-                        <div class="form-group"><label>Gender</label><select><option>Male</option><option>Female</option></select></div>
-                        <div class="form-group"><label>Marital Status</label><select><option>Single</option><option>Married</option><option>Divorced</option></select></div>
-                        <div class="form-group"><label>Has Co-Applicant?</label>
-                            <select onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
-                        </div>
+                        <div class="form-group"><label>Has Co-Applicant?</label><select onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number"></div>
-                        <div class="form-group"><label>Own House?</label>
-                            <select onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
-                        </div>
-                        <div class="form-group hidden-field" id="houseField"><label>Own House Pincode</label><input type="number"></div>
+                        <div class="form-group"><label>Own House?</label><select onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div class="form-group hidden-field" id="houseField"><label>Pincode</label><input type="number"></div>
                     </div>
                 </div>
             </div>
 
             <div class="accordion">
-                <div class="accordion-header" onclick="toggleSection('sec5')">Section 5: Loan Requirement <span>▼</span></div>
+                <div class="accordion-header" onclick="toggleSection('sec5')">5. Loan Requirement <span>▼</span></div>
                 <div id="sec5" class="accordion-body">
                     <div class="form-grid">
-                        <div class="form-group"><label>Required Loan Amount (Lakhs)</label><input type="number" id="reqAmount"></div>
-                        <div class="form-group"><label>Purpose of Loan</label>
-                            <select><option>Working Capital</option><option>Business Expansion</option><option>Asset Purchase</option></select>
-                        </div>
+                        <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount"></div>
+                        <div class="form-group"><label>Purpose</label><select><option>Working Capital</option><option>Expansion</option></select></div>
                     </div>
                 </div>
             </div>
 
-            <button class="submit-btn" onclick="runEligibilityEngine()">⚡ Check Eligibility & Calculate Limits</button>
+            <button class="submit-btn" onclick="runEligibilityEngine()">⚡ Check Eligibility</button>
             <div id="resultsArea"></div>
         </div>
 
-        <div id="dashView" class="view-section">
-            <h2 style="color:#333;">DSA Dashboard</h2>
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-number" id="totalBanks">0</div><div class="stat-label">Active Policies</div></div>
-                <div class="stat-card"><div class="stat-number" id="avgRoi">0%</div><div class="stat-label">Avg ROI</div></div>
-                <div class="stat-card"><div class="stat-number">48m</div><div class="stat-label">Max Tenure</div></div>
-            </div>
-            <h3>Saved Bank Policies</h3>
-            <table class="policy-table">
-                <thead><tr><th>Bank Name</th><th>Min Vintage</th><th>Min CIBIL</th><th>Max Unsecured</th><th>ROI</th><th>Max Tenure</th></tr></thead>
-                <tbody id="policyTableBody"></tbody>
-            </table>
+        <div class="right-panel">
+            <div class="panel-title">📋 Saved Policies</div>
+            <div id="policySideList">
+                </div>
         </div>
 
     </div>
 
     <div id="pdfModal">
         <div class="pdf-paper">
-            <h2 style="color:#1a237e; text-decoration:underline;">PROVISIONAL OFFER LETTER</h2>
+            <h2 style="color:#1a237e; text-decoration:underline;">PROVISIONAL OFFER</h2>
             <p><strong>Date:</strong> <span id="certDate"></span></p>
-            <br>
-            <p style="text-align:left;">To,</p>
-            <p style="text-align:left; font-weight:bold; font-size:18px;" id="certClientName"></p>
+            <p><strong>Customer:</strong> <span id="certClientName"></span></p>
             <hr>
-            <p>Congratulations! Based on your business profile, you are eligible for the following loan offer:</p>
-            
-            <h1 id="certBank" style="color:#2e7d32; font-size:32px; margin:10px 0;"></h1>
-            
-            <table style="width:100%; margin:20px 0; text-align:left;">
-                <tr><td><strong>Program Type:</strong></td><td id="certProg"></td></tr>
-                <tr><td><strong>Approved Amount:</strong></td><td id="certAmt" style="font-weight:bold;"></td></tr>
-                <tr><td><strong>Tenure:</strong></td><td id="certTenure"></td></tr>
-                <tr><td><strong>Interest Rate:</strong></td><td id="certRoi"></td></tr>
-            </table>
-
-            <p style="font-size:11px; color:grey; margin-top:30px;">
-                *This is a computer-generated provisional offer. Final approval is subject to document verification and credit policy of the respective bank.
-            </p>
-
+            <h1 id="certBank" style="color:#2e7d32; font-size:28px;"></h1>
+            <p><strong>Program:</strong> <span id="certProg"></span></p>
+            <p><strong>Approved Amount:</strong> <span id="certAmt" style="font-weight:bold; font-size:20px;"></span></p>
+            <p><strong>Tenure:</strong> <span id="certTenure"></span> | <strong>ROI:</strong> <span id="certRoi"></span></p>
             <br>
             <div class="no-print">
                 <button class="submit-btn" style="width:auto; background:#d32f2f;" onclick="document.getElementById('pdfModal').style.display='none'">Close</button>
-                <button class="submit-btn" style="width:auto; background:#0288d1;" onclick="window.print()">Print / Save PDF</button>
+                <button class="submit-btn" style="width:auto; background:#0288d1;" onclick="window.print()">Print PDF</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. SAVED POLICIES ---
+        // --- 1. SAVED POLICIES DATA ---
         const bankPolicies = [
             { bank: "HDFC Bank", minVintage: 3, minCibil: 700, maxUnsecured: 2, maxEnquiries: 4, roi: 18, maxTenure: 36 },
             { bank: "Bajaj Finserv", minVintage: 2, minCibil: 680, maxUnsecured: 4, maxEnquiries: 6, roi: 20, maxTenure: 30 },
@@ -255,53 +190,38 @@
             { bank: "Axis Bank", minVintage: 3, minCibil: 710, maxUnsecured: 2, maxEnquiries: 3, roi: 17.5, maxTenure: 60 }
         ];
 
-        // --- 2. VIEW & UI LOGIC ---
-        function switchView(viewId, navItem) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
-            document.getElementById(viewId).classList.add('active-view');
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            navItem.classList.add('active');
-            if(viewId === 'dashView') loadDashboard();
-        }
+        // --- 2. INITIALIZE RIGHT SIDE PANEL ---
+        window.onload = function() {
+            const list = document.getElementById('policySideList');
+            let html = "";
+            bankPolicies.forEach(p => {
+                html += `
+                <div class="policy-mini-card">
+                    <strong>${p.bank}</strong>
+                    <div class="mini-stat"><span>Min Vintage:</span> <span>${p.minVintage} Yrs</span></div>
+                    <div class="mini-stat"><span>Min CIBIL:</span> <span>${p.minCibil}</span></div>
+                    <div class="mini-stat"><span>ROI:</span> <span>${p.roi}%</span></div>
+                    <div class="mini-stat"><span>Tenure:</span> <span>${p.maxTenure}m</span></div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        };
 
+        // --- 3. UI FUNCTIONS ---
         function toggleSection(id) {
             const el = document.getElementById(id);
             el.style.display = (el.style.display === 'block') ? 'none' : 'block';
         }
-
-        function toggleField(fieldId, show) {
-            document.getElementById(fieldId).style.display = show ? 'block' : 'none';
+        function toggleField(id, show) {
+            document.getElementById(id).style.display = show ? 'block' : 'none';
         }
 
-        function toggleBankOpt(el) { el.classList.toggle('selected'); }
-        
-        function addCustomField(sectionId) {
-            const section = document.querySelector(`#${sectionId} .form-grid`);
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            div.innerHTML = `<label>New Field</label><input type="text">`;
-            section.appendChild(div);
-        }
-
-        function loadDashboard() {
-            const tbody = document.getElementById('policyTableBody');
-            tbody.innerHTML = "";
-            let totalRoi = 0;
-            bankPolicies.forEach(p => {
-                totalRoi += p.roi;
-                tbody.insertAdjacentHTML('beforeend', `<tr><td><b>${p.bank}</b></td><td>${p.minVintage} Yrs</td><td>${p.minCibil}+</td><td>Max ${p.maxUnsecured}</td><td>${p.roi}%</td><td>${p.maxTenure}m</td></tr>`);
-            });
-            document.getElementById('totalBanks').innerText = bankPolicies.length;
-            document.getElementById('avgRoi').innerText = (totalRoi/bankPolicies.length).toFixed(1) + "%";
-        }
-
-        // --- 3. CALCULATION HELPER (PV Formula) ---
+        // --- 4. CALCULATION LOGIC (PV) ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
         }
 
-        // --- 4. ELIGIBILITY ENGINE ---
         function runEligibilityEngine() {
             // Inputs
             const vintage = parseFloat(document.getElementById('vintage').value) || 0;
@@ -312,49 +232,47 @@
             const unsecLoans = parseFloat(document.getElementById('unsecLoans').value) || 0;
             const enquiries = parseFloat(document.getElementById('enquiries').value) || 0;
             const currentEMI = parseFloat(document.getElementById('monthlyEmi').value) || 0;
-            const reducedEMI = parseFloat(document.getElementById('reducedEmi').value) || 0;
+            
+            // Net Income Logic
+            let margin = (sector.includes('Manufacturing')) ? 0.09 : (sector.includes('Service') ? 0.11 : 0.07);
+            const netIncome = Math.max(0, (turnover/12 * margin) - currentEMI);
 
-            // Income Calc
-            let margin = (sector === 'Manufacturing') ? 0.09 : (sector === 'Service' ? 0.11 : 0.07);
-            const netIncome = Math.max(0, (turnover/12 * margin) - Math.max(0, currentEMI - reducedEMI));
-
-            let html = `<h3>Calculation Results</h3><div style="background:#e3f2fd; padding:10px; border-radius:5px; margin-bottom:20px;"><strong>Calculated Net Income:</strong> ₹${Math.round(netIncome).toLocaleString()} / month</div>`;
+            let html = `<h3>Calculation Results (Net Income: ₹${Math.round(netIncome)})</h3>`;
 
             bankPolicies.forEach(p => {
                 let isEligible = true, reasons = [];
                 if (vintage < p.minVintage) { isEligible = false; reasons.push(`Vintage < ${p.minVintage}`); }
                 if (cibil < p.minCibil) { isEligible = false; reasons.push(`CIBIL < ${p.minCibil}`); }
-                if (unsecLoans > p.maxUnsecured) { isEligible = false; reasons.push(`Unsecured Loans > ${p.maxUnsecured}`); }
+                if (unsecLoans > p.maxUnsecured) { isEligible = false; reasons.push(`Unsec Loans > ${p.maxUnsecured}`); }
                 if (enquiries > p.maxEnquiries) { isEligible = false; reasons.push(`High Enquiries`); }
 
                 if (isEligible) {
                     const mRate = (p.roi/100)/12;
                     const loanABB = calculatePV(mRate, p.maxTenure, abb);
-                    const loanDSCR = calculatePV(mRate, p.maxTenure, netIncome);
+                    const loanInc = calculatePV(mRate, p.maxTenure, netIncome);
 
                     html += `
                     <div class="result-card approved">
-                        <div class="card-header">
-                            <span class="bank-logo">✅ ${p.bank}</span>
-                            <span style="background:#2e7d32; color:white; padding:4px 8px; font-size:12px; border-radius:4px;">ELIGIBLE</span>
+                        <div style="font-weight:bold; margin-bottom:5px;">✅ ${p.bank}</div>
+                        <div class="program-row">
+                            <span>ABB Program: ₹${(loanABB/100000).toFixed(2)} L</span>
+                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', 'ABB Program', '₹${(loanABB/100000).toFixed(2)} Lakhs', '${p.maxTenure}m', '${p.roi}%')">PDF</button>
                         </div>
                         <div class="program-row">
-                            <span><b>ABB Program:</b> ₹${(loanABB/100000).toFixed(2)} Lakhs</span>
-                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', 'ABB Program', '${(loanABB/100000).toFixed(2)} Lakhs', '${p.maxTenure} Months', '${p.roi}%')">📄 PDF</button>
-                        </div>
-                        <div class="program-row">
-                            <span><b>Net Income Program:</b> ₹${(loanDSCR/100000).toFixed(2)} Lakhs</span>
-                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', 'Income Program', '${(loanDSCR/100000).toFixed(2)} Lakhs', '${p.maxTenure} Months', '${p.roi}%')">📄 PDF</button>
+                            <span>Income Program: ₹${(loanInc/100000).toFixed(2)} L</span>
+                            <button class="pdf-download-btn" onclick="openPDF('${p.bank}', 'Income Program', '₹${(loanInc/100000).toFixed(2)} Lakhs', '${p.maxTenure}m', '${p.roi}%')">PDF</button>
                         </div>
                     </div>`;
                 } else {
-                    html += `<div class="result-card declined"><div class="card-header"><span class="bank-logo">❌ ${p.bank}</span><span style="background:#d32f2f; color:white; padding:4px 8px; font-size:12px; border-radius:4px;">DECLINED</span></div><div style="color:#d32f2f;">${reasons.join(', ')}</div></div>`;
+                    html += `<div class="result-card declined">
+                                <div>❌ ${p.bank}</div>
+                                <div style="font-size:12px; color:#d32f2f;">${reasons.join(', ')}</div>
+                             </div>`;
                 }
             });
             document.getElementById('resultsArea').innerHTML = html;
         }
 
-        // --- 5. PDF GENERATION FUNCTION ---
         function openPDF(bank, prog, amt, tenure, roi) {
             document.getElementById('certDate').innerText = new Date().toLocaleDateString();
             document.getElementById('certClientName').innerText = document.getElementById('bizName').value || "Valued Customer";
@@ -363,7 +281,6 @@
             document.getElementById('certAmt').innerText = amt;
             document.getElementById('certTenure').innerText = tenure;
             document.getElementById('certRoi').innerText = roi;
-            
             document.getElementById('pdfModal').style.display = 'flex';
         }
     </script>
