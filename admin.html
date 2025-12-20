@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Super Admin (Cloud)</title>
     <style>
-        /* Styles from before */
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; display: flex; height: 100vh; }
         #adminLoginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #004a99; z-index: 9999; display: flex; justify-content: center; align-items: center; }
         .login-box { background: white; padding: 40px; border-radius: 10px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
@@ -112,14 +111,15 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+  // YOUR SPECIFIC KEYS
   const firebaseConfig = {
-    apiKey: "AIzaSyAqc4OiR26dNzop2pUWvx_eLzNhHsaEBRE",
-    authDomain: "credit-engine-2ffba.firebaseapp.com",
-    projectId: "credit-engine-2ffba",
-    storageBucket: "credit-engine-2ffba.firebasestorage.app",
-    messagingSenderId: "432392785380",
-    appId: "1:432392785380:web:52d87b4a5548cea9954bf1",
-    measurementId: "G-TVQ7TXJXPV"
+    apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
+    authDomain: "credir-engine-new.firebaseapp.com",
+    projectId: "credir-engine-new",
+    storageBucket: "credir-engine-new.firebasestorage.app",
+    messagingSenderId: "249073295308",
+    appId: "1:249073295308:web:e3db899190a4d2506d0769",
+    measurementId: "G-YBXMM1J129"
   };
 
   const app = initializeApp(firebaseConfig);
