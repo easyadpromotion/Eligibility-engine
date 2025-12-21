@@ -45,9 +45,9 @@
 
         /* BUTTONS */
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
-        .report-btn { width: 100%; padding: 16px; background: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
+        .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
-        /* DASHBOARD */
+        /* DASHBOARD TABLE */
         .dash-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .dash-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .dash-table th, .dash-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -94,7 +94,7 @@
         <div class="logo">🚀 Credit Engine</div>
         <div class="nav-item active" id="nav-app" onclick="switchView('appView')">📄 New Application</div>
         <div class="nav-item" id="nav-dash" onclick="switchView('dashView')">📊 Dashboard</div>
-        <div class="logout">🚪 Logout</div>
+        <div class="logout" onclick="logoutUser()">🚪 Logout</div>
     </div>
 
     <div class="main-content">
@@ -158,12 +158,13 @@
                     <div class="form-grid">
                         <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
                         <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans" class="pdf-data" data-label="Active Loans"></div>
-                        <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
+                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
                         <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsecured Loans"></div>
+                        
+                        <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
                         <div class="form-group"><label>Loans Taken (Last 6m)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
                         <div class="form-group"><label>Loans Closing (Next 6m)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
-                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
-                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
+                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enq" class="pdf-data" data-label="Enquiries"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec3')">+ Add Field</button>
                 </div>
@@ -204,7 +205,7 @@
             <h2>DSA Dashboard</h2>
             
             <div class="dash-card">
-                <h3>📂 Application History (Downloads)</h3>
+                <h3>📂 Application History</h3>
                 <table class="dash-table" id="historyTable">
                     <thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody></tbody>
@@ -214,10 +215,10 @@
             <div class="dash-card">
                 <h3>🔐 User Settings</h3>
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="form-group"><label>Change Username</label><input type="text" value="dsa_user_01"></div>
-                    <div class="form-group"><label>Change Password</label><input type="password" placeholder="New Password"></div>
+                    <div class="form-group"><label>Change Username</label><input type="text" id="set_user" placeholder="Enter username"></div>
+                    <div class="form-group"><label>Change Password</label><input type="password" id="set_pass" placeholder="New Password"></div>
                 </div>
-                <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="alert('Credentials Updated!')">Update Credentials</button>
+                <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="updateCredentials()">Update Credentials</button>
             </div>
         </div>
 
@@ -270,6 +271,14 @@
         function toggleSection(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
         function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
         function toggleBankOpt(el) { el.classList.toggle('selected'); }
+        
+        function logoutUser() {
+            if(confirm("Are you sure you want to logout?")) {
+                alert("Logged out successfully.");
+                location.reload(); // Simulates logout
+            }
+        }
+
         function addCustomField(gridId) {
             const section = document.querySelector(`#${gridId} .form-grid`);
             const div = document.createElement('div');
@@ -309,10 +318,11 @@
         function runEligibilityEngine() {
             latestResults = { eligible: [], declined: [] };
             
-            // Gather Data regardless of visibility
+            // Gather Data
             let formData = {};
             document.querySelectorAll('.pdf-data').forEach(el => {
-                if(el.value.trim() !== "") formData[el.getAttribute('data-label')] = el.value;
+                // Save value regardless of visibility
+                formData[el.getAttribute('data-label')] = el.value;
             });
 
             // Parse
@@ -363,7 +373,7 @@
                 }
             });
 
-            // Save History
+            // Save History (with full formData)
             const entry = {
                 date: new Date().toLocaleDateString(),
                 customer: formData['Business Name'] || "Customer",
@@ -398,6 +408,24 @@
             generateFullPDF(entry.results, entry.data);
         }
 
+        function updateCredentials() {
+            const u = document.getElementById('set_user').value;
+            const p = document.getElementById('set_pass').value;
+            if(!u || !p) { alert('Please enter both username and password.'); return; }
+            
+            // Update Local Storage
+            let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
+            // Simple logic: update first user or add new
+            if(users.length > 0) {
+                users[0].user = u;
+                users[0].pass = p;
+            } else {
+                users.push({ name: "DSA User", mobile: "0000000000", user: u, pass: p, status: "Active" });
+            }
+            localStorage.setItem('credit_users_db', JSON.stringify(users));
+            alert('Credentials Updated Successfully! Use these to login next time.');
+        }
+
         // --- PDF GENERATOR ---
         function generateFullPDF(resultsOverride = null, dataOverride = null) {
             const res = resultsOverride || latestResults;
@@ -427,7 +455,7 @@
             const dTable = document.getElementById('pdfRejectTable');
             dTable.innerHTML = res.declined.length === 0 ? "<tr><td colspan='4'>No Rejections</td></tr>" : "";
             res.declined.forEach(i => {
-                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Failed Policy</td><td class="status-declined">DECLINED</td></tr>`);
+                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Policy Failed</td><td class="status-declined">DECLINED</td></tr>`);
             });
 
             document.getElementById('fullReportModal').style.display = 'block';
