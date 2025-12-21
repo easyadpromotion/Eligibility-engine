@@ -17,6 +17,7 @@
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .page-title { font-size: 24px; font-weight: bold; color: #333; }
+        .user-info { font-size: 14px; color: #1a237e; font-weight: bold; } /* New User Display */
         
         .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .accordion-header { padding: 18px 25px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #eee; }
@@ -27,7 +28,6 @@
         .form-group { margin-bottom: 5px; }
         label { display: block; margin-bottom: 6px; font-size: 13px; color: #555; font-weight: 500; }
         input, select { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; box-sizing: border-box; }
-        
         .hidden-field { display: none; background-color: #fafafa; padding: 10px; border: 1px dashed #ccc; margin-top: 5px; }
         .add-field-btn { background: none; border: 1px dashed #1a237e; color: #1a237e; padding: 10px; width: 100%; margin-top: 15px; cursor: pointer; border-radius: 4px; font-size: 13px; }
         
@@ -91,7 +91,7 @@
                 <div class="mobile-btn" onclick="document.getElementById('sidebar').classList.toggle('active')">☰</div>
                 <div class="page-title">DSA Portal</div>
             </div>
-            <div style="font-size:12px; font-weight:bold; color:#1a237e;">Shield: <span id="policyCount">0</span> Active</div>
+            <div class="user-info">👤 <span id="displayUser">Guest</span> | Shield: <span id="policyCount">0</span></div>
         </div>
 
         <div id="appView">
@@ -105,7 +105,7 @@
                         <div class="form-group"><label>Turnover (Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
                         <div class="form-group"><label>Entity Type</label><select id="entityType" class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option></select></div>
                         <div class="form-group"><label>Sector</label><select id="sector" class="pdf-data" data-label="Sector"><option value="Trading">Trading (7% Margin)</option><option value="Manufacturing">Manufacturing (9% Margin)</option><option value="Service">Service (11% Margin)</option></select></div>
-                        <div class="form-group"><label>Business Premises</label><select id="premises" class="pdf-data" data-label="Premises"><option>Rented</option><option>Leased</option><option>Owned</option></select></div>
+                        <div class="form-group"><label>Premises</label><select id="premises" class="pdf-data" data-label="Premises"><option>Rented</option><option>Leased</option><option>Owned</option></select></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec1')">+ Add Field</button>
                 </div>
@@ -117,7 +117,7 @@
                     <div class="form-grid">
                         <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
                         <div class="form-group">
-                            <label>Bank Statement type</label>
+                            <label>Bank Statements</label>
                             <div class="bank-options" id="bankOpts">
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
@@ -125,9 +125,9 @@
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">CC</div>
                             </div>
                         </div>
-                        <div class="form-group"><label>GST Reg</label><select id="gstReg" class="pdf-data" data-label="GST Reg" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div class="form-group"><label>GST Registered?</label><select id="gstReg" class="pdf-data" data-label="GST Reg" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="gstDetails"><label>GST Turnover (Lakhs)</label><input type="number" id="gstTurn" class="pdf-data" data-label="GST Turnover"></div>
-                        <div class="form-group"><label>ITR Filed</label><select id="itrReg" class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div class="form-group"><label>ITR Filed?</label><select id="itrReg" class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="itrDetails"><label>ITR Gross Income</label><input type="number" id="itrInc" class="pdf-data" data-label="ITR Income"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec2')">+ Add Field</button>
@@ -138,15 +138,15 @@
                 <div class="accordion-header" onclick="toggleSection('sec3')">3. Credit Profile <span>▼</span></div>
                 <div id="sec3" class="accordion-body">
                     <div class="form-grid">
-                        <div class="form-group"><label>Cibil</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
+                        <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
                         <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans" class="pdf-data" data-label="Active Loans"></div>
                         <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
                         <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsec Loans"></div>
                         
-                        <div class="form-group"><label>Loans Taken (6Months)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
-                        <div class="form-group"><label>Loans Closing(Next 6Months)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
-                        <div class="form-group"><label>Reduced EMI(Next 6 Months)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
-                        <div class="form-group"><label>Enquiries(3 Months)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
+                        <div class="form-group"><label>Loans Taken (Last 6m)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
+                        <div class="form-group"><label>Loans Closing (Next 6m)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
+                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
+                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec3')">+ Add Field</button>
                 </div>
@@ -159,7 +159,7 @@
                         <div class="form-group"><label>Applicant Age</label><input type="number" id="age" class="pdf-data" data-label="Age"></div>
                         <div class="form-group"><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
                         <div class="form-group"><label>Co-Applicant?</label><select id="coApp" class="pdf-data" data-label="Co-App" onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
-                        <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" id="coAge" class="pdf-data" data-label="Co-App Age"></div>
+                        <div class="form-group hidden-field" id="coAppField"><label>Co-App Age</label><input type="number" id="coAge" class="pdf-data" data-label="Co-App Age"></div>
                         <div class="form-group"><label>Own House?</label><select id="ownHouse" class="pdf-data" data-label="Own House" onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="houseField"><label>Own House Pincode</label><input type="number" class="pdf-data" data-label="Pincode"></div>
                     </div>
@@ -171,7 +171,7 @@
                 <div class="accordion-header" onclick="toggleSection('sec5')">5. Loan Requirement <span>▼</span></div>
                 <div id="sec5" class="accordion-body">
                     <div class="form-grid">
-                        <div class="form-group"><label>Required Loan Amount(lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
+                        <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
                         <div class="form-group"><label>Purpose</label><select class="pdf-data" data-label="Purpose"><option>Working Capital</option><option>Expansion</option><option>Asset Purchase</option></select></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec5')">+ Add Field</button>
@@ -186,13 +186,12 @@
         <div id="dashView" style="display:none;">
             <h2>DSA Dashboard</h2>
             <div class="dash-card">
-                <h3>📂 Application History</h3>
+                <h3>📂 My Application History</h3>
                 <table class="dash-table" id="historyTable"><thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
             </div>
             <div class="dash-card">
-                <h3>🔐 User Settings</h3>
-                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="form-group"><label>Current Username</label><input type="text" id="cur_user" placeholder="Enter current username"></div>
+                <h3>🔐 Change My Password</h3>
+                <div class="form-grid" style="grid-template-columns: 1fr;">
                     <div class="form-group"><label>New Password</label><input type="password" id="new_pass" placeholder="Enter new password"></div>
                 </div>
                 <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="updateCredentials()">Update Password</button>
@@ -216,19 +215,24 @@
     </div>
 
     <script>
+        // --- 1. USER SESSION CHECK ---
+        const loggedUser = JSON.parse(sessionStorage.getItem('active_dsa_user'));
+        if(!loggedUser) { window.location.href = "index.html"; }
+        document.getElementById('displayUser').innerText = loggedUser.name;
+
         function switchView(v){document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));if(v==='appView')document.getElementById('nav-app').classList.add('active');if(v==='dashView')document.getElementById('nav-dash').classList.add('active');document.getElementById('appView').style.display=v==='appView'?'block':'none';document.getElementById('dashView').style.display=v==='dashView'?'block':'none';if(v==='dashView')renderHistory();}
         function toggleSection(id){const e=document.getElementById(id);e.style.display=(e.style.display==='block')?'none':'block';}
         function toggleField(id,s){document.getElementById(id).style.display=s?'block':'none';}
         function toggleBankOpt(e){e.classList.toggle('selected');}
-        function logoutUser(){if(confirm("Logout?"))window.location.href="index.html";}
+        function logoutUser(){if(confirm("Logout?")) { sessionStorage.removeItem('active_dsa_user'); window.location.href="index.html"; }}
         
         function updateCredentials(){
-            const u=document.getElementById('cur_user').value, p=document.getElementById('new_pass').value;
-            if(!u||!p){alert('Enter details');return;}
+            const p=document.getElementById('new_pass').value;
+            if(!p){alert('Enter new password');return;}
             let users=JSON.parse(localStorage.getItem('credit_users_db'))||[];
-            let idx=users.findIndex(x=>x.user===u);
-            if(idx!==-1){users[idx].pass=p;localStorage.setItem('credit_users_db',JSON.stringify(users));alert('Updated! Login again.');window.location.href="index.html";}
-            else{alert('User not found!');}
+            let idx=users.findIndex(x=>x.user===loggedUser.user);
+            if(idx!==-1){users[idx].pass=p;localStorage.setItem('credit_users_db',JSON.stringify(users));alert('Updated! Please login again.'); logoutUser(); }
+            else{alert('Error updating.');}
         }
 
         function addCustomField(id){const s=document.querySelector(`#${id} .form-grid`), d=document.createElement('div');d.className='form-group';d.innerHTML=`<label>Custom</label><input type="text" class="pdf-data" data-label="Custom">`;s.appendChild(d);}
@@ -262,13 +266,9 @@
             document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
             formData['Bank Statements'] = bankStmts.join(', ');
 
-            // CAPTURE DSA NAME (Attempts to find logged-in user, else defaults)
-            let loggedUser = "DSA User";
-            try {
-                let saved = localStorage.getItem('current_dsa_user');
-                if(saved) loggedUser = JSON.parse(saved).name || saved;
-            } catch(e){}
-            formData['DSA Name'] = loggedUser;
+            // CAPTURE DSA DETAILS FROM SESSION
+            formData['DSA Name'] = loggedUser.name;
+            formData['DSA Username'] = loggedUser.user; // For filtering
 
             const turn=parseFloat(formData['Turnover'])||0, abb=parseFloat(formData['ABB'])||0, cibil=parseFloat(formData['CIBIL'])||0, unsec=parseFloat(formData['Unsec Loans'])||0, emi=parseFloat(formData['Monthly EMI'])||0, redEmi=parseFloat(formData['Reduced EMI'])||0;
             const sectorVal=document.getElementById('sector').value;
@@ -292,17 +292,27 @@
 
             formData['Date'] = new Date().toLocaleDateString();
 
-            history.unshift({date:formData['Date'], customer:formData['Business Name'], status:latestResults.eligible.length>0?"Eligible":"Declined", dsaName: formData['DSA Name'], data:formData, results:latestResults});
+            history.unshift({date:formData['Date'], customer:formData['Business Name'], status:latestResults.eligible.length>0?"Eligible":"Declined", dsaUsername: loggedUser.user, dsaName: loggedUser.name, data:formData, results:latestResults});
             localStorage.setItem('dsa_app_history',JSON.stringify(history));
             document.getElementById('resultsArea').innerHTML=`<h3>Found ${latestResults.eligible.length} Eligible Banks</h3>`;
             document.getElementById('dlReportBtn').style.display='block';
         }
 
         function renderHistory(){
-            const t=document.querySelector('#historyTable tbody');t.innerHTML=history.length===0?"<tr><td colspan='5'>No History</td></tr>":"";
-            history.forEach((h,i)=>t.innerHTML+=`<tr><td>${h.date}</td><td>${h.customer}</td><td><span class="status-badge ${h.status==='Eligible'?'status-eligible':'status-declined'}">${h.status}</span></td><td><button class="btn-view" onclick="viewHistory(${i})">View</button></td></tr>`);
+            const t=document.querySelector('#historyTable tbody'); t.innerHTML="";
+            // *** CRITICAL FIX: FILTER HISTORY BY USER ***
+            let myHistory = history.filter(h => h.dsaUsername === loggedUser.user);
+            
+            if(myHistory.length===0) t.innerHTML="<tr><td colspan='5'>No History</td></tr>";
+            else myHistory.forEach((h,i)=>t.innerHTML+=`<tr><td>${h.date}</td><td>${h.customer}</td><td><span class="status-badge ${h.status==='Eligible'?'status-eligible':'status-declined'}">${h.status}</span></td><td><button class="btn-view" onclick="viewHistory(${i})">View</button></td></tr>`);
         }
-        function viewHistory(i){let e=history[i];generateFullPDF(e.results,e.data);}
+        
+        // Fix View to find correct index in filtered list
+        function viewHistory(uiIndex){
+            let myHistory = history.filter(h => h.dsaUsername === loggedUser.user);
+            let e = myHistory[uiIndex];
+            generateFullPDF(e.results, e.data);
+        }
 
         function generateFullPDF(resOv=null,datOv=null){
             const res=resOv||latestResults, dGrid=document.getElementById('pdfAppDetails'); dGrid.innerHTML="";
@@ -318,4 +328,3 @@
     </script>
 </body>
 </html>
-
