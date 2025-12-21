@@ -8,8 +8,6 @@
     <style>
         /* --- CORE STYLES --- */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        
-        /* SIDEBAR */
         .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 100; transition: 0.3s; }
         .logo { font-size: 22px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
         .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
@@ -108,6 +106,7 @@
         </div>
 
         <div id="appView">
+            
             <div class="accordion">
                 <div class="accordion-header" onclick="toggleSection('sec1')">1. Business Details <span>▼</span></div>
                 <div id="sec1" class="accordion-body open">
@@ -164,13 +163,14 @@
                     <div class="form-grid">
                         <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
                         <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans" class="pdf-data" data-label="Active Loans"></div>
-                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
+                        
                         <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsecured Loans"></div>
                         
                         <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
                         <div class="form-group"><label>Loans Taken (Last 6m)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
                         <div class="form-group"><label>Loans Closing (Next 6m)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
-                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enq" class="pdf-data" data-label="Enquiries"></div>
+                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
+                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec3')">+ Add Field</button>
                 </div>
@@ -278,21 +278,23 @@
         function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
         function toggleBankOpt(el) { el.classList.toggle('selected'); }
         
+        // --- 1. FIXED LOGOUT ---
         function logoutUser() {
             if(confirm("Are you sure you want to logout?")) {
-                window.location.href = "index.html"; // Redirects to Login
+                // Redirect to the login page (index.html)
+                window.location.href = "index.html"; 
             }
         }
 
+        // --- 2. FIXED CREDENTIAL UPDATE ---
         function updateCredentials() {
             const u = document.getElementById('set_user').value;
             const p = document.getElementById('set_pass').value;
             if(!u || !p) { alert('Please enter both username and password.'); return; }
             
-            // 1. Get existing users
             let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
             
-            // 2. Update first user (or create new if empty)
+            // Overwrite the first user or add if empty
             if(users.length > 0) {
                 users[0].user = u;
                 users[0].pass = p;
@@ -300,9 +302,8 @@
                 users.push({ name: "DSA User", mobile: "0000000000", user: u, pass: p, status: "Active" });
             }
             
-            // 3. Save back to storage
             localStorage.setItem('credit_users_db', JSON.stringify(users));
-            alert('Credentials Updated! Please use these new details to login next time.');
+            alert('Credentials Updated! Please login with new details.');
         }
 
         function addCustomField(gridId) {
@@ -344,23 +345,36 @@
         function runEligibilityEngine() {
             latestResults = { eligible: [], declined: [] };
             
-            // Gather Data (Robust)
+            // --- 3. FIXED DATA CAPTURE ---
+            // Explicitly capture all fields by ID to ensure nothing is missed
             let formData = {};
-            document.querySelectorAll('.pdf-data').forEach(el => {
-                // Ensure ID fallback if data-label missing
-                let key = el.getAttribute('data-label') || el.id;
-                formData[key] = el.value;
+            
+            // List of all critical input IDs
+            const fieldIds = [
+                'bizName', 'contact', 'vintage', 'turnover', 'entityType', 'sector', 'premises',
+                'abb', 'gstReg', 'gstTurn', 'itrReg', 'itrInc',
+                'cibil', 'activeLoans', 'monthlyEmi', 'unsecLoans', 'loansTaken6m', 'loansClosed6m', 'reducedEmi', 'enquiries',
+                'age', 'coApp', 'coAge', 'ownHouse', 'reqAmount'
+            ];
+
+            fieldIds.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    // Save by the "Label" if possible for display, else key
+                    let key = el.getAttribute('data-label') || id;
+                    formData[key] = el.value;
+                }
             });
 
-            // Parse
+            // Parse Variables for Logic
             const turn = parseFloat(formData['Turnover']) || 0;
             const abb = parseFloat(formData['ABB']) || 0;
             const cibil = parseFloat(formData['CIBIL']) || 0;
             const unsec = parseFloat(formData['Unsec Loans']) || 0;
             const emi = parseFloat(formData['Monthly EMI']) || 0;
             const redEmi = parseFloat(formData['Reduced EMI']) || 0;
-            const sectorVal = document.getElementById('sector').value;
             
+            const sectorVal = document.getElementById('sector').value;
             let margin = 0.07;
             if (sectorVal.includes('Manufacturing')) margin = 0.09;
             if (sectorVal.includes('Service')) margin = 0.11;
@@ -400,12 +414,12 @@
                 }
             });
 
-            // Save History (with full formData)
+            // Save History (Complete Data Snapshot)
             const entry = {
                 date: new Date().toLocaleDateString(),
                 customer: formData['Business Name'] || "Customer",
                 status: latestResults.eligible.length > 0 ? "Eligible" : "Declined",
-                data: formData,
+                data: formData, // Captured data object
                 results: latestResults
             };
             history.unshift(entry);
@@ -432,6 +446,7 @@
 
         function viewHistory(index) {
             const entry = history[index];
+            // Pass the SAVED data to the generator
             generateFullPDF(entry.results, entry.data);
         }
 
@@ -441,10 +456,13 @@
             const dGrid = document.getElementById('pdfAppDetails');
             dGrid.innerHTML = "";
             
+            // Logic: Use Override (Historical) if available, else Live Form
             if(dataOverride) {
                 document.getElementById('pdfCustomerName').innerText = dataOverride['Business Name'] || "Customer";
                 for (const [key, value] of Object.entries(dataOverride)) {
-                    dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><strong>${key}:</strong> ${value}</div>`);
+                    if(value) {
+                        dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><strong>${key}:</strong> ${value}</div>`);
+                    }
                 }
             } else {
                 document.getElementById('pdfCustomerName').innerText = document.getElementById('bizName').value || "Customer";
@@ -464,7 +482,7 @@
             const dTable = document.getElementById('pdfRejectTable');
             dTable.innerHTML = res.declined.length === 0 ? "<tr><td colspan='4'>No Rejections</td></tr>" : "";
             res.declined.forEach(i => {
-                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Failed Policy</td><td class="status-declined">DECLINED</td></tr>`);
+                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Policy Failed</td><td class="status-declined">DECLINED</td></tr>`);
             });
 
             document.getElementById('fullReportModal').style.display = 'block';
