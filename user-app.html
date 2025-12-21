@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Engine Pro - Ultimate</title>
+    <title>Credit Engine Pro - Master</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* --- CORE STYLES --- */
@@ -62,15 +62,16 @@
 
         /* PDF MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .report-paper { background: white; width: 800px; margin: 0 auto; padding: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: 'Arial', sans-serif; min-height: 1000px; }
+        .report-paper { background: white; width: 900px; margin: 0 auto; padding: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: 'Arial', sans-serif; min-height: 1000px; }
         .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
         .report-title { font-size: 24px; font-weight: bold; text-decoration: underline; }
         .report-section-title { background: #eee; padding: 8px; font-weight: bold; font-size: 14px; border-left: 4px solid #333; margin-bottom: 10px; margin-top: 20px; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 12px; }
         .detail-item { border-bottom: 1px dotted #ccc; padding-bottom: 2px; }
-        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-        .report-table th, .report-table td { border: 1px solid #333; padding: 8px; text-align: left; }
-        .report-table th { background-color: #f0f0f0; font-weight: bold; }
+        
+        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        .report-table th, .report-table td { border: 1px solid #333; padding: 8px; text-align: center; vertical-align: middle; }
+        .report-table th { background-color: #f0f0f0; font-weight: bold; text-transform: uppercase; }
         .status-declined { color: #d32f2f; font-weight: bold; }
         .status-approved { color: #2e7d32; font-weight: bold; }
 
@@ -127,12 +128,12 @@
                 <div class="form-grid" id="grid2">
                     <div class="form-group"><label>ABB (Rupees Only)</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
                     <div class="form-group">
-                        <label>Bank Statements (Select Available)</label>
+                        <label>Bank Statements</label>
                         <div class="bank-options">
-                            <div class="bank-opt" onclick="toggleBankOpt(this)" data-val="SA">SA</div>
-                            <div class="bank-opt" onclick="toggleBankOpt(this)" data-val="CA">CA</div>
-                            <div class="bank-opt" onclick="toggleBankOpt(this)" data-val="OD">OD</div>
-                            <div class="bank-opt" onclick="toggleBankOpt(this)" data-val="CC">CC</div>
+                            <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
+                            <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
+                            <div class="bank-opt" onclick="toggleBankOpt(this)">OD</div>
+                            <div class="bank-opt" onclick="toggleBankOpt(this)">CC</div>
                         </div>
                     </div>
                     <div class="form-group"><label>GST Registered?</label><select id="gstReg" class="pdf-data" data-label="GST Reg" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
@@ -168,8 +169,8 @@
                     <div class="form-group"><label>Applicant Age</label><input type="number" id="age" class="pdf-data" data-label="Age"></div>
                     <div class="form-group"><label>Applicant Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
                     <div class="form-group"><label>Co-Applicant?</label><select id="coApp" onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
-                    <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" id="coAge" class="pdf-data" data-label="Co-App Age"></div>
-                    <div class="form-group"><label>Own House?</label><select id="ownHouse" onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                    <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
+                    <div class="form-group"><label>Own House?</label><select onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                     <div class="form-group hidden-field" id="houseField"><label>Own House Pincode</label><input type="number" class="pdf-data" data-label="Pincode"></div>
                 </div>
                 <button class="add-field-btn" onclick="addCustomField('grid4')">+ Add Field</button>
@@ -206,7 +207,15 @@
             <div class="details-grid" id="pdfAppDetails"></div>
             <div class="report-section-title">ELIGIBILITY (ALL BANKS)</div>
             <table class="report-table">
-                <thead><tr><th>Bank Name</th><th>Program Type</th><th>Approved Amount</th><th>Tenure</th><th>ROI</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>BANK NAME</th>
+                        <th>PROGRAM</th>
+                        <th>ELIGIBILITY LOAN AMOUNT</th>
+                        <th>TENURE (MIN & MAX)</th>
+                        <th>ROI (MIN & MAX)</th>
+                    </tr>
+                </thead>
                 <tbody id="pdfEligibleTable"></tbody>
             </table>
             <div class="report-section-title">NOT ELIGIBLE</div>
@@ -220,25 +229,27 @@
     <script>
         let latestResults = { eligible: [], declined: [] };
         
-        // --- 1. MASTER POLICY DATA (Corrected as per your latest prompt) ---
-        // Global Rules: Min CIBIL 700, Max Unsec 5
-        // Specifics: Tata HTBL > 200L, Birla Big > 250L
+        // --- 1. POLICY DATA (WITH MAX LOAN LIMITS) ---
+        // Format: loanMin/Max (Lakhs), tenMin/Max (Months), roiMin/Max (%)
         const bankPolicies = [
-            // Standard
-            { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 18, maxTenure: 36, minTurnover: 20 },
-            { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 17.5, maxTenure: 36, minTurnover: 25 },
-            { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 16.5, maxTenure: 48, minTurnover: 40 },
-            // High Ticket
-            { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, roi: 14, maxTenure: 60, minTurnover: 200 }, 
-            { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, roi: 13.5, maxTenure: 60, minTurnover: 250 }, 
-            // Others
-            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 19, maxTenure: 36, minTurnover: 30 },
-            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 700, maxUnsec: 5, roi: 15, maxTenure: 48, minTurnover: 100 },
+            // Standard (Max ~30-50L)
+            { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:50, tenMin:12, tenMax:36, roiMin:18, roiMax:24, minTurnover: 20 },
+            { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:40, tenMin:12, tenMax:36, roiMin:17.5, roiMax:22, minTurnover: 25 },
+            { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:5, loanMax:50, tenMin:12, tenMax:48, roiMin:16.5, roiMax:21, minTurnover: 40 },
+            
+            // High Ticket (Max ~5Cr)
+            { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, loanMin:50, loanMax:500, tenMin:12, tenMax:60, roiMin:14, roiMax:18, minTurnover: 200 }, 
+            { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, loanMin:50, loanMax:500, tenMin:12, tenMax:60, roiMin:13.5, roiMax:18, minTurnover: 250 }, 
+            
+            // Others (Max ~30-100L)
+            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:30, tenMin:12, tenMax:36, roiMin:19, roiMax:26, minTurnover: 30 },
+            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 700, maxUnsec: 5, loanMin:30, loanMax:100, tenMin:12, tenMax:48, roiMin:15, roiMax:20, minTurnover: 100 },
+            
             // Overdrafts
-            { bank: "ADITYA BIRLA DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 12, maxTenure: 12, minTurnover: 100 },
-            { bank: "TATA CAPITAL DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 12.5, maxTenure: 12, minTurnover: 100 },
-            { bank: "BAJAJ FINANCE FLEXI OD", type:"OD", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 14.5, maxTenure: 24, minTurnover: 50 },
-            { bank: "CLIX CAPITAL", type:"NBFC", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 21, maxTenure: 30, minTurnover: 15 }
+            { bank: "ADITYA BIRLA DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:10, loanMax:50, tenMin:12, tenMax:12, roiMin:12, roiMax:16, minTurnover: 100 },
+            { bank: "TATA CAPITAL DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:10, loanMax:50, tenMin:12, tenMax:12, roiMin:12.5, roiMax:16, minTurnover: 100 },
+            { bank: "BAJAJ FINANCE FLEXI OD", type:"OD", minVintage: 2, minCibil: 700, maxUnsec: 5, loanMin:5, loanMax:25, tenMin:12, tenMax:24, roiMin:14.5, roiMax:22, minTurnover: 50 },
+            { bank: "CLIX CAPITAL", type:"NBFC", minVintage: 2, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:20, tenMin:12, tenMax:30, roiMin:21, roiMax:28, minTurnover: 15 }
         ];
 
         window.onload = function() { document.getElementById('policyCount').innerText = bankPolicies.length; };
@@ -275,7 +286,7 @@
             const reducedEMI = parseFloat(document.getElementById('reducedEmi').value) || 0;
             const sector = document.getElementById('sector').value;
             
-            // 12-Point Checks (Mandatory Fields)
+            // Mandatory Checks
             const coApp = document.getElementById('coApp').value;
             const ownHouse = document.getElementById('ownHouse').value;
             const gstReg = document.getElementById('gstReg').value;
@@ -301,57 +312,61 @@
                 if (unsecLoans > p.maxUnsec) { isEligible = false; reasons.push(`Unsec > ${p.maxUnsec}`); }
                 if (turnoverLakhs < p.minTurnover) { isEligible = false; reasons.push(`Turnover < ${p.minTurnover}L`); }
                 
-                // 2. CHECK SPECIFIC MANDATES
-                // (e.g. if a policy requires GST and user says No, reject. For now, using generic logic)
-                
                 if (isEligible) {
-                    const mRate = (p.roi / 100) / 12;
+                    const mRate = (p.roiMin / 100) / 12;
                     
                     // --- MULTIPLE PROGRAM CALCULATION ---
-                    
                     // 1. ABB Program (If ABB > 0)
                     if(abb > 0) {
-                        // Multiplier Assumption: 2x to 5x of ABB depending on bank (Simplified to 3x)
-                        let amt = calculatePV(mRate, p.maxTenure, abb * 2); 
+                        let amt = calculatePV(mRate, p.tenMax, abb * 2); // Multiplier assumption
                         offers.push({ type: "ABB", amt: amt });
                     }
-
                     // 2. DSCR / Income Program (If Net Income > 0)
                     if(netIncome > 0) {
-                        let amt = calculatePV(mRate, p.maxTenure, netIncome);
+                        let amt = calculatePV(mRate, p.tenMax, netIncome);
                         offers.push({ type: "Income/DSCR", amt: amt });
                     }
-
                     // 3. GST Program (If GST Reg = Yes)
                     if(gstReg === 'Yes' && gstTurn > 0) {
-                        // Assumption: 20% of GST Turnover
                         let amt = (gstTurn * 100000) * 0.20;
                         offers.push({ type: "GST Surrogate", amt: amt });
                     }
-
                     // 4. ITR Program (If ITR Filed = Yes)
                     if(itrFiled === 'Yes' && itrInc > 0) {
-                        // Assumption: 3x of Gross Income
                         let amt = (itrInc * 100000) * 3;
                         offers.push({ type: "ITR Surrogate", amt: amt });
                     }
 
-                    // FIND BEST OFFER
+                    // FIND BEST OFFER & APPLY CAPS
                     if(offers.length > 0) {
-                        // Sort by Amount Descending
                         offers.sort((a,b) => b.amt - a.amt);
-                        let best = offers[0]; // Best offer
+                        let best = offers[0]; // Highest offer
                         
-                        latestResults.eligible.push({
-                            bank: p.bank,
-                            prog: best.type, // e.g. "GST Surrogate"
-                            amt: (best.amt / 100000).toFixed(2),
-                            tenure: p.maxTenure,
-                            roi: p.roi
-                        });
+                        // STRICT CAP Logic: Check Policy Max/Min Loan
+                        if(best.amt < p.loanMin * 100000) {
+                            // Reject if calculated amount is too low
+                            latestResults.declined.push({ 
+                                bank: p.bank, 
+                                prog: best.type, 
+                                remarks: `Eligibility (${(best.amt/100000).toFixed(1)}L) < Min Loan (${p.loanMin}L)`, 
+                                status: "DECLINED" 
+                            });
+                        } else {
+                            // Cap at Max Loan
+                            if(best.amt > p.loanMax * 100000) {
+                                best.amt = p.loanMax * 100000;
+                            }
+                            
+                            latestResults.eligible.push({
+                                bank: p.bank,
+                                prog: best.type,
+                                amt: (best.amt / 100000).toFixed(2),
+                                tenMin: p.tenMin, tenMax: p.tenMax,
+                                roiMin: p.roiMin, roiMax: p.roiMax
+                            });
+                        }
                     } else {
-                        // Eligible by criteria but no income proof found
-                        latestResults.declined.push({ bank: p.bank, prog: "N/A", remarks: "No Income Proof (ABB/GST/ITR)", status: "DECLINED" });
+                        latestResults.declined.push({ bank: p.bank, prog: "N/A", remarks: "No Income Proof", status: "DECLINED" });
                     }
 
                 } else {
@@ -374,7 +389,7 @@
             document.getElementById('dlReportBtn').style.display = 'block';
         }
 
-        // --- 4. PDF ---
+        // --- 4. PDF GENERATOR ---
         function generateFullPDF() {
             document.getElementById('pdfCustomerName').innerText = document.getElementById('bizName').value || "Valued Customer";
             
@@ -390,7 +405,13 @@
             eTable.innerHTML = "";
             if(latestResults.eligible.length === 0) eTable.innerHTML = "<tr><td colspan='5' style='text-align:center'>No Eligible Banks Found</td></tr>";
             latestResults.eligible.forEach(i => {
-                eTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} Lakhs</td><td>${i.tenure}m</td><td>${i.roi}%</td></tr>`);
+                eTable.insertAdjacentHTML('beforeend', `<tr>
+                    <td>${i.bank}</td>
+                    <td>${i.prog}</td>
+                    <td>₹${i.amt} Lakhs</td>
+                    <td>${i.tenMin} - ${i.tenMax} Months</td>
+                    <td>${i.roiMin}% - ${i.roiMax}%</td>
+                </tr>`);
             });
 
             const dTable = document.getElementById('pdfRejectTable');
