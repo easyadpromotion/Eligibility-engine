@@ -3,103 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSA Portal Login</title>
+    <title>DSA Login - Credit Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #004a99; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        h2 { color: #004a99; margin-bottom: 20px; }
+        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #0047ab; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: white; padding: 40px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .title { font-size: 24px; font-weight: bold; color: #0047ab; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { background: #004a99; color: white; width: 100%; padding: 12px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button:hover { background: #003377; }
-        .switch-link { margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; display: block; }
-        .switch-link:hover { text-decoration: underline; color: #004a99; }
-        #msg { margin-top: 15px; font-weight: bold; min-height: 20px; font-size:14px; }
+        .btn { width: 100%; padding: 12px; background-color: #003380; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
+        .btn:hover { background-color: #002255; }
+        .link { display: block; margin-top: 15px; color: #666; font-size: 13px; cursor: pointer; text-decoration: none; }
+        .error { color: #d32f2f; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
+        .success { color: #2e7d32; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="login-card" id="loginForm">
-    <h2>🔒 DSA Login</h2>
-    <input type="text" id="loginUser" placeholder="Username">
-    <input type="password" id="loginPass" placeholder="Password">
-    <button type="button" id="btnLogin">Login</button>
-    <span class="switch-link" id="showReg">New DSA? Register Here</span>
-    <div id="loginMsg" style="margin-top:10px; color:red"></div>
-</div>
+    <div class="card" id="loginCard">
+        <div class="title">🔒 DSA Login</div>
+        <input type="text" id="lUser" placeholder="Username">
+        <input type="password" id="lPass" placeholder="Password">
+        <button class="btn" onclick="login()">Login</button>
+        <div class="link" onclick="toggleView()">New DSA? Register Here</div>
+        <div id="loginMsg" class="error"></div>
+    </div>
 
-<div class="login-card" id="registerForm" style="display:none">
-    <h2>📝 DSA Registration</h2>
-    <input type="text" id="regUser" placeholder="Choose Username">
-    <input type="password" id="regPass" placeholder="Choose Password">
-    <button type="button" id="btnReg">Request Access</button>
-    <span class="switch-link" id="showLogin">Back to Login</span>
-    <div id="regMsg" style="margin-top:10px; color:green"></div>
-</div>
+    <div class="card" id="regCard" style="display:none;">
+        <div class="title">📝 DSA Registration</div>
+        <input type="text" id="rName" placeholder="Full Name">
+        <input type="number" id="rMobile" placeholder="Mobile Number">
+        <input type="text" id="rUser" placeholder="Choose Username">
+        <input type="password" id="rPass" placeholder="Choose Password">
+        <button class="btn" onclick="register()">Request Access</button>
+        <div class="link" onclick="toggleView()">Back to Login</div>
+        <div id="regMsg" class="success"></div>
+    </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-
-  // YOUR SPECIFIC KEYS
-  const firebaseConfig = {
-    apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
-    authDomain: "credir-engine-new.firebaseapp.com",
-    projectId: "credir-engine-new",
-    storageBucket: "credir-engine-new.firebasestorage.app",
-    messagingSenderId: "249073295308",
-    appId: "1:249073295308:web:e3db899190a4d2506d0769",
-    measurementId: "G-YBXMM1J129"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // Toggle Forms
-  document.getElementById('showReg').onclick = () => { document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; };
-  document.getElementById('showLogin').onclick = () => { document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; };
-
-  // REGISTER FUNCTION
-  document.getElementById('btnReg').onclick = async () => {
-    const u = document.getElementById('regUser').value.trim();
-    const p = document.getElementById('regPass').value.trim();
-    const msg = document.getElementById('regMsg');
-    
-    if(!u || !p) { msg.innerText = "❌ Enter details"; msg.style.color="red"; return; }
-    msg.innerText = "⏳ Checking...";
-
-    try {
-        const q = query(collection(db, "users"), where("username", "==", u));
-        const snap = await getDocs(q);
-        if(!snap.empty) { msg.innerText = "❌ Username Taken"; msg.style.color="red"; return; }
-
-        await addDoc(collection(db, "users"), { username: u, password: p, status: "Pending" });
-        msg.innerText = "✅ Request Sent! Wait for Admin."; msg.style.color="green";
-    } catch(e) { console.error(e); msg.innerText = "Connection Error. Check Database Rules."; }
-  };
-
-  // LOGIN FUNCTION
-  document.getElementById('btnLogin').onclick = async () => {
-    const u = document.getElementById('loginUser').value.trim();
-    const p = document.getElementById('loginPass').value.trim();
-    const msg = document.getElementById('loginMsg');
-    
-    msg.innerText = "⏳ Connecting..."; msg.style.color="orange";
-
-    try {
-        const q = query(collection(db, "users"), where("username", "==", u), where("password", "==", p));
-        const snap = await getDocs(q);
-
-        if(snap.empty) { msg.innerText = "❌ Invalid Credentials"; msg.style.color="red"; return; }
-        
-        const user = snap.docs[0].data();
-        if(user.status === 'Pending') { msg.innerText = "⏳ Approval Pending"; msg.style.color="orange"; }
-        else if(user.status === 'Rejected') { msg.innerText = "🚫 Access Denied"; msg.style.color="red"; }
-        else {
-            sessionStorage.setItem('currentUser', u);
-            window.location.href = "user-app.html";
+    <script>
+        function toggleView() {
+            const login = document.getElementById('loginCard');
+            const reg = document.getElementById('regCard');
+            if (login.style.display === 'none') {
+                login.style.display = 'block';
+                reg.style.display = 'none';
+            } else {
+                login.style.display = 'none';
+                reg.style.display = 'block';
+            }
+            document.getElementById('loginMsg').style.display = 'none';
+            document.getElementById('regMsg').style.display = 'none';
         }
-    } catch(e) { console.error(e); msg.innerText = "Connection Error"; }
-  };
-</script>
+
+        function login() {
+            const u = document.getElementById('lUser').value.trim();
+            const p = document.getElementById('lPass').value.trim();
+            const msg = document.getElementById('loginMsg');
+
+            if (!u || !p) {
+                msg.innerText = "Please enter username and password";
+                msg.style.display = 'block';
+                return;
+            }
+
+            // 1. CHECK ACTIVE USERS (Priority)
+            const activeUsers = JSON.parse(localStorage.getItem('credit_users_db')) || [];
+            const validUser = activeUsers.find(user => user.user === u && user.pass === p);
+
+            if (validUser) {
+                if (validUser.status === 'Active') {
+                    // SUCCESS: Redirect to User App
+                    window.location.href = "user-app.html";
+                    return;
+                } else {
+                    msg.innerText = "❌ Account Blocked/Inactive";
+                    msg.style.display = 'block';
+                    return;
+                }
+            }
+
+            // 2. CHECK PENDING REQUESTS (Only if not in Active)
+            const requests = JSON.parse(localStorage.getItem('dsa_requests')) || [];
+            const isPending = requests.find(req => req.user === u && req.pass === p);
+
+            if (isPending) {
+                msg.innerText = "⏳ Approval Pending. Contact Admin.";
+                msg.style.color = "#ff9800"; // Orange for warning
+                msg.style.display = 'block';
+                return;
+            }
+
+            // 3. FAILED
+            msg.innerText = "❌ Invalid Credentials";
+            msg.style.color = "#d32f2f"; // Red for error
+            msg.style.display = 'block';
+        }
+
+        function register() {
+            const n = document.getElementById('rName').value;
+            const m = document.getElementById('rMobile').value;
+            const u = document.getElementById('rUser').value;
+            const p = document.getElementById('rPass').value;
+            const msg = document.getElementById('regMsg');
+
+            if (!n || !m || !u || !p) {
+                alert("All fields are mandatory");
+                return;
+            }
+
+            let requests = JSON.parse(localStorage.getItem('dsa_requests')) || [];
+            requests.push({ name: n, mobile: m, user: u, pass: p, status: "Pending" });
+            localStorage.setItem('dsa_requests', JSON.stringify(requests));
+
+            msg.innerText = "✅ Request Sent! Wait for Admin Approval.";
+            msg.style.display = 'block';
+            
+            // Clear fields
+            document.getElementById('rName').value = "";
+            document.getElementById('rMobile').value = "";
+            document.getElementById('rUser').value = "";
+            document.getElementById('rPass').value = "";
+        }
+    </script>
 </body>
 </html>
