@@ -49,31 +49,69 @@
         .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
         .checkbox-item { display: flex; align-items: center; gap: 5px; font-size: 12px; background: #e8eaf6; padding: 5px 10px; border-radius: 15px; }
         .checkbox-item input { width: auto; }
+
+        /* SECTIONS VIEW */
+        .section { display: none; }
+        .section.active { display: block; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h2>Super Admin</h2>
-    <div class="nav-item active">📜 Policy Library</div>
-    <div class="nav-item">👥 Manage Users</div>
+    <div class="nav-item active" onclick="showSection('policies')">📜 Policy Library</div>
+    <div class="nav-item" onclick="showSection('users')">👥 Manage Users</div>
+    <div class="nav-item" onclick="showSection('settings')">⚙️ Settings</div>
 </div>
 
 <div class="main-content">
-    <h2>Bank Policy Engine <button class="btn btn-add" onclick="openModal()">+ Create Policy</button></h2>
     
-    <table id="policyTable">
-        <thead>
-            <tr>
-                <th>Bank Name</th>
-                <th>Product</th>
-                <th>Min Loan</th>
-                <th>ROI Range</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div id="policies" class="section active">
+        <h2>Bank Policy Engine <button class="btn btn-add" onclick="openModal()">+ Create Policy</button></h2>
+        <table id="policyTable">
+            <thead>
+                <tr>
+                    <th>Bank Name</th>
+                    <th>Product</th>
+                    <th>Min Loan</th>
+                    <th>ROI Range</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="users" class="section">
+        <h2>Manage DSA Users</h2>
+        <table id="userTable">
+            <thead>
+                <tr>
+                    <th>DSA Name</th>
+                    <th>Mobile</th>
+                    <th>Username</th>
+                    <th>Password</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="settings" class="section">
+        <h2>Admin Settings</h2>
+        <div style="background:white; padding:20px; max-width:400px; border-radius:8px;">
+            <label>Change Admin Username</label>
+            <input type="text" id="adminUser" value="admin">
+            <br>
+            <label>Change Admin Password</label>
+            <input type="text" id="adminPass" value="admin123">
+            <br><br>
+            <button class="btn btn-add" onclick="alert('Admin Credentials Updated Successfully!')">Update Credentials</button>
+        </div>
+    </div>
+
 </div>
 
 <div id="policyModal" class="modal">
@@ -87,8 +125,8 @@
             <form id="policyForm">
                 <input type="hidden" id="p_id">
 
-                <div class="sec-title">🔹 SECTION A – BASIC PRODUCT DETAILS</div>
-                <div class="sec-content">
+                <div class="sec-title" onclick="toggleSec('secA')">🔹 SECTION A – BASIC PRODUCT DETAILS ▼</div>
+                <div id="secA" class="sec-content">
                     <div class="form-full"><label>Bank Name</label><input type="text" id="bankName"></div>
                     <div class="form-row">
                         <div><label>Product Type</label>
@@ -115,8 +153,8 @@
                     </div>
                 </div>
 
-                <div class="sec-title">🔹 SECTION B – APPLICANT & CO-APPLICANT</div>
-                <div class="sec-content">
+                <div class="sec-title" onclick="toggleSec('secB')">🔹 SECTION B – APPLICANT & CO-APPLICANT ▼</div>
+                <div id="secB" class="sec-content">
                     <div class="form-row">
                         <div><label>Applicant Age Min</label><input type="number" id="ageMin"></div>
                         <div><label>Applicant Age Max</label><input type="number" id="ageMax"></div>
@@ -147,8 +185,8 @@
                     </div>
                 </div>
 
-                <div class="sec-title">🔹 SECTION C – BUSINESS & BANKING</div>
-                <div class="sec-content">
+                <div class="sec-title" onclick="toggleSec('secC')">🔹 SECTION C – BUSINESS & BANKING ▼</div>
+                <div id="secC" class="sec-content">
                     <div class="form-row">
                         <div><label>Business Vintage (Years)</label><input type="number" id="vintageMin"></div>
                         <div><label>Min Turnover (Lakhs)</label><input type="number" id="turnMin"></div>
@@ -177,8 +215,8 @@
                     </div>
                 </div>
 
-                <div class="sec-title">🔹 SECTION D – CREDIT & OBLIGATIONS</div>
-                <div class="sec-content">
+                <div class="sec-title" onclick="toggleSec('secD')">🔹 SECTION D – CREDIT & OBLIGATIONS ▼</div>
+                <div id="secD" class="sec-content">
                     <div class="form-row">
                         <div><label>CIBIL Min</label><input type="number" id="cibilMin"></div>
                         <div><label>CIBIL Max</label><input type="number" id="cibilMax"></div>
@@ -193,14 +231,14 @@
                     </div>
                 </div>
 
-                <div class="sec-title">🔹 SECTION E – PROGRAMS (Multipliers)</div>
-                <div class="sec-content">
+                <div class="sec-title" onclick="toggleSec('secE')">🔹 SECTION E – PROGRAMS (Multipliers) ▼</div>
+                <div id="secE" class="sec-content">
                     <div id="progContainer"></div>
                     <button type="button" class="btn btn-plus" onclick="addProg()">➕ Add Program (ABB/GST/ITR/DSCR)</button>
                 </div>
 
-                <div class="sec-title">🔹 SECTION F – CUSTOM RULES</div>
-                <div class="sec-content">
+                <div class="sec-title" onclick="toggleSec('secF')">🔹 SECTION F – CUSTOM RULES ▼</div>
+                <div id="secF" class="sec-content">
                     <div id="ruleContainer"></div>
                     <button type="button" class="btn btn-plus" onclick="addRule()">➕ Add Condition</button>
                 </div>
@@ -215,20 +253,50 @@
 </div>
 
 <script>
-    let policies = JSON.parse(localStorage.getItem('admin_policies_master')) || [];
+    // --- INITIAL DATA: THE 11 POLICIES ---
+    const defaultPolicies = [
+        { id: 1, bankName: "TATA CAPITAL STBL", prodType: "Small Ticket", loanMin: 1, loanMax: 50, roiMin: 18, roiMax: 24, turnMin: 20 },
+        { id: 2, bankName: "ADITYA BIRLA STBL", prodType: "Small Ticket", loanMin: 1, loanMax: 40, roiMin: 17.5, roiMax: 22, turnMin: 25 },
+        { id: 3, bankName: "BAJAJ FINANCE TERM", prodType: "Small Ticket", loanMin: 5, loanMax: 30, roiMin: 16.5, roiMax: 21, turnMin: 40 },
+        { id: 4, bankName: "TATA CAPITAL HTBL", prodType: "Big Ticket", loanMin: 50, loanMax: 500, roiMin: 14, roiMax: 18, turnMin: 200 },
+        { id: 5, bankName: "ADITYA BIRLA BIG TICKET", prodType: "Big Ticket", loanMin: 50, loanMax: 500, roiMin: 13.5, roiMax: 18, turnMin: 250 },
+        { id: 6, bankName: "PIRAMAL CAPITAL UBL", prodType: "Small Ticket", loanMin: 1, loanMax: 30, roiMin: 19, roiMax: 26, turnMin: 30 },
+        { id: 7, bankName: "PIRAMAL CAPITAL UBL+", prodType: "Big Ticket", loanMin: 30, loanMax: 100, roiMin: 15, roiMax: 20, turnMin: 100 },
+        { id: 8, bankName: "ADITYA BIRLA DROP OD", prodType: "Drop Line OD", loanMin: 10, loanMax: 50, roiMin: 12, roiMax: 16, turnMin: 100 },
+        { id: 9, bankName: "TATA CAPITAL DROP OD", prodType: "Drop Line OD", loanMin: 10, loanMax: 50, roiMin: 12.5, roiMax: 16, turnMin: 100 },
+        { id: 10, bankName: "BAJAJ FINANCE FLEXI OD", prodType: "OD", loanMin: 5, loanMax: 25, roiMin: 14.5, roiMax: 22, turnMin: 50 },
+        { id: 11, bankName: "CLIX CAPITAL", prodType: "Small Ticket", loanMin: 1, loanMax: 20, roiMin: 21, roiMax: 28, turnMin: 15 }
+    ];
+
+    const defaultUsers = [
+        { name: "Rahul Kumar", mobile: "9876543210", user: "rahul_dsa", pass: "Pass@123", status: "Active" },
+        { name: "Sneha Agencies", mobile: "9988776655", user: "sneha_fin", pass: "Money#2025", status: "Active" }
+    ];
+
+    let policies = JSON.parse(localStorage.getItem('admin_policies_final')) || defaultPolicies;
+    let users = JSON.parse(localStorage.getItem('admin_users_final')) || defaultUsers;
 
     // --- UI FUNCTIONS ---
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    }
+
+    function toggleSec(id) {
+        const el = document.getElementById(id);
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
     function openModal() {
         document.getElementById('policyForm').reset();
         document.getElementById('p_id').value = '';
         document.getElementById('progContainer').innerHTML = '';
         document.getElementById('ruleContainer').innerHTML = '';
         document.getElementById('policyModal').style.display = 'flex';
-        // Reset toggles
-        toggleField('coAppDetails', false);
-        toggleField('houseDetails', false);
-        toggleField('itrDetails', false);
-        toggleField('gstDetails', false);
+        // Open first section
+        document.getElementById('secA').style.display = 'block';
     }
     
     function closeModal() { document.getElementById('policyModal').style.display = 'none'; }
@@ -247,7 +315,7 @@
             </select>
             <input type="number" placeholder="Min" class="prog-min" value="${d.min||''}">
             <input type="number" placeholder="Max" class="prog-max" value="${d.max||''}">
-            <input type="number" placeholder="Multiplier (e.g. 0.2)" class="prog-mult" value="${d.mult||''}">
+            <input type="number" placeholder="Mult" class="prog-mult" value="${d.mult||''}">
             <button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button>
         `;
         document.getElementById('progContainer').appendChild(div);
@@ -257,8 +325,8 @@
         const div = document.createElement('div');
         div.className = 'dynamic-row';
         div.innerHTML = `
-            <input type="text" placeholder="Field Name" class="rule-name" value="${d.name||''}">
-            <input type="text" placeholder="Condition" class="rule-cond" value="${d.cond||''}">
+            <input type="text" placeholder="Condition Name" class="rule-name" value="${d.name||''}">
+            <input type="text" placeholder="Value" class="rule-cond" value="${d.cond||''}">
             <button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button>
         `;
         document.getElementById('ruleContainer').appendChild(div);
@@ -270,7 +338,7 @@
             id: document.getElementById('p_id').value || Date.now(),
             bankName: document.getElementById('bankName').value,
             prodType: document.getElementById('prodType').value,
-            // A
+            // Mapping fields manually to ensure saving
             loanMin: document.getElementById('loanMin').value,
             loanMax: document.getElementById('loanMax').value,
             tenureMin: document.getElementById('tenureMin').value,
@@ -279,7 +347,6 @@
             roiMax: document.getElementById('roiMax').value,
             pfMin: document.getElementById('pfMin').value,
             pfMax: document.getElementById('pfMax').value,
-            // B
             ageMin: document.getElementById('ageMin').value,
             ageMax: document.getElementById('ageMax').value,
             coAppReq: document.getElementById('coAppReq').value,
@@ -288,7 +355,6 @@
             houseReq: document.getElementById('houseReq').value,
             houseGeo: document.getElementById('houseGeo').value,
             housePins: document.getElementById('housePins').value,
-            // C
             vintageMin: document.getElementById('vintageMin').value,
             turnMin: document.getElementById('turnMin').value,
             abbMin: document.getElementById('abbMin').value,
@@ -297,14 +363,12 @@
             gstReq: document.getElementById('gstReq').value,
             gstTurn: document.getElementById('gstTurn').value,
             bankTypes: Array.from(document.querySelectorAll('.bank-type:checked')).map(cb => cb.value),
-            // D
             cibilMin: document.getElementById('cibilMin').value,
             cibilMax: document.getElementById('cibilMax').value,
             actLoans: document.getElementById('actLoans').value,
             unsecLoans: document.getElementById('unsecLoans').value,
             loans6m: document.getElementById('loans6m').value,
             enq3m: document.getElementById('enq3m').value,
-            // E & F
             programs: [],
             rules: []
         };
@@ -330,18 +394,18 @@
         const idx = policies.findIndex(x => x.id == p.id);
         if(idx > -1) policies[idx] = p; else policies.push(p);
         
-        localStorage.setItem('admin_policies_master', JSON.stringify(policies));
+        localStorage.setItem('admin_policies_final', JSON.stringify(policies));
         closeModal();
         renderTable();
     }
 
-    // --- EDIT LOGIC (The Fix for Undefined) ---
+    // --- EDIT LOGIC ---
     function editPolicy(index) {
         openModal();
         const p = policies[index];
         document.getElementById('p_id').value = p.id;
         
-        // Map Every Field Manually to ensure no "undefined"
+        // Map Every Field Manually
         document.getElementById('bankName').value = p.bankName || '';
         document.getElementById('prodType').value = p.prodType || 'Small Ticket';
         document.getElementById('loanMin').value = p.loanMin || '';
@@ -355,7 +419,6 @@
         
         document.getElementById('ageMin').value = p.ageMin || '';
         document.getElementById('ageMax').value = p.ageMax || '';
-        
         document.getElementById('coAppReq').value = p.coAppReq || 'No';
         toggleField('coAppDetails', p.coAppReq === 'Yes');
         document.getElementById('coAgeMin').value = p.coAgeMin || '';
@@ -398,34 +461,45 @@
     function deletePolicy(index) {
         if(confirm('Delete?')) {
             policies.splice(index, 1);
-            localStorage.setItem('admin_policies_master', JSON.stringify(policies));
+            localStorage.setItem('admin_policies_final', JSON.stringify(policies));
             renderTable();
         }
     }
 
+    // --- RENDER TABLES ---
     function renderTable() {
+        // Policies
         const tbody = document.querySelector('#policyTable tbody');
         tbody.innerHTML = '';
-        if(policies.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No policies found. Click + Create Policy.</td></tr>';
-            return;
-        }
         policies.forEach((p, idx) => {
             tbody.innerHTML += `
             <tr>
                 <td>${p.bankName}</td>
                 <td>${p.prodType}</td>
-                <td>${p.loanMin}L - ${p.loanMax}L</td>
-                <td>${p.roiMin}% - ${p.roiMax}%</td>
+                <td>${p.loanMin || 0}L - ${p.loanMax || 'Max'}L</td>
+                <td>${p.roiMin || 0}% - ${p.roiMax || 0}%</td>
                 <td>
                     <button class="btn btn-edit" onclick="editPolicy(${idx})">Edit</button>
                     <button class="btn btn-del" onclick="deletePolicy(${idx})">Del</button>
                 </td>
             </tr>`;
         });
+
+        // Users
+        const ubody = document.querySelector('#userTable tbody');
+        ubody.innerHTML = '';
+        users.forEach((u) => {
+            ubody.innerHTML += `
+            <tr>
+                <td>${u.name}</td><td>${u.mobile}</td>
+                <td>${u.user}</td><td>${u.pass}</td>
+                <td style="color:green; font-weight:bold;">${u.status}</td>
+                <td><button class="btn btn-edit">Edit</button> <button class="btn btn-del">Block</button></td>
+            </tr>`;
+        });
     }
 
-    renderTable();
+    renderTable(); // Init
 </script>
 </body>
 </html>
