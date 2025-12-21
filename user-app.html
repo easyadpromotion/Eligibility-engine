@@ -38,7 +38,6 @@
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
-        /* DASHBOARD */
         .dash-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .dash-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .dash-table th, .dash-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -57,7 +56,6 @@
             .form-grid { grid-template-columns: 1fr; }
         }
 
-        /* PDF MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .report-paper { background: white; width: 900px; margin: 0 auto; padding: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: 'Arial', sans-serif; min-height: 1000px; }
         .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
@@ -106,14 +104,8 @@
                         <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" class="pdf-data" data-label="Vintage"></div>
                         <div class="form-group"><label>Turnover (Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
                         <div class="form-group"><label>Entity Type</label><select id="entityType" class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option></select></div>
-                        <div class="form-group"><label>Sector</label>
-                            <select id="sector" class="pdf-data" data-label="Sector">
-                                <option value="Trading">Trading (7% Margin)</option>
-                                <option value="Manufacturing">Manufacturing (9% Margin)</option>
-                                <option value="Service">Service (11% Margin)</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Premises</label><select id="premises" class="pdf-data" data-label="Premises"><option>Rented</option><option>Leased</option><option>Owned</option></select></div>
+                        <div class="form-group"><label>Sector</label><select id="sector" class="pdf-data" data-label="Sector"><option value="Trading">Trading (7% Margin)</option><option value="Manufacturing">Manufacturing (9% Margin)</option><option value="Service">Service (11% Margin)</option></select></div>
+                        <div class="form-group"><label>Business Premises</label><select id="premises" class="pdf-data" data-label="Premises"><option>Rented</option><option>Leased</option><option>Owned</option></select></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec1')">+ Add Field</button>
                 </div>
@@ -125,17 +117,17 @@
                     <div class="form-grid">
                         <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
                         <div class="form-group">
-                            <label>Bank Statements</label>
-                            <div class="bank-options">
+                            <label>Bank Statement type</label>
+                            <div class="bank-options" id="bankOpts">
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">OD</div>
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">CC</div>
                             </div>
                         </div>
-                        <div class="form-group"><label>GST Registered?</label><select id="gstReg" class="pdf-data" data-label="GST Reg" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div class="form-group"><label>GST Reg</label><select id="gstReg" class="pdf-data" data-label="GST Reg" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="gstDetails"><label>GST Turnover (Lakhs)</label><input type="number" id="gstTurn" class="pdf-data" data-label="GST Turnover"></div>
-                        <div class="form-group"><label>ITR Filed?</label><select id="itrReg" class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div class="form-group"><label>ITR Filed</label><select id="itrReg" class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="itrDetails"><label>ITR Gross Income</label><input type="number" id="itrInc" class="pdf-data" data-label="ITR Income"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec2')">+ Add Field</button>
@@ -146,15 +138,14 @@
                 <div class="accordion-header" onclick="toggleSection('sec3')">3. Credit Profile <span>▼</span></div>
                 <div id="sec3" class="accordion-body">
                     <div class="form-grid">
-                        <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
+                        <div class="form-group"><label>Cibil</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
                         <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans" class="pdf-data" data-label="Active Loans"></div>
-                       <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
-                        <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsecured Loans"></div>
-                        
-                        <div class="form-group"><label>Loans Taken (Last 6m)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
-                        <div class="form-group"><label>Loans Closing (Next 6m)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
-                         <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
-                        <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
+                        <div class="form-group"><label>Reduced EMI(Next 6 Months)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
+                        <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsec Loans"></div>
+                        <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
+                        <div class="form-group"><label>Loans Taken (6Months)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
+                        <div class="form-group"><label>Loans Closing(Next 6Months)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
+                        <div class="form-group"><label>Enquiries(3 Months)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec3')">+ Add Field</button>
                 </div>
@@ -167,7 +158,7 @@
                         <div class="form-group"><label>Applicant Age</label><input type="number" id="age" class="pdf-data" data-label="Age"></div>
                         <div class="form-group"><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
                         <div class="form-group"><label>Co-Applicant?</label><select id="coApp" class="pdf-data" data-label="Co-App" onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
-                        <div class="form-group hidden-field" id="coAppField"><label>Co-App Age</label><input type="number" id="coAge" class="pdf-data" data-label="Co-App Age"></div>
+                        <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" id="coAge" class="pdf-data" data-label="Co-App Age"></div>
                         <div class="form-group"><label>Own House?</label><select id="ownHouse" class="pdf-data" data-label="Own House" onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                         <div class="form-group hidden-field" id="houseField"><label>Own House Pincode</label><input type="number" class="pdf-data" data-label="Pincode"></div>
                     </div>
@@ -179,7 +170,7 @@
                 <div class="accordion-header" onclick="toggleSection('sec5')">5. Loan Requirement <span>▼</span></div>
                 <div id="sec5" class="accordion-body">
                     <div class="form-grid">
-                        <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
+                        <div class="form-group"><label>Required Loan Amount(lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
                         <div class="form-group"><label>Purpose</label><select class="pdf-data" data-label="Purpose"><option>Working Capital</option><option>Expansion</option><option>Asset Purchase</option></select></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec5')">+ Add Field</button>
@@ -193,15 +184,10 @@
 
         <div id="dashView" style="display:none;">
             <h2>DSA Dashboard</h2>
-            
             <div class="dash-card">
                 <h3>📂 Application History</h3>
-                <table class="dash-table" id="historyTable">
-                    <thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <table class="dash-table" id="historyTable"><thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
             </div>
-
             <div class="dash-card">
                 <h3>🔐 User Settings</h3>
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
@@ -211,7 +197,6 @@
                 <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="updateCredentials()">Update Password</button>
             </div>
         </div>
-
     </div>
 
     <div id="fullReportModal">
@@ -220,241 +205,115 @@
                 <button onclick="document.getElementById('fullReportModal').style.display='none'" style="padding:10px; cursor:pointer;">Close</button>
                 <button onclick="window.print()" style="padding:10px; background:#0288d1; color:white; border:none; cursor:pointer;">Print / Save PDF</button>
             </div>
-            <div class="report-header">
-                <div class="report-title">PROVISIONAL OFFER LETTER</div>
-                <div style="font-size:18px; margin-top:10px; font-weight:bold;">Customer: <span id="pdfCustomerName"></span></div>
-            </div>
-            <div class="report-section-title">LOAN APPLICATION DETAILS</div>
-            <div class="details-grid" id="pdfAppDetails"></div>
+            <div class="report-header"><div class="report-title">PROVISIONAL OFFER LETTER</div><div style="font-size:18px; margin-top:10px; font-weight:bold;">Customer: <span id="pdfCustomerName"></span></div></div>
+            <div class="report-section-title">LOAN APPLICATION DETAILS</div><div class="details-grid" id="pdfAppDetails"></div>
             <div class="report-section-title">ELIGIBILITY (ALL BANKS)</div>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>BANK NAME</th>
-                        <th>PROGRAM</th>
-                        <th>ELIGIBILITY LOAN AMOUNT</th>
-                        <th>TENURE (MIN & MAX)</th>
-                        <th>ROI (MIN & MAX)</th>
-                    </tr>
-                </thead>
-                <tbody id="pdfEligibleTable"></tbody>
-            </table>
+            <table class="report-table"><thead><tr><th>BANK NAME</th><th>PROGRAM</th><th>ELIGIBILITY LOAN AMOUNT</th><th>TENURE (MIN & MAX)</th><th>ROI (MIN & MAX)</th></tr></thead><tbody id="pdfEligibleTable"></tbody></table>
             <div class="report-section-title">NOT ELIGIBLE</div>
-            <table class="report-table">
-                <thead><tr><th>BANK NAME</th><th>REJECT PROGRAM</th><th>REMARKS</th><th>FINAL STATUS</th></tr></thead>
-                <tbody id="pdfRejectTable"></tbody>
-            </table>
+            <table class="report-table"><thead><tr><th>BANK NAME</th><th>REJECT PROGRAM</th><th>REMARKS</th><th>FINAL STATUS</th></tr></thead><tbody id="pdfRejectTable"></tbody></table>
         </div>
     </div>
 
     <script>
-        function switchView(view) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(view === 'appView') document.getElementById('nav-app').classList.add('active');
-            if(view === 'dashView') document.getElementById('nav-dash').classList.add('active');
-            
-            document.getElementById('appView').style.display = view === 'appView' ? 'block' : 'none';
-            document.getElementById('dashView').style.display = view === 'dashView' ? 'block' : 'none';
-            if(view === 'dashView') renderHistory();
-        }
-
-        function toggleSection(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
-        function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
-        function toggleBankOpt(el) { el.classList.toggle('selected'); }
+        function switchView(v){document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));if(v==='appView')document.getElementById('nav-app').classList.add('active');if(v==='dashView')document.getElementById('nav-dash').classList.add('active');document.getElementById('appView').style.display=v==='appView'?'block':'none';document.getElementById('dashView').style.display=v==='dashView'?'block':'none';if(v==='dashView')renderHistory();}
+        function toggleSection(id){const e=document.getElementById(id);e.style.display=(e.style.display==='block')?'none':'block';}
+        function toggleField(id,s){document.getElementById(id).style.display=s?'block':'none';}
+        function toggleBankOpt(e){e.classList.toggle('selected');}
+        function logoutUser(){if(confirm("Logout?"))window.location.href="index.html";}
         
-        // --- 1. FIXED LOGOUT ---
-        function logoutUser() {
-            if(confirm("Are you sure you want to logout?")) {
-                window.location.href = "index.html"; 
-            }
+        function updateCredentials(){
+            const u=document.getElementById('cur_user').value, p=document.getElementById('new_pass').value;
+            if(!u||!p){alert('Enter details');return;}
+            let users=JSON.parse(localStorage.getItem('credit_users_db'))||[];
+            let idx=users.findIndex(x=>x.user===u);
+            if(idx!==-1){users[idx].pass=p;localStorage.setItem('credit_users_db',JSON.stringify(users));alert('Updated! Login again.');window.location.href="index.html";}
+            else{alert('User not found!');}
         }
 
-        // --- 2. FIXED CREDENTIAL UPDATE (Find correct user) ---
-        function updateCredentials() {
-            const curUser = document.getElementById('cur_user').value;
-            const newPass = document.getElementById('new_pass').value;
-            if(!curUser || !newPass) { alert('Please enter Current Username and New Password.'); return; }
-            
-            let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
-            let userIndex = users.findIndex(u => u.user === curUser);
-            
-            if(userIndex !== -1) {
-                users[userIndex].pass = newPass;
-                localStorage.setItem('credit_users_db', JSON.stringify(users));
-                alert('Password Updated Successfully! Please login again.');
-                window.location.href = "index.html";
-            } else {
-                alert('User not found! Please enter the correct current username.');
-            }
-        }
+        function addCustomField(id){const s=document.querySelector(`#${id} .form-grid`), d=document.createElement('div');d.className='form-group';d.innerHTML=`<label>Custom</label><input type="text" class="pdf-data" data-label="Custom">`;s.appendChild(d);}
 
-        function addCustomField(gridId) {
-            const section = document.querySelector(`#${gridId} .form-grid`);
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            div.innerHTML = `<label>Custom Field</label><input type="text" class="pdf-data" data-label="Custom">`;
-            section.appendChild(div);
-        }
-
-        // --- POLICIES ---
         const defaultPolicies = [
-            { bank: "TATA CAPITAL STBL", type:"STBL", minTurn:20, minCibil:700, maxUnsec:5, loanMax:20, tenMax:36, roiMin:18, roiMax:24 },
-            { bank: "ADITYA BIRLA STBL", type:"STBL", minTurn:25, minCibil:700, maxUnsec:5, loanMax:40, tenMax:36, roiMin:17.5, roiMax:22 },
-            { bank: "BAJAJ FINANCE TERM", type:"TERM", minTurn:40, minCibil:700, maxUnsec:5, loanMax:30, tenMax:48, roiMin:16.5, roiMax:21 },
-            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minTurn:30, minCibil:700, maxUnsec:"", loanMax:15, tenMax:36, roiMin:16, roiMax:24 }, 
-            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minTurn:100, minCibil:700, maxUnsec:5, loanMax:100, tenMax:48, roiMin:15, roiMax:20 },
-            { bank: "TATA CAPITAL HTBL", type:"HTBL", minTurn:200, minCibil:700, maxUnsec:5, loanMax:500, tenMax:60, roiMin:14, roiMax:18 },
-            { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minTurn:250, minCibil:700, maxUnsec:5, loanMax:500, tenMax:60, roiMin:13.5, roiMax:18 },
-            { bank: "ADITYA BIRLA DROP OD", type:"OD", minTurn:100, minCibil:700, maxUnsec:5, loanMax:50, tenMax:12, roiMin:12, roiMax:16 },
-            { bank: "TATA CAPITAL DROP OD", type:"OD", minTurn:100, minCibil:700, maxUnsec:5, loanMax:50, tenMax:12, roiMin:12.5, roiMax:16 },
-            { bank: "BAJAJ FINANCE FLEXI OD", type:"OD", minTurn:50, minCibil:700, maxUnsec:5, loanMax:25, tenMax:24, roiMin:14.5, roiMax:22 },
-            { bank: "CLIX CAPITAL", type:"NBFC", minTurn:15, minCibil:700, maxUnsec:5, loanMax:20, tenMax:30, roiMin:21, roiMax:28 }
+            { bank:"TATA CAPITAL STBL", type:"STBL", minTurn:20, minCibil:700, maxUnsec:5, loanMax:20, tenMax:36, roiMin:18, roiMax:24 },
+            { bank:"ADITYA BIRLA STBL", type:"STBL", minTurn:25, minCibil:700, maxUnsec:5, loanMax:40, tenMax:36, roiMin:17.5, roiMax:22 },
+            { bank:"BAJAJ FINANCE TERM", type:"TERM", minTurn:40, minCibil:700, maxUnsec:5, loanMax:50, tenMax:48, roiMin:16.5, roiMax:21 },
+            { bank:"PIRAMAL CAPITAL UBL", type:"UBL", minTurn:30, minCibil:700, maxUnsec:"", loanMax:15, tenMax:36, roiMin:16, roiMax:24 },
+            { bank:"PIRAMAL CAPITAL UBL+", type:"UBL+", minTurn:100, minCibil:700, maxUnsec:5, loanMax:100, tenMax:48, roiMin:15, roiMax:20 },
+            { bank:"TATA CAPITAL HTBL", type:"HTBL", minTurn:200, minCibil:700, maxUnsec:5, loanMax:500, tenMax:60, roiMin:14, roiMax:18 },
+            { bank:"ADITYA BIRLA BIG TICKET", type:"HTBL", minTurn:250, minCibil:700, maxUnsec:5, loanMax:500, tenMax:60, roiMin:13.5, roiMax:18 },
+            { bank:"ADITYA BIRLA DROP OD", type:"OD", minTurn:100, minCibil:700, maxUnsec:5, loanMax:50, tenMax:12, roiMin:12, roiMax:16 },
+            { bank:"TATA CAPITAL DROP OD", type:"OD", minTurn:100, minCibil:700, maxUnsec:5, loanMax:50, tenMax:12, roiMin:12.5, roiMax:16 },
+            { bank:"BAJAJ FINANCE FLEXI OD", type:"OD", minTurn:50, minCibil:700, maxUnsec:5, loanMax:25, tenMax:24, roiMin:14.5, roiMax:22 },
+            { bank:"CLIX CAPITAL", type:"NBFC", minTurn:15, minCibil:700, maxUnsec:5, loanMax:20, tenMax:30, roiMin:21, roiMax:28 }
         ];
+        let policies=JSON.parse(localStorage.getItem('credit_engine_db')); if(!policies||policies.length===0)policies=defaultPolicies;
+        document.getElementById('policyCount').innerText=policies.length;
+        let latestResults={eligible:[],declined:[]}, history=JSON.parse(localStorage.getItem('dsa_app_history'))||[];
 
-        let policies = JSON.parse(localStorage.getItem('credit_engine_db'));
-        if (!policies || policies.length === 0) { policies = defaultPolicies; }
-        document.getElementById('policyCount').innerText = policies.length;
+        function calcPV(r,n,p){if(r===0)return p*n;return p*(1-Math.pow(1+r,-n))/r;}
 
-        let latestResults = { eligible: [], declined: [] };
-        let history = JSON.parse(localStorage.getItem('dsa_app_history')) || [];
+        function runEligibilityEngine(){
+            latestResults={eligible:[],declined:[]};
+            let formData={};
+            document.querySelectorAll('.pdf-data').forEach(el=>{let k=el.getAttribute('data-label')||el.id;formData[k]=el.value;});
+            
+            // CAPTURE BANK STATEMENTS
+            let bankStmts = [];
+            document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
+            formData['Bank Statements'] = bankStmts.join(', ');
 
-        // --- ENGINE ---
-        function calcPV(rate, nper, pmt) {
-            if (rate === 0) return pmt * nper;
-            return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
+            // CAPTURE DSA NAME (Attempts to find logged-in user, else defaults)
+            let loggedUser = "DSA User";
+            try {
+                let saved = localStorage.getItem('current_dsa_user');
+                if(saved) loggedUser = JSON.parse(saved).name || saved;
+            } catch(e){}
+            formData['DSA Name'] = loggedUser;
+
+            const turn=parseFloat(formData['Turnover'])||0, abb=parseFloat(formData['ABB'])||0, cibil=parseFloat(formData['CIBIL'])||0, unsec=parseFloat(formData['Unsec Loans'])||0, emi=parseFloat(formData['Monthly EMI'])||0, redEmi=parseFloat(formData['Reduced EMI'])||0;
+            const sectorVal=document.getElementById('sector').value;
+            let margin=0.07; if(sectorVal.includes('Manufacturing'))margin=0.09; if(sectorVal.includes('Service'))margin=0.11;
+            const netIncome=Math.max(0,((turn*100000)/12*margin)-Math.max(0,emi-redEmi));
+
+            policies.forEach(p=>{
+                let pass=true, reason="";
+                if(turn<p.minTurn){pass=false;reason=`Turnover < ${p.minTurn}L`;}
+                else if(cibil<p.minCibil){pass=false;reason=`CIBIL < ${p.minCibil}`;}
+                else if(p.maxUnsec!==""&&unsec>p.maxUnsec){pass=false;reason=`Unsec > ${p.maxUnsec}`;}
+                
+                if(pass){
+                    const r=(p.roiMin/100)/12;
+                    let amt=Math.min(Math.max(calcPV(r,p.tenMax,abb*2.5),calcPV(r,p.tenMax,netIncome)),p.loanMax*100000);
+                    if(amt<100000){pass=false;reason="Eligible < 1L";}
+                    if(pass) latestResults.eligible.push({bank:p.bank,prog:p.type,amt:(amt/100000).toFixed(2),ten:`${p.tenMax}m`,roi:`${p.roiMin}-${p.roiMax}%`});
+                    else latestResults.declined.push({bank:p.bank,reason:reason});
+                } else latestResults.declined.push({bank:p.bank,reason:reason});
+            });
+
+            formData['Date'] = new Date().toLocaleDateString();
+
+            history.unshift({date:formData['Date'], customer:formData['Business Name'], status:latestResults.eligible.length>0?"Eligible":"Declined", dsaName: formData['DSA Name'], data:formData, results:latestResults});
+            localStorage.setItem('dsa_app_history',JSON.stringify(history));
+            document.getElementById('resultsArea').innerHTML=`<h3>Found ${latestResults.eligible.length} Eligible Banks</h3>`;
+            document.getElementById('dlReportBtn').style.display='block';
         }
 
-        function runEligibilityEngine() {
-            latestResults = { eligible: [], declined: [] };
-            
-            // --- 3. ROBUST DATA CAPTURE (Captures hidden fields too) ---
-            let formData = {};
-            document.querySelectorAll('.pdf-data').forEach(el => {
-                // Ensure every field is captured using label or ID
-                let key = el.getAttribute('data-label') || el.id;
-                formData[key] = el.value;
-            });
-
-            // Parse
-            const turn = parseFloat(formData['Turnover']) || 0;
-            const abb = parseFloat(formData['ABB']) || 0;
-            const cibil = parseFloat(formData['CIBIL']) || 0;
-            const unsec = parseFloat(formData['Unsec Loans']) || 0;
-            const emi = parseFloat(formData['Monthly EMI']) || 0;
-            const redEmi = parseFloat(formData['Reduced EMI']) || 0;
-            
-            const sectorVal = document.getElementById('sector').value;
-            let margin = 0.07;
-            if (sectorVal.includes('Manufacturing')) margin = 0.09;
-            if (sectorVal.includes('Service')) margin = 0.11;
-            
-            const netIncome = Math.max(0, ((turn*100000)/12 * margin) - Math.max(0, emi-redEmi));
-
-            // Checks
-            policies.forEach(p => {
-                let pass = true;
-                let reason = "";
-
-                if (turn < p.minTurn) { pass=false; reason=`Turnover < ${p.minTurn}L`; }
-                else if (cibil < p.minCibil) { pass=false; reason=`CIBIL < ${p.minCibil}`; }
-                else if (p.maxUnsec !== "" && unsec > p.maxUnsec) { pass=false; reason=`Unsec > ${p.maxUnsec}`; }
-
-                if (pass) {
-                    const mRate = (p.roiMin/100)/12;
-                    let loanABB = calcPV(mRate, p.tenMax, abb*2.5);
-                    let loanInc = calcPV(mRate, p.tenMax, netIncome);
-                    let final = Math.min(Math.max(loanABB, loanInc), p.loanMax * 100000);
-                    
-                    if(final < 100000) { pass=false; reason="Eligible < 1L"; }
-
-                    if(pass) {
-                        latestResults.eligible.push({ 
-                            bank: p.bank || p.bankName, 
-                            prog: p.type || p.prodType, 
-                            amt: (final/100000).toFixed(2), 
-                            ten: `${p.tenMax}m`, 
-                            roi: `${p.roiMin}-${p.roiMax}%` 
-                        });
-                    } else {
-                        latestResults.declined.push({ bank: p.bank || p.bankName, reason: reason });
-                    }
-                } else {
-                    latestResults.declined.push({ bank: p.bank || p.bankName, reason: reason });
-                }
-            });
-
-            // Save History (Complete Snapshot)
-            const entry = {
-                date: new Date().toLocaleDateString(),
-                customer: formData['Business Name'] || "Customer",
-                status: latestResults.eligible.length > 0 ? "Eligible" : "Declined",
-                data: formData, // Complete form data
-                results: latestResults
-            };
-            history.unshift(entry);
-            localStorage.setItem('dsa_app_history', JSON.stringify(history));
-
-            // UI
-            document.getElementById('resultsArea').innerHTML = `<h3>Found ${latestResults.eligible.length} Eligible Banks</h3>`;
-            document.getElementById('dlReportBtn').style.display = 'block';
+        function renderHistory(){
+            const t=document.querySelector('#historyTable tbody');t.innerHTML=history.length===0?"<tr><td colspan='5'>No History</td></tr>":"";
+            history.forEach((h,i)=>t.innerHTML+=`<tr><td>${h.date}</td><td>${h.customer}</td><td><span class="status-badge ${h.status==='Eligible'?'status-eligible':'status-declined'}">${h.status}</span></td><td><button class="btn-view" onclick="viewHistory(${i})">View</button></td></tr>`);
         }
+        function viewHistory(i){let e=history[i];generateFullPDF(e.results,e.data);}
 
-        // --- DASHBOARD FUNCTIONS ---
-        function renderHistory() {
-            const tbody = document.querySelector('#historyTable tbody');
-            tbody.innerHTML = history.length === 0 ? "<tr><td colspan='5'>No History</td></tr>" : "";
-            history.forEach((h, index) => {
-                tbody.innerHTML += `<tr>
-                    <td>${h.date}</td>
-                    <td>${h.customer}</td>
-                    <td><span class="status-badge ${h.status==='Eligible'?'status-eligible':'status-declined'}">${h.status}</span></td>
-                    <td><button class="btn-view" onclick="viewHistory(${index})">View</button></td>
-                </tr>`;
-            });
-        }
-
-        function viewHistory(index) {
-            const entry = history[index];
-            // Load saved data into report
-            generateFullPDF(entry.results, entry.data);
-        }
-
-        // --- PDF GENERATOR ---
-        function generateFullPDF(resultsOverride = null, dataOverride = null) {
-            const res = resultsOverride || latestResults;
-            const dGrid = document.getElementById('pdfAppDetails');
-            dGrid.innerHTML = "";
+        function generateFullPDF(resOv=null,datOv=null){
+            const res=resOv||latestResults, dGrid=document.getElementById('pdfAppDetails'); dGrid.innerHTML="";
+            if(datOv){document.getElementById('pdfCustomerName').innerText=datOv['Business Name'];for(const[k,v]of Object.entries(datOv)){if(v)dGrid.insertAdjacentHTML('beforeend',`<div class="detail-item"><strong>${k}:</strong> ${v}</div>`);}}
+            else{document.getElementById('pdfCustomerName').innerText=document.getElementById('bizName').value;document.querySelectorAll('.pdf-data').forEach(i=>{if(i.value)dGrid.insertAdjacentHTML('beforeend',`<div class="detail-item"><strong>${i.getAttribute('data-label')}:</strong> ${i.value}</div>`);});}
             
-            // Priority: Use Historical Data if available
-            if(dataOverride) {
-                document.getElementById('pdfCustomerName').innerText = dataOverride['Business Name'] || "Customer";
-                for (const [key, value] of Object.entries(dataOverride)) {
-                    if(value) dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><strong>${key}:</strong> ${value}</div>`);
-                }
-            } else {
-                document.getElementById('pdfCustomerName').innerText = document.getElementById('bizName').value || "Customer";
-                document.querySelectorAll('.pdf-data').forEach(inp => {
-                    if(inp.value && inp.offsetParent !== null) {
-                        dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><strong>${inp.getAttribute('data-label')}:</strong> ${inp.value}</div>`);
-                    }
-                });
-            }
-
-            const eTable = document.getElementById('pdfEligibleTable');
-            eTable.innerHTML = res.eligible.length === 0 ? "<tr><td colspan='5'>No Eligible Banks</td></tr>" : "";
-            res.eligible.forEach(i => {
-                eTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`);
-            });
-
-            const dTable = document.getElementById('pdfRejectTable');
-            dTable.innerHTML = res.declined.length === 0 ? "<tr><td colspan='4'>No Rejections</td></tr>" : "";
-            res.declined.forEach(i => {
-                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Policy Failed</td><td class="status-declined">DECLINED</td></tr>`);
-            });
-
-            document.getElementById('fullReportModal').style.display = 'block';
+            const eT=document.getElementById('pdfEligibleTable'); eT.innerHTML=res.eligible.length===0?"<tr><td colspan='5'>No Eligible Banks</td></tr>":"";
+            res.eligible.forEach(i=>eT.insertAdjacentHTML('beforeend',`<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`));
+            const dT=document.getElementById('pdfRejectTable'); dT.innerHTML=res.declined.length===0?"<tr><td colspan='4'>No Rejections</td></tr>":"";
+            res.declined.forEach(i=>dT.insertAdjacentHTML('beforeend',`<tr><td>${i.bank}</td><td>${i.reason}</td><td>Policy Failed</td><td class="status-declined">DECLINED</td></tr>`));
+            document.getElementById('fullReportModal').style.display='block';
         }
     </script>
 </body>
 </html>
-
