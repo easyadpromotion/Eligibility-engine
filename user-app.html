@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Engine Pro - Master</title>
+    <title>Credit Engine Pro - Updated Master</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* --- CORE STYLES --- */
@@ -49,6 +49,9 @@
         .submit-btn:hover { background-color: #1b5e20; }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
+        /* RESULTS AREA */
+        #resultsArea { margin-top: 40px; }
+
         /* MOBILE */
         @media (max-width: 768px) {
             .sidebar { position: fixed; left: -260px; height: 100%; }
@@ -69,6 +72,7 @@
         .report-table th, .report-table td { border: 1px solid #333; padding: 8px; text-align: left; }
         .report-table th { background-color: #f0f0f0; font-weight: bold; }
         .status-declined { color: #d32f2f; font-weight: bold; }
+        .status-approved { color: #2e7d32; font-weight: bold; }
 
         @media print { 
             body > * { display: none !important; } 
@@ -216,25 +220,28 @@
     <script>
         let latestResults = { eligible: [], declined: [] };
         
-        // --- POLICIES (Note: Piramal has NO maxUnsec limit) ---
+        // --- 1. MASTER POLICY DATA ---
+        // UPDATED: All Banks have Min CIBIL 700 & Max Unsecured 5
         const bankPolicies = [
-            { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 2, roi: 18, maxTenure: 36, minTurnover: 20 },
-            { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 710, maxUnsec: 2, roi: 17.5, maxTenure: 36, minTurnover: 25 },
-            { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 720, maxUnsec: 3, roi: 16.5, maxTenure: 48, minTurnover: 40 },
-            // PIRAMAL UBL: Unsecured limit REMOVED as per instruction
-            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, roi: 19, maxTenure: 36, minTurnover: 30 },
-            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 730, maxUnsec: 1, roi: 15, maxTenure: 48, minTurnover: 100 },
-            { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 725, maxUnsec: 4, roi: 14, maxTenure: 60, minTurnover: 200 },
-            { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minVintage: 4, minCibil: 725, maxUnsec: 3, roi: 13.5, maxTenure: 60, minTurnover: 250 },
-            { bank: "ADITYA BIRLA DROP OD", type:"OD", minVintage: 3, minCibil: 740, maxUnsec: 2, roi: 12, maxTenure: 12, minTurnover: 100 },
-            { bank: "TATA CAPITAL DROP OD", type:"OD", minVintage: 3, minCibil: 740, maxUnsec: 2, roi: 12.5, maxTenure: 12, minTurnover: 100 },
-            { bank: "BAJAJ FINANCE FLEXI OD", type:"OD", minVintage: 2, minCibil: 725, maxUnsec: 3, roi: 14.5, maxTenure: 24, minTurnover: 50 },
-            { bank: "CLIX CAPITAL", type:"NBFC", minVintage: 2, minCibil: 680, maxUnsec: 5, roi: 21, maxTenure: 30, minTurnover: 15 }
+            // Standard
+            { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 18, maxTenure: 36, minTurnover: 20 },
+            { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 17.5, maxTenure: 36, minTurnover: 25 },
+            { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 16.5, maxTenure: 48, minTurnover: 40 },
+            // High Ticket (Turnover preserved)
+            { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, roi: 14, maxTenure: 60, minTurnover: 200 }, 
+            { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, roi: 13.5, maxTenure: 60, minTurnover: 250 }, 
+            // Others
+            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 19, maxTenure: 36, minTurnover: 30 },
+            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 700, maxUnsec: 5, roi: 15, maxTenure: 48, minTurnover: 100 },
+            { bank: "ADITYA BIRLA DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 12, maxTenure: 12, minTurnover: 100 },
+            { bank: "TATA CAPITAL DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, roi: 12.5, maxTenure: 12, minTurnover: 100 },
+            { bank: "BAJAJ FINANCE FLEXI OD", type:"OD", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 14.5, maxTenure: 24, minTurnover: 50 },
+            { bank: "CLIX CAPITAL", type:"NBFC", minVintage: 2, minCibil: 700, maxUnsec: 5, roi: 21, maxTenure: 30, minTurnover: 15 }
         ];
 
         window.onload = function() { document.getElementById('policyCount').innerText = bankPolicies.length; };
 
-        // --- UI FUNCTIONS ---
+        // --- 2. UI HELPERS ---
         function toggleSection(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
         function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
         function toggleBankOpt(el) { el.classList.toggle('selected'); }
@@ -246,7 +253,7 @@
             section.appendChild(div);
         }
 
-        // --- ENGINE ---
+        // --- 3. ENGINE ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -255,7 +262,7 @@
         function runEligibilityEngine() {
             latestResults = { eligible: [], declined: [] };
             
-            // 1. Gather Inputs
+            // Inputs
             const vintage = parseFloat(document.getElementById('vintage').value) || 0;
             const turnoverLakhs = parseFloat(document.getElementById('turnover').value) || 0;
             const turnover = turnoverLakhs * 100000;
@@ -266,32 +273,29 @@
             const reducedEMI = parseFloat(document.getElementById('reducedEmi').value) || 0;
             const sector = document.getElementById('sector').value;
 
-            // 2. Net Income Calculation (Margin Logic)
-            let margin = 0.07; // Default Trading
+            // Logic: Net Income
+            let margin = 0.07; 
             if (sector.includes('Manufacturing')) margin = 0.09;
             if (sector.includes('Service')) margin = 0.11;
             
             const netIncome = Math.max(0, (turnover / 12 * margin) - Math.max(0, currentEMI - reducedEMI));
 
-            // 3. Policy Check Loop
+            // Policy Loop
             bankPolicies.forEach(p => {
                 let isEligible = true;
                 let reasons = [];
                 
-                // Gating Checks
+                // Gating
                 if (vintage < p.minVintage) { isEligible = false; reasons.push(`Vintage < ${p.minVintage}`); }
                 if (cibil < p.minCibil) { isEligible = false; reasons.push(`CIBIL < ${p.minCibil}`); }
                 if (turnoverLakhs < p.minTurnover) { isEligible = false; reasons.push(`Turnover < ${p.minTurnover}L`); }
-                // Unsecured Limit (Only if defined in policy)
-                if (p.maxUnsec !== undefined && unsecLoans > p.maxUnsec) { isEligible = false; reasons.push(`Unsec Loans > ${p.maxUnsec}`); }
+                if (unsecLoans > p.maxUnsec) { isEligible = false; reasons.push(`Unsec > ${p.maxUnsec}`); }
 
                 if (isEligible) {
                     const mRate = (p.roi / 100) / 12;
-                    // ABB Program
-                    const loanABB = calculatePV(mRate, p.maxTenure, abb * 2); // Assuming 2x multiplier for ABB example
-                    // DSCR Program
+                    // Dual Program Calc
+                    const loanABB = calculatePV(mRate, p.maxTenure, abb * 2); 
                     const loanDSCR = calculatePV(mRate, p.maxTenure, netIncome);
-                    
                     const finalAmount = Math.max(loanABB, loanDSCR);
 
                     latestResults.eligible.push({
@@ -311,21 +315,20 @@
                 }
             });
 
-            // Update UI
+            // UI
             document.getElementById('resultsArea').innerHTML = `
                 <div style="background:#e8f5e9; padding:15px; border-radius:5px; border-left:5px solid #2e7d32;">
                     <h3>Calculation Complete</h3>
-                    <p><strong>Net Income:</strong> ₹${Math.round(netIncome).toLocaleString()} | <strong>Sector Margin:</strong> ${margin*100}%</p>
-                    <p><strong>Eligible Banks:</strong> ${latestResults.eligible.length} | <strong>Declined:</strong> ${latestResults.declined.length}</p>
+                    <p><strong>Net Income:</strong> ₹${Math.round(netIncome).toLocaleString()}</p>
+                    <p><strong>Eligible:</strong> ${latestResults.eligible.length} | <strong>Declined:</strong> ${latestResults.declined.length}</p>
                 </div>`;
             document.getElementById('dlReportBtn').style.display = 'block';
         }
 
-        // --- GENERATE PDF ---
+        // --- 4. PDF ---
         function generateFullPDF() {
             document.getElementById('pdfCustomerName').innerText = document.getElementById('bizName').value || "Valued Customer";
             
-            // App Details
             const dGrid = document.getElementById('pdfAppDetails');
             dGrid.innerHTML = "";
             document.querySelectorAll('.pdf-data').forEach(inp => {
@@ -334,15 +337,13 @@
                 }
             });
 
-            // Eligible Table
             const eTable = document.getElementById('pdfEligibleTable');
             eTable.innerHTML = "";
-            if(latestResults.eligible.length === 0) eTable.innerHTML = "<tr><td colspan='5' style='text-align:center'>No Eligible Banks Found</td></tr>";
+            if(latestResults.eligible.length === 0) eTable.innerHTML = "<tr><td colspan='5' style='text-align:center'>No Eligible Banks</td></tr>";
             latestResults.eligible.forEach(i => {
-                eTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} Lakhs</td><td>${i.tenure}m</td><td>${i.roi}%</td></tr>`);
+                eTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} L</td><td>${i.tenure}m</td><td>${i.roi}%</td></tr>`);
             });
 
-            // Reject Table
             const dTable = document.getElementById('pdfRejectTable');
             dTable.innerHTML = "";
             if(latestResults.declined.length === 0) dTable.innerHTML = "<tr><td colspan='4' style='text-align:center'>No Rejections</td></tr>";
