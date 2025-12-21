@@ -6,47 +6,39 @@
     <title>Credit Engine Pro - User</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* --- CORE STYLES --- */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 100; transition: 0.3s; }
+        .sidebar { width: 250px; background-color: #1a237e; color: white; padding: 20px; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 100; }
         .logo { font-size: 22px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
         .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
         .logout { margin-top: auto; background-color: #d32f2f; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        /* MAIN CONTENT */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .page-title { font-size: 24px; font-weight: bold; color: #333; }
         
-        /* FORM ACCORDIONS */
-        .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
-        .accordion-header { padding: 18px 25px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .accordion-body { padding: 25px; display: none; border-top: 1px solid #eee; }
+        .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .accordion-header { padding: 18px 25px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #eee; }
+        .accordion-body { padding: 25px; display: none; }
         .accordion-body.open { display: block; }
         
-        /* GRID */
         .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         .form-group { margin-bottom: 5px; }
         label { display: block; margin-bottom: 6px; font-size: 13px; color: #555; font-weight: 500; }
         input, select { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; box-sizing: border-box; }
         
-        /* UTILITY */
         .hidden-field { display: none; background-color: #fafafa; padding: 10px; border: 1px dashed #ccc; margin-top: 5px; }
         .add-field-btn { background: none; border: 1px dashed #1a237e; color: #1a237e; padding: 10px; width: 100%; margin-top: 15px; cursor: pointer; border-radius: 4px; font-size: 13px; }
         
-        /* BANK OPTIONS */
         .bank-options { display: flex; gap: 10px; flex-wrap: wrap; }
-        .bank-opt { padding: 8px 15px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 13px; user-select: none; background: #fff; }
+        .bank-opt { padding: 8px 15px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 13px; background: #fff; }
         .bank-opt.selected { background-color: #1a237e; color: white; border-color: #1a237e; }
 
-        /* BUTTONS */
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
-        .submit-btn:hover { background-color: #1b5e20; }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
-        /* DASHBOARD TABLE */
+        /* DASHBOARD */
         .dash-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .dash-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .dash-table th, .dash-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -56,7 +48,6 @@
         .status-declined { background: #ffebee; color: #c62828; }
         .btn-view { padding: 6px 12px; background: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
 
-        /* MOBILE RESPONSIVE */
         .mobile-btn { display: none; font-size: 24px; cursor: pointer; color: #1a237e; margin-right: 10px; }
         @media (max-width: 1024px) { .form-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
@@ -106,7 +97,6 @@
         </div>
 
         <div id="appView">
-            
             <div class="accordion">
                 <div class="accordion-header" onclick="toggleSection('sec1')">1. Business Details <span>▼</span></div>
                 <div id="sec1" class="accordion-body open">
@@ -115,12 +105,7 @@
                         <div class="form-group"><label>Contact Number</label><input type="number" id="contact" class="pdf-data" data-label="Contact"></div>
                         <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" class="pdf-data" data-label="Vintage"></div>
                         <div class="form-group"><label>Turnover (Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
-                        
-                        <div class="form-group"><label>Entity Type</label>
-                            <select id="entityType" class="pdf-data" data-label="Entity">
-                                <option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label>Entity Type</label><select id="entityType" class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option></select></div>
                         <div class="form-group"><label>Sector</label>
                             <select id="sector" class="pdf-data" data-label="Sector">
                                 <option value="Trading">Trading (7% Margin)</option>
@@ -163,13 +148,11 @@
                     <div class="form-grid">
                         <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
                         <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans" class="pdf-data" data-label="Active Loans"></div>
-                        
+                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
                         <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsecured Loans"></div>
-                        
                         <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="Monthly EMI"></div>
                         <div class="form-group"><label>Loans Taken (Last 6m)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
                         <div class="form-group"><label>Loans Closing (Next 6m)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
-                        <div class="form-group"><label>Reduced EMI (Next 6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
                         <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
                     </div>
                     <button class="add-field-btn" onclick="addCustomField('sec3')">+ Add Field</button>
@@ -221,10 +204,10 @@
             <div class="dash-card">
                 <h3>🔐 User Settings</h3>
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="form-group"><label>New Username</label><input type="text" id="set_user" placeholder="Enter new username"></div>
-                    <div class="form-group"><label>New Password</label><input type="password" id="set_pass" placeholder="Enter new password"></div>
+                    <div class="form-group"><label>Current Username</label><input type="text" id="cur_user" placeholder="Enter current username"></div>
+                    <div class="form-group"><label>New Password</label><input type="password" id="new_pass" placeholder="Enter new password"></div>
                 </div>
-                <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="updateCredentials()">Update Credentials</button>
+                <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="updateCredentials()">Update Password</button>
             </div>
         </div>
 
@@ -281,29 +264,27 @@
         // --- 1. FIXED LOGOUT ---
         function logoutUser() {
             if(confirm("Are you sure you want to logout?")) {
-                // Redirect to the login page (index.html)
                 window.location.href = "index.html"; 
             }
         }
 
-        // --- 2. FIXED CREDENTIAL UPDATE ---
+        // --- 2. FIXED CREDENTIAL UPDATE (Find correct user) ---
         function updateCredentials() {
-            const u = document.getElementById('set_user').value;
-            const p = document.getElementById('set_pass').value;
-            if(!u || !p) { alert('Please enter both username and password.'); return; }
+            const curUser = document.getElementById('cur_user').value;
+            const newPass = document.getElementById('new_pass').value;
+            if(!curUser || !newPass) { alert('Please enter Current Username and New Password.'); return; }
             
             let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
+            let userIndex = users.findIndex(u => u.user === curUser);
             
-            // Overwrite the first user or add if empty
-            if(users.length > 0) {
-                users[0].user = u;
-                users[0].pass = p;
+            if(userIndex !== -1) {
+                users[userIndex].pass = newPass;
+                localStorage.setItem('credit_users_db', JSON.stringify(users));
+                alert('Password Updated Successfully! Please login again.');
+                window.location.href = "index.html";
             } else {
-                users.push({ name: "DSA User", mobile: "0000000000", user: u, pass: p, status: "Active" });
+                alert('User not found! Please enter the correct current username.');
             }
-            
-            localStorage.setItem('credit_users_db', JSON.stringify(users));
-            alert('Credentials Updated! Please login with new details.');
         }
 
         function addCustomField(gridId) {
@@ -345,28 +326,15 @@
         function runEligibilityEngine() {
             latestResults = { eligible: [], declined: [] };
             
-            // --- 3. FIXED DATA CAPTURE ---
-            // Explicitly capture all fields by ID to ensure nothing is missed
+            // --- 3. ROBUST DATA CAPTURE (Captures hidden fields too) ---
             let formData = {};
-            
-            // List of all critical input IDs
-            const fieldIds = [
-                'bizName', 'contact', 'vintage', 'turnover', 'entityType', 'sector', 'premises',
-                'abb', 'gstReg', 'gstTurn', 'itrReg', 'itrInc',
-                'cibil', 'activeLoans', 'monthlyEmi', 'unsecLoans', 'loansTaken6m', 'loansClosed6m', 'reducedEmi', 'enquiries',
-                'age', 'coApp', 'coAge', 'ownHouse', 'reqAmount'
-            ];
-
-            fieldIds.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) {
-                    // Save by the "Label" if possible for display, else key
-                    let key = el.getAttribute('data-label') || id;
-                    formData[key] = el.value;
-                }
+            document.querySelectorAll('.pdf-data').forEach(el => {
+                // Ensure every field is captured using label or ID
+                let key = el.getAttribute('data-label') || el.id;
+                formData[key] = el.value;
             });
 
-            // Parse Variables for Logic
+            // Parse
             const turn = parseFloat(formData['Turnover']) || 0;
             const abb = parseFloat(formData['ABB']) || 0;
             const cibil = parseFloat(formData['CIBIL']) || 0;
@@ -414,12 +382,12 @@
                 }
             });
 
-            // Save History (Complete Data Snapshot)
+            // Save History (Complete Snapshot)
             const entry = {
                 date: new Date().toLocaleDateString(),
                 customer: formData['Business Name'] || "Customer",
                 status: latestResults.eligible.length > 0 ? "Eligible" : "Declined",
-                data: formData, // Captured data object
+                data: formData, // Complete form data
                 results: latestResults
             };
             history.unshift(entry);
@@ -446,7 +414,7 @@
 
         function viewHistory(index) {
             const entry = history[index];
-            // Pass the SAVED data to the generator
+            // Load saved data into report
             generateFullPDF(entry.results, entry.data);
         }
 
@@ -456,13 +424,11 @@
             const dGrid = document.getElementById('pdfAppDetails');
             dGrid.innerHTML = "";
             
-            // Logic: Use Override (Historical) if available, else Live Form
+            // Priority: Use Historical Data if available
             if(dataOverride) {
                 document.getElementById('pdfCustomerName').innerText = dataOverride['Business Name'] || "Customer";
                 for (const [key, value] of Object.entries(dataOverride)) {
-                    if(value) {
-                        dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><strong>${key}:</strong> ${value}</div>`);
-                    }
+                    if(value) dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><strong>${key}:</strong> ${value}</div>`);
                 }
             } else {
                 document.getElementById('pdfCustomerName').innerText = document.getElementById('bizName').value || "Customer";
