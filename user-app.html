@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Engine Pro - Master</title>
+    <title>Credit Engine Pro - Ultimate</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* --- CORE STYLES --- */
@@ -68,7 +68,6 @@
         .report-section-title { background: #eee; padding: 8px; font-weight: bold; font-size: 14px; border-left: 4px solid #333; margin-bottom: 10px; margin-top: 20px; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 12px; }
         .detail-item { border-bottom: 1px dotted #ccc; padding-bottom: 2px; }
-        
         .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
         .report-table th, .report-table td { border: 1px solid #333; padding: 8px; text-align: center; vertical-align: middle; }
         .report-table th { background-color: #f0f0f0; font-weight: bold; text-transform: uppercase; }
@@ -169,8 +168,8 @@
                     <div class="form-group"><label>Applicant Age</label><input type="number" id="age" class="pdf-data" data-label="Age"></div>
                     <div class="form-group"><label>Applicant Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
                     <div class="form-group"><label>Co-Applicant?</label><select id="coApp" onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
-                    <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
-                    <div class="form-group"><label>Own House?</label><select onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
+                    <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" id="coAge" class="pdf-data" data-label="Co-App Age"></div>
+                    <div class="form-group"><label>Own House?</label><select id="ownHouse" onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select></div>
                     <div class="form-group hidden-field" id="houseField"><label>Own House Pincode</label><input type="number" class="pdf-data" data-label="Pincode"></div>
                 </div>
                 <button class="add-field-btn" onclick="addCustomField('grid4')">+ Add Field</button>
@@ -229,22 +228,19 @@
     <script>
         let latestResults = { eligible: [], declined: [] };
         
-        // --- 1. POLICY DATA (WITH MAX LOAN LIMITS) ---
-        // Format: loanMin/Max (Lakhs), tenMin/Max (Months), roiMin/Max (%)
+        // --- 1. MASTER POLICY DATA ---
+        // maxUnsec: undefined means NO LIMIT (for Piramal)
         const bankPolicies = [
-            // Standard (Max ~30-50L)
+            // Standard
             { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:50, tenMin:12, tenMax:36, roiMin:18, roiMax:24, minTurnover: 20 },
             { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:40, tenMin:12, tenMax:36, roiMin:17.5, roiMax:22, minTurnover: 25 },
             { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:5, loanMax:50, tenMin:12, tenMax:48, roiMin:16.5, roiMax:21, minTurnover: 40 },
-            
-            // High Ticket (Max ~5Cr)
+            // High Ticket
             { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, loanMin:50, loanMax:500, tenMin:12, tenMax:60, roiMin:14, roiMax:18, minTurnover: 200 }, 
             { bank: "ADITYA BIRLA BIG TICKET", type:"HTBL", minVintage: 4, minCibil: 700, maxUnsec: 5, loanMin:50, loanMax:500, tenMin:12, tenMax:60, roiMin:13.5, roiMax:18, minTurnover: 250 }, 
-            
-            // Others (Max ~30-100L)
-            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:1, loanMax:30, tenMin:12, tenMax:36, roiMin:19, roiMax:26, minTurnover: 30 },
+            // Others
+            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, loanMin:1, loanMax:30, tenMin:12, tenMax:36, roiMin:19, roiMax:26, minTurnover: 30 }, // No maxUnsec limit
             { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 700, maxUnsec: 5, loanMin:30, loanMax:100, tenMin:12, tenMax:48, roiMin:15, roiMax:20, minTurnover: 100 },
-            
             // Overdrafts
             { bank: "ADITYA BIRLA DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:10, loanMax:50, tenMin:12, tenMax:12, roiMin:12, roiMax:16, minTurnover: 100 },
             { bank: "TATA CAPITAL DROP OD", type:"OD", minVintage: 3, minCibil: 700, maxUnsec: 5, loanMin:10, loanMax:50, tenMin:12, tenMax:12, roiMin:12.5, roiMax:16, minTurnover: 100 },
@@ -275,7 +271,7 @@
         function runEligibilityEngine() {
             latestResults = { eligible: [], declined: [] };
             
-            // A. INPUTS
+            // Inputs
             const vintage = parseFloat(document.getElementById('vintage').value) || 0;
             const turnoverLakhs = parseFloat(document.getElementById('turnover').value) || 0;
             const turnover = turnoverLakhs * 100000;
@@ -287,14 +283,12 @@
             const sector = document.getElementById('sector').value;
             
             // Mandatory Checks
-            const coApp = document.getElementById('coApp').value;
-            const ownHouse = document.getElementById('ownHouse').value;
             const gstReg = document.getElementById('gstReg').value;
             const itrFiled = document.getElementById('itrReg').value;
             const gstTurn = parseFloat(document.getElementById('gstTurn').value) || 0;
             const itrInc = parseFloat(document.getElementById('itrInc').value) || 0;
 
-            // B. LOGIC: NET INCOME
+            // Logic: Net Income
             let margin = 0.07; 
             if (sector.includes('Manufacturing')) margin = 0.09;
             if (sector.includes('Service')) margin = 0.11;
@@ -309,8 +303,9 @@
                 // 1. GATING (The 12 Fields)
                 if (vintage < p.minVintage) { isEligible = false; reasons.push(`Vintage < ${p.minVintage}`); }
                 if (cibil < p.minCibil) { isEligible = false; reasons.push(`CIBIL < ${p.minCibil}`); }
-                if (unsecLoans > p.maxUnsec) { isEligible = false; reasons.push(`Unsec > ${p.maxUnsec}`); }
                 if (turnoverLakhs < p.minTurnover) { isEligible = false; reasons.push(`Turnover < ${p.minTurnover}L`); }
+                // Unsecured Check (Skip if undefined for Piramal)
+                if (p.maxUnsec !== undefined && unsecLoans > p.maxUnsec) { isEligible = false; reasons.push(`Unsec > ${p.maxUnsec}`); }
                 
                 if (isEligible) {
                     const mRate = (p.roiMin / 100) / 12;
@@ -318,7 +313,7 @@
                     // --- MULTIPLE PROGRAM CALCULATION ---
                     // 1. ABB Program (If ABB > 0)
                     if(abb > 0) {
-                        let amt = calculatePV(mRate, p.tenMax, abb * 2); // Multiplier assumption
+                        let amt = calculatePV(mRate, p.tenMax, abb * 2); 
                         offers.push({ type: "ABB", amt: amt });
                     }
                     // 2. DSCR / Income Program (If Net Income > 0)
