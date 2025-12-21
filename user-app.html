@@ -3,346 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Engine Pro - Full Width</title>
+    <title>DSA Credit Engine - Mobile Ready</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* --- 1. LAYOUT STYLES --- */
+        /* --- CORE STYLES --- */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; overflow: hidden; }
         
         /* SIDEBAR */
-        .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0; }
-        .logo { font-size: 22px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 100; transition: 0.3s; flex-shrink: 0; }
+        .logo { font-size: 20px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
         .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; font-size: 14px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
         .logout { margin-top: auto; background-color: #d32f2f; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        /* MAIN CONTENT AREA */
-        .main-content { flex: 1; padding: 40px; overflow-y: auto; max-width: 1200px; margin: 0 auto; width: 100%; }
-        
-        /* HEADER */
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .page-title { font-size: 28px; font-weight: bold; color: #333; }
-        .policy-badge { background: #e8eaf6; color: #1a237e; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; border: 1px solid #c5cae9; }
+        /* MAIN CONTENT */
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .header-bar { background: white; padding: 15px 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-size: 20px; font-weight: bold; color: #333; }
+        .mobile-toggle { display: none; font-size: 24px; background: none; border: none; cursor: pointer; color: #1a237e; margin-right: 15px; }
 
-        /* --- 2. FORM STYLES --- */
-        .accordion { background: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
-        .accordion-header { padding: 18px 25px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; font-size: 16px; }
-        .accordion-body { padding: 25px; display: none; border-top: 1px solid #eee; }
+        .content-area { flex: 1; padding: 20px; overflow-y: auto; }
+
+        /* VIEWS (Tab Switching) */
+        .view-section { display: none; }
+        .view-section.active-view { display: block; }
+
+        /* FORM STYLES */
+        .accordion { background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
+        .accordion-header { padding: 15px 20px; font-weight: 600; color: #1a237e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .accordion-body { padding: 20px; display: none; border-top: 1px solid #eee; }
         .accordion-body.open { display: block; }
         
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; }
-        .form-group { margin-bottom: 5px; }
-        label { display: block; margin-bottom: 8px; font-size: 13px; color: #555; font-weight: 500; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
         
-        .hidden-field { display: none; }
-        
-        /* Bank Buttons */
-        .bank-options { display: flex; gap: 10px; flex-wrap: wrap; }
-        .bank-opt { padding: 10px 20px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 13px; user-select: none; background: #fafafa; }
-        .bank-opt.selected { background-color: #1a237e; color: white; border-color: #1a237e; }
+        .submit-btn { width: 100%; padding: 15px; background-color: #2e7d32; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+        .report-btn { width: 100%; padding: 15px; background-color: #0288d1; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; display: none; }
 
-        .submit-btn { width: 100%; padding: 18px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
-        .submit-btn:hover { background-color: #1b5e20; }
-        
-        .report-btn { width: 100%; padding: 15px; background-color: #0288d1; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
+        /* DASHBOARD STYLES */
+        .dash-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .dash-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .dash-table th, .dash-table td { border: 1px solid #eee; padding: 10px; text-align: left; font-size: 13px; }
+        .dash-table th { background: #f9f9f9; }
 
-        /* RESULTS AREA */
-        #resultsArea { margin-top: 40px; margin-bottom: 50px; }
-        .result-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 6px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .result-card.approved { border-left-color: #2e7d32; }
-        .result-card.declined { border-left-color: #d32f2f; }
+        /* PDF MODAL */
+        #pdfModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; overflow-y: auto; }
+        .pdf-paper { background: white; width: 90%; max-width: 800px; margin: 30px auto; padding: 30px; }
         
-        /* --- 3. PDF REPORT STYLES (Hidden Modal) --- */
-        #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .report-paper { background: white; width: 800px; margin: 0 auto; padding: 50px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: 'Arial', sans-serif; min-height: 1000px; }
-        
-        .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-        .report-title { font-size: 24px; font-weight: bold; text-transform: uppercase; text-decoration: underline; color: #000; }
-        .report-section-title { background: #eee; padding: 10px; font-weight: bold; font-size: 14px; border-left: 5px solid #333; margin-bottom: 15px; margin-top: 30px; }
-        
-        .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; font-size: 12px; }
-        .detail-item { border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
-        .detail-label { font-weight: bold; color: #555; }
-
-        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-        .report-table th, .report-table td { border: 1px solid #333; padding: 10px; text-align: left; }
-        .report-table th { background-color: #f0f0f0; font-weight: bold; }
-        .status-declined { color: #d32f2f; font-weight: bold; }
-        .status-approved { color: #2e7d32; font-weight: bold; }
+        /* POINT 5: MOBILE RESPONSIVENESS */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { position: fixed; left: -250px; height: 100%; width: 250px; }
+            .sidebar.active-mobile { left: 0; }
+            .mobile-toggle { display: block; }
+            .main-wrapper { width: 100%; }
+            .form-grid { grid-template-columns: 1fr; }
+            .dash-table { display: block; overflow-x: auto; white-space: nowrap; }
+        }
 
         @media print {
             body > * { display: none !important; }
-            #fullReportModal { display: block !important; position: absolute; top: 0; left: 0; background: white; width: 100%; height: auto; padding: 0; margin: 0; z-index: 9999; }
-            .report-paper { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 30px; }
+            #pdfModal { display: block !important; position: absolute; top: 0; left: 0; background: white; }
+            .pdf-paper { width: 100%; margin: 0; box-shadow: none; }
             .no-print { display: none !important; }
         }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
         <div class="logo">🚀 Credit Engine</div>
-        <div class="nav-item active">📄 New Application</div>
-        <div class="nav-item">📊 Dashboard</div>
+        <div class="nav-item active" onclick="switchView('appView', this)">📄 New Application</div>
+        <div class="nav-item" onclick="switchView('dashView', this)">📊 Dashboard</div>
         <div class="logout">🚪 Logout</div>
     </div>
 
-    <div class="main-content">
-        
+    <div class="main-wrapper">
         <div class="header-bar">
-            <div class="page-title">New Loan Application</div>
-            <div class="policy-badge">🛡️ <span id="policyCount">0</span> Policies Active</div>
-        </div>
-
-        <div class="accordion">
-            <div class="accordion-header" onclick="toggleSection('sec1')">1. Business Details <span>▼</span></div>
-            <div id="sec1" class="accordion-body open">
-                <div class="form-grid">
-                    <div class="form-group"><label>Customer/Business Name</label><input type="text" id="bizName" class="pdf-data" data-label="Business Name"></div>
-                    <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" class="pdf-data" data-label="Vintage"></div>
-                    <div class="form-group"><label>Turnover (₹ Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
-                    <div class="form-group"><label>Entity Type</label>
-                        <select id="entityType" class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option></select>
-                    </div>
-                    <div class="form-group"><label>Business Sector</label>
-                        <select id="sector" class="pdf-data" data-label="Sector">
-                            <option value="Trading">Trading (7% Margin)</option>
-                            <option value="Manufacturing">Manufacturing (9% Margin)</option>
-                            <option value="Service">Service (11% Margin)</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Premises Type</label><select id="premises" class="pdf-data" data-label="Premises"><option>Owned</option><option>Rented</option><option>Leased</option></select></div>
-                </div>
+            <div style="display:flex; align-items:center;">
+                <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+                <div class="page-title">DSA Portal</div>
+            </div>
+            <div style="font-size:12px; font-weight:bold; color:#1a237e;">
+                Shield: <span id="policyCount">0</span> Active
             </div>
         </div>
 
-        <div class="accordion">
-            <div class="accordion-header" onclick="toggleSection('sec2')">2. Banking & Docs <span>▼</span></div>
-            <div id="sec2" class="accordion-body">
-                <div class="form-grid">
-                    <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
-                    <div class="form-group">
-                        <label>Bank Statements Available</label>
-                        <div class="bank-options">
-                            <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
-                            <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
-                            <div class="bank-opt" onclick="toggleBankOpt(this)">OD</div>
-                            <div class="bank-opt" onclick="toggleBankOpt(this)">CC</div>
+        <div class="content-area">
+            
+            <div id="appView" class="view-section active-view">
+                <h3>New Loan Application</h3>
+
+                <div class="accordion">
+                    <div class="accordion-header" onclick="toggleSection('sec1')">1. Business Details <span>▼</span></div>
+                    <div id="sec1" class="accordion-body open">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Business Name</label><input type="text" id="bizName" class="pdf-data" data-label="Business Name"></div>
+                            <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" class="pdf-data" data-label="Vintage"></div>
+                            <div class="form-group"><label>Turnover (₹ Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
+                            <div class="form-group"><label>Entity Type</label><select id="entityType"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
+                            <div class="form-group"><label>Sector</label><select id="sector"><option value="Trading">Trading</option><option value="Manufacturing">Manufacturing</option><option value="Service">Service</option></select></div>
+                            <div class="form-group"><label>Premises</label><select><option>Owned</option><option>Rented</option></select></div>
                         </div>
                     </div>
-                    <div class="form-group"><label>GST Registered?</label>
-                        <select id="gstReg" class="pdf-data" data-label="GST Reg" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-header" onclick="toggleSection('sec2')">2. Banking & Docs <span>▼</span></div>
+                    <div id="sec2" class="accordion-body">
+                        <div class="form-grid">
+                            <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
+                            <div class="form-group"><label>GST Registered?</label><select><option>No</option><option>Yes</option></select></div>
+                            <div class="form-group"><label>ITR Filed?</label><select><option>No</option><option>Yes</option></select></div>
+                        </div>
                     </div>
-                    <div class="form-group hidden-field" id="gstDetails"><label>GST Number</label><input type="text" class="pdf-data" data-label="GST No"></div>
-                    
-                    <div class="form-group"><label>ITR Filed?</label>
-                        <select id="itrReg" class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-header" onclick="toggleSection('sec3')">3. Credit Profile <span>▼</span></div>
+                    <div id="sec3" class="accordion-body">
+                        <div class="form-grid">
+                            <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
+                            <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans"></div>
+                            <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi"></div>
+                            <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans"></div>
+                        </div>
                     </div>
-                    <div class="form-group hidden-field" id="itrDetails"><label>ITR Amount</label><input type="number" class="pdf-data" data-label="ITR Amt"></div>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-header" onclick="toggleSection('sec4')">4. Applicant Details <span>▼</span></div>
+                    <div id="sec4" class="accordion-body">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Applicant Age</label><input type="number" id="age"></div>
+                            <div class="form-group"><label>Co-Applicant?</label><select><option>No</option><option>Yes</option></select></div>
+                            <div class="form-group"><label>Own House?</label><select><option>No</option><option>Yes</option></select></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-header" onclick="toggleSection('sec5')">5. Loan Requirement <span>▼</span></div>
+                    <div id="sec5" class="accordion-body">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount"></div>
+                            <div class="form-group"><label>Purpose</label><select><option>Working Capital</option><option>Expansion</option></select></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="submit-btn" onclick="runEngine()">⚡ Check Eligibility</button>
+                <button class="report-btn" id="dlBtn" onclick="openPDF()">📄 Download Offer Letter</button>
+                <div id="resultsArea" style="margin-top:20px;"></div>
+            </div>
+
+            <div id="dashView" class="view-section">
+                <h3>DSA Dashboard</h3>
+                
+                <div class="dash-card">
+                    <h4>📂 Application History (Downloads)</h4>
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Customer Name</th>
+                                <th>Loan Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>20-12-2025</td>
+                                <td>Rahul Traders</td>
+                                <td>₹50 L</td>
+                                <td style="color:green;">Eligible</td>
+                                <td><button>Re-Download</button></td>
+                            </tr>
+                            <tr>
+                                <td>19-12-2025</td>
+                                <td>Sneha Mfg</td>
+                                <td>₹1.2 Cr</td>
+                                <td style="color:red;">Declined</td>
+                                <td><button>View</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dash-card">
+                    <h4>🔐 User Settings</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Change Username</label>
+                            <input type="text" value="dsa_user_01">
+                        </div>
+                        <div class="form-group">
+                            <label>Change Password</label>
+                            <input type="password" placeholder="New Password">
+                        </div>
+                    </div>
+                    <button class="submit-btn" style="width:auto; margin-top:10px;">Update Credentials</button>
                 </div>
             </div>
+
         </div>
-
-        <div class="accordion">
-            <div class="accordion-header" onclick="toggleSection('sec3')">3. Credit Profile <span>▼</span></div>
-            <div id="sec3" class="accordion-body">
-                <div class="form-grid">
-                    <div class="form-group"><label>CIBIL Score</label><input type="number" id="cibil" class="pdf-data" data-label="CIBIL"></div>
-                    <div class="form-group"><label>Active Loans</label><input type="number" id="activeLoans" class="pdf-data" data-label="Active Loans"></div>
-                    <div class="form-group"><label>Monthly EMI (₹)</label><input type="number" id="monthlyEmi" class="pdf-data" data-label="EMI"></div>
-                    <div class="form-group"><label>Unsecured Loans</label><input type="number" id="unsecLoans" class="pdf-data" data-label="Unsec Loans"></div>
-                    <div class="form-group"><label>Loans Taken (6m)</label><input type="number" id="loansTaken6m" class="pdf-data" data-label="Loans (6m)"></div>
-                    <div class="form-group"><label>Loans Closing (6m)</label><input type="number" id="loansClosed6m" class="pdf-data" data-label="Closing (6m)"></div>
-                    <div class="form-group"><label>Reduced EMI (6m)</label><input type="number" id="reducedEmi" class="pdf-data" data-label="Reduced EMI"></div>
-                    <div class="form-group"><label>Enquiries (3m)</label><input type="number" id="enquiries" class="pdf-data" data-label="Enquiries"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="accordion">
-            <div class="accordion-header" onclick="toggleSection('sec4')">4. Applicant Details <span>▼</span></div>
-            <div id="sec4" class="accordion-body">
-                <div class="form-grid">
-                    <div class="form-group"><label>Applicant Age</label><input type="number" id="age" class="pdf-data" data-label="Age"></div>
-                    <div class="form-group"><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
-                    <div class="form-group"><label>Marital Status</label><select class="pdf-data" data-label="Marital"><option>Married</option><option>Single</option></select></div>
-                    
-                    <div class="form-group"><label>Has Co-Applicant?</label>
-                        <select onchange="toggleField('coAppField', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
-                    </div>
-                    <div class="form-group hidden-field" id="coAppField"><label>Co-Applicant Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
-                    
-                    <div class="form-group"><label>Own House?</label>
-                        <select onchange="toggleField('houseField', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
-                    </div>
-                    <div class="form-group hidden-field" id="houseField"><label>Pincode</label><input type="number" class="pdf-data" data-label="House Pincode"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="accordion">
-            <div class="accordion-header" onclick="toggleSection('sec5')">5. Loan Requirement <span>▼</span></div>
-            <div id="sec5" class="accordion-body">
-                <div class="form-grid">
-                    <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
-                    <div class="form-group"><label>Purpose</label><select id="purpose" class="pdf-data" data-label="Purpose"><option>Working Capital</option><option>Expansion</option><option>Asset Purchase</option></select></div>
-                </div>
-            </div>
-        </div>
-
-        <button class="submit-btn" onclick="runEligibilityEngine()">⚡ Check Eligibility (All Banks)</button>
-        <button class="report-btn" id="dlReportBtn" onclick="generateFullPDF()">📄 Download Full Report</button>
-        <div id="resultsArea"></div>
-
     </div>
 
-    <div id="fullReportModal">
-        <div class="report-paper">
-            <div class="no-print" style="text-align:right; margin-bottom:10px;">
-                <button onclick="document.getElementById('fullReportModal').style.display='none'" style="padding:10px; cursor:pointer;">Close</button>
-                <button onclick="window.print()" style="padding:10px; background:#0288d1; color:white; border:none; cursor:pointer;">Print / Save PDF</button>
+    <div id="pdfModal">
+        <div class="pdf-paper">
+            <div class="no-print" style="text-align:right;">
+                <button onclick="document.getElementById('pdfModal').style.display='none'">Close</button>
+                <button onclick="window.print()">Print</button>
             </div>
-
-            <div class="report-header">
-                <div class="report-title">PROVISIONAL OFFER LETTER</div>
-                <div style="font-size:18px; margin-top:10px; font-weight:bold;">Customer: <span id="pdfCustomerName"></span></div>
-            </div>
-
-            <div class="report-section-title">LOAN APPLICATION DETAILS</div>
-            <div class="details-grid" id="pdfAppDetails"></div>
-
-            <div class="report-section-title">ELIGIBILITY (ALL BANKS)</div>
-            <table class="report-table">
-                <thead><tr><th>Bank Name</th><th>Program Type</th><th>Approved Amount</th><th>Tenure</th><th>ROI</th></tr></thead>
-                <tbody id="pdfEligibleTable"></tbody>
-            </table>
-
-            <div class="report-section-title">NOT ELIGIBLE</div>
-            <table class="report-table">
-                <thead><tr><th>Bank Name</th><th>Reject Program</th><th>Remarks</th><th>Final Status</th></tr></thead>
-                <tbody id="pdfRejectTable"></tbody>
-            </table>
+            <h2 style="text-align:center; text-decoration:underline;">PROVISIONAL OFFER LETTER</h2>
+            <p><strong>Customer:</strong> <span id="pdfName"></span></p>
+            <div id="pdfContent"></div>
         </div>
     </div>
 
     <script>
-        // GLOBAL DATA
-        let latestResults = { eligible: [], declined: [] };
-        
-        // Full Bank List (From previous screenshot context)
-        const bankPolicies = [
-            { bank: "TATA CAPITAL STBL", type:"STBL", minVintage: 2, minCibil: 700, maxUnsecured: 2, roi: 18, maxTenure: 36, minTurnover: 20 },
-            { bank: "ADITYA BIRLA STBL", type:"STBL", minVintage: 2, minCibil: 710, maxUnsecured: 2, roi: 17.5, maxTenure: 36, minTurnover: 25 },
-            { bank: "BAJAJ FINANCE TERM", type:"TERM", minVintage: 3, minCibil: 720, maxUnsecured: 3, roi: 16.5, maxTenure: 48, minTurnover: 40 },
-            { bank: "TATA CAPITAL HTBL", type:"HTBL", minVintage: 4, minCibil: 725, maxUnsecured: 4, roi: 14, maxTenure: 60, minTurnover: 200 }, 
-            { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minVintage: 3, minCibil: 700, maxUnsecured: 2, roi: 19, maxTenure: 36, minTurnover: 30 },
-            { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minVintage: 4, minCibil: 730, maxUnsecured: 1, roi: 15, maxTenure: 48, minTurnover: 100 },
-            { bank: "ADITYA BIRLA DROP OD", type:"OD", minVintage: 3, minCibil: 740, maxUnsecured: 2, roi: 12, maxTenure: 12, minTurnover: 100 },
-            { bank: "CLIX CAPITAL", type:"NBFC", minVintage: 2, minCibil: 680, maxUnsecured: 5, roi: 21, maxTenure: 30, minTurnover: 15 }
+        // POINT 1: ALL 11 POLICIES INCLUDED
+        const policies = [
+            { name: "TATA CAPITAL STBL", minTurn: 20 },
+            { name: "ADITYA BIRLA STBL", minTurn: 25 },
+            { name: "BAJAJ FINANCE TERM", minTurn: 40 },
+            { name: "TATA CAPITAL HTBL", minTurn: 200 },
+            { name: "ADITYA BIRLA BIG TICKET", minTurn: 250 },
+            { name: "PIRAMAL CAPITAL UBL", minTurn: 30 },
+            { name: "PIRAMAL CAPITAL UBL+", minTurn: 100 },
+            { name: "ADITYA BIRLA DROP OD", minTurn: 100 },
+            { name: "TATA CAPITAL DROP OD", minTurn: 100 },
+            { name: "BAJAJ FINANCE FLEXI OD", minTurn: 50 },
+            { name: "CLIX CAPITAL", minTurn: 15 }
         ];
 
-        window.onload = function() {
-            document.getElementById('policyCount').innerText = bankPolicies.length;
-        };
+        window.onload = () => { document.getElementById('policyCount').innerText = policies.length; };
 
-        // UI HELPERS
-        function toggleSection(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
-        function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
-        function toggleBankOpt(el) { el.classList.toggle('selected'); }
-
-        // ENGINE
-        function calculatePV(rate, nper, pmt) {
-            if (rate === 0) return pmt * nper;
-            return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
+        // NAVIGATION
+        function switchView(id, btn) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
+            document.getElementById(id).classList.add('active-view');
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            if(window.innerWidth < 768) toggleSidebar();
         }
 
-        function runEligibilityEngine() {
-            latestResults = { eligible: [], declined: [] };
-            
-            // Inputs
-            const vintage = parseFloat(document.getElementById('vintage').value) || 0;
-            const turnover = (parseFloat(document.getElementById('turnover').value) || 0) * 100000;
-            const turnoverLakhs = turnover / 100000;
-            const sector = document.getElementById('sector').value;
-            const abb = parseFloat(document.getElementById('abb').value) || 0;
-            const cibil = parseFloat(document.getElementById('cibil').value) || 0;
-            const unsecLoans = parseFloat(document.getElementById('unsecLoans').value) || 0;
-            const currentEMI = parseFloat(document.getElementById('monthlyEmi').value) || 0;
-            const reducedEMI = parseFloat(document.getElementById('reducedEmi').value) || 0;
-
-            // Income
-            let margin = (sector.includes('Manufacturing')) ? 0.09 : (sector.includes('Service') ? 0.11 : 0.07);
-            const netIncome = Math.max(0, (turnover / 12 * margin) - Math.max(0, currentEMI - reducedEMI));
-
-            bankPolicies.forEach(p => {
-                let isEligible = true;
-                let reasons = [];
-                
-                if (vintage < p.minVintage) { isEligible = false; reasons.push(`Vintage < ${p.minVintage} Yrs`); }
-                if (cibil < p.minCibil) { isEligible = false; reasons.push(`CIBIL < ${p.minCibil}`); }
-                if (unsecLoans > p.maxUnsecured) { isEligible = false; reasons.push(`Unsec > ${p.maxUnsecured}`); }
-                if (turnoverLakhs < p.minTurnover) { isEligible = false; reasons.push(`Turnover < ${p.minTurnover}L`); }
-
-                if (isEligible) {
-                    const mRate = (p.roi/100)/12;
-                    const loanABB = calculatePV(mRate, p.maxTenure, abb); 
-                    const loanInc = calculatePV(mRate, p.maxTenure, netIncome);
-                    
-                    latestResults.eligible.push({
-                        bank: p.bank,
-                        prog: p.type + " (ABB/Income)",
-                        amt: (Math.max(loanABB, loanInc)/100000).toFixed(2),
-                        tenure: p.maxTenure,
-                        roi: p.roi
-                    });
-                } else {
-                    latestResults.declined.push({
-                        bank: p.bank,
-                        prog: p.type,
-                        remarks: reasons.join(', '),
-                        status: "DECLINED"
-                    });
-                }
-            });
-
-            // Show results on screen simply
-            let html = `<h3>Calculation Complete: Found ${latestResults.eligible.length} Eligible Offers</h3>`;
-            html += `<p>Click "Download Full Report" below to view the official PDF.</p>`;
-            document.getElementById('resultsArea').innerHTML = html;
-            document.getElementById('dlReportBtn').style.display = 'block';
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active-mobile');
         }
 
-        function generateFullPDF() {
-            document.getElementById('pdfCustomerName').innerText = document.getElementById('bizName').value || "Valued Customer";
+        function toggleSection(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // LOGIC
+        function runEngine() {
+            const turnover = parseFloat(document.getElementById('turnover').value) || 0;
+            let eligible = 0;
+            policies.forEach(p => { if(turnover >= p.minTurn) eligible++; });
             
-            // Fill App Details
-            const dGrid = document.getElementById('pdfAppDetails');
-            dGrid.innerHTML = "";
-            document.querySelectorAll('.pdf-data').forEach(inp => {
-                if(inp.value && inp.value !== "0" && inp.style.display !== 'none') {
-                    dGrid.insertAdjacentHTML('beforeend', `<div class="detail-item"><span class="detail-label">${inp.getAttribute('data-label')}:</span> ${inp.value}</div>`);
-                }
-            });
+            document.getElementById('resultsArea').innerHTML = `<h3>Found ${eligible} Eligible Banks</h3>`;
+            document.getElementById('dlBtn').style.display = 'block';
+        }
 
-            // Fill Eligible
-            const eTable = document.getElementById('pdfEligibleTable');
-            eTable.innerHTML = "";
-            if(latestResults.eligible.length === 0) eTable.innerHTML = "<tr><td colspan='5' style='text-align:center'>No Eligible Banks</td></tr>";
-            latestResults.eligible.forEach(i => {
-                eTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} L</td><td>${i.tenure}m</td><td>${i.roi}%</td></tr>`);
-            });
-
-            // Fill Declined
-            const dTable = document.getElementById('pdfRejectTable');
-            dTable.innerHTML = "";
-            if(latestResults.declined.length === 0) dTable.innerHTML = "<tr><td colspan='4' style='text-align:center'>No Rejections</td></tr>";
-            latestResults.declined.forEach(i => {
-                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.remarks}</td><td class="status-declined">${i.status}</td></tr>`);
-            });
-
-            document.getElementById('fullReportModal').style.display = 'block';
+        function openPDF() {
+            document.getElementById('pdfName').innerText = document.getElementById('bizName').value || "Customer";
+            document.getElementById('pdfModal').style.display = 'block';
         }
     </script>
 </body>
