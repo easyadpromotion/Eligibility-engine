@@ -40,15 +40,8 @@
         .form-full { margin-bottom: 10px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #333; }
         input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        
         .hidden-field { display: none; background: #f9f9f9; padding: 10px; border: 1px dashed #ccc; margin-top: 5px; }
         
-        .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; background: #f0f0f0; padding: 5px; border-radius: 4px; }
-        .dynamic-row input, .dynamic-row select { flex: 1; }
-        .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
-        .checkbox-item { display: flex; align-items: center; gap: 5px; font-size: 12px; background: #e8eaf6; padding: 5px 10px; border-radius: 15px; }
-        .checkbox-item input { width: auto; }
-
         /* VIEW SWITCHING */
         .section { display: none; }
         .section.active { display: block; }
@@ -74,7 +67,7 @@
             </div>
         </div>
         <table id="policyTable">
-            <thead><tr><th>Bank Name</th><th>Product</th><th>Min Loan</th><th>ROI Range</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Bank Name</th><th>Product</th><th>Loan Range</th><th>ROI Range</th><th>Actions</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -110,75 +103,141 @@
             <form id="policyForm">
                 <input type="hidden" id="p_id">
                 
-                <div class="sec-title">🔹 SECTION A – BASIC PRODUCT DETAILS</div>
+        <div class="sec-title">🔹 SECTION A – BASIC PRODUCT DETAILS</div>
+
                 <div class="sec-content">
+
                     <div class="form-full"><label>Bank Name</label><input type="text" id="bankName"></div>
+
                     <div class="form-row">
+
                         <div><label>Product Type</label><select id="prodType"><option>STBL</option><option>HTBL</option><option>OD</option><option>TERM</option><option>NBFC</option><option>UBL</option><option>UBL+</option></select></div>
+
                     </div>
+
                     <div class="form-row"><div><label>Loan Min (Lakhs)</label><input type="number" id="loanMin"></div><div><label>Loan Max (Lakhs)</label><input type="number" id="loanMax"></div></div>
+
                     <div class="form-row"><div><label>Tenure Min (Months)</label><input type="number" id="tenMin"></div><div><label>Tenure Max (Months)</label><input type="number" id="tenMax"></div></div>
+
                     <div class="form-row"><div><label>ROI Min (%)</label><input type="number" step="0.1" id="roiMin"></div><div><label>ROI Max (%)</label><input type="number" step="0.1" id="roiMax"></div></div>
+
                     <div class="form-row"><div><label>PF Min (%)</label><input type="number" step="0.1" id="pfMin"></div><div><label>PF Max (%)</label><input type="number" step="0.1" id="pfMax"></div></div>
+
                 </div>
+
+
 
                 <div class="sec-title">🔹 SECTION B – APPLICANT</div>
+
                 <div class="sec-content">
+
                     <div class="form-row"><div><label>Age Min</label><input type="number" id="ageMin"></div><div><label>Age Max</label><input type="number" id="ageMax"></div></div>
+
                     <div class="form-row">
+
                         <label>Co-Applicant Mandatory?</label>
+
                         <select id="coAppReq" onchange="toggleField('coBox', this.value==='Yes')"><option>No</option><option>Yes</option></select>
+
                     </div>
+
                     <div id="coBox" class="hidden-field">
+
                         <div class="form-row"><div><label>Co-App Age Min</label><input type="number" id="coAgeMin"></div><div><label>Co-App Age Max</label><input type="number" id="coAgeMax"></div></div>
+
                     </div>
+
                     <div class="form-row" style="margin-top:10px;">
+
                         <label>Own House Mandatory?</label>
+
                         <select id="houseReq" onchange="toggleField('houseBox', this.value==='Yes')"><option>No</option><option>Yes</option></select>
+
                     </div>
+
                     <div id="houseBox" class="hidden-field">
+
                         <div class="form-row"><div><label>Geo Limit</label><select id="houseGeo"><option>Local</option><option>Anywhere India</option></select></div><div><label>Pincodes</label><input type="text" id="housePins"></div></div>
+
                     </div>
+
                 </div>
+
+
 
                 <div class="sec-title">🔹 SECTION C – BUSINESS</div>
+
                 <div class="sec-content">
+
                     <div class="form-row"><div><label>Vintage Min (Yrs)</label><input type="number" id="minVin"></div><div><label>Turnover Min (Lakhs)</label><input type="number" id="minTurn"></div></div>
+
                     <div class="form-full"><label>ABB Min (Rupees)</label><input type="number" id="abbMin"></div>
+
                     
+
                     <div class="form-row">
+
                         <div><label>ITR Required?</label><select id="itrReq" onchange="toggleField('itrBox', this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+
                         <div id="itrBox" class="hidden-field"><label>Min ITR Turnover</label><input type="number" id="itrVal"></div>
+
                     </div>
+
                     <div class="form-row">
+
                         <div><label>GST Required?</label><select id="gstReq" onchange="toggleField('gstBox', this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+
                         <div id="gstBox" class="hidden-field"><label>Min GST Turnover</label><input type="number" id="gstVal"></div>
+
                     </div>
+
                     
+
                     <label>Banking Types Accepted:</label>
+
                     <div class="checkbox-group">
+
                         <label class="checkbox-item"><input type="checkbox" class="bank-chk" value="SA"> SA</label>
+
                         <label class="checkbox-item"><input type="checkbox" class="bank-chk" value="CA"> CA</label>
+
                         <label class="checkbox-item"><input type="checkbox" class="bank-chk" value="OD"> OD</label>
+
                         <label class="checkbox-item"><input type="checkbox" class="bank-chk" value="CC"> CC</label>
+
                     </div>
+
                 </div>
+
+
 
                 <div class="sec-title">🔹 SECTION D – CREDIT</div>
+
                 <div class="sec-content">
+
                     <div class="form-row"><div><label>CIBIL Min</label><input type="number" id="minCibil"></div><div><label>CIBIL Max</label><input type="number" id="maxCibil"></div></div>
+
                     <div class="form-row"><div><label>Max Active Loans</label><input type="number" id="actLoans"></div><div><label>Max Unsecured (Empty=Unlimited)</label><input type="number" id="maxUnsec"></div></div>
+
                     <div class="form-row"><div><label>Loans (Last 6m)</label><input type="number" id="loans6m"></div><div><label>Enquiries (3m)</label><input type="number" id="enq3m"></div></div>
+
                 </div>
 
+
+
                 <div class="sec-title">🔹 SECTION E & F – PROGRAMS & RULES</div>
+
                 <div class="sec-content">
+
                     <div id="progContainer"></div>
+
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
+
                 </div>
+
             </form>
-        </div>
-        <div class="modal-footer">
+
+        </div> <div class="modal-footer">
             <button class="btn btn-del" onclick="closeModal('policy')">Cancel</button>
             <button class="btn btn-add" onclick="savePolicy()">💾 Save Policy</button>
         </div>
@@ -205,19 +264,20 @@
 </div>
 
 <script>
-    // --- 1. DATA INITIALIZATION & RECOVERY ---
+    // --- 1. CORRECT DEFAULT POLICIES (Matches PDF & Screenshots) ---
+    // Piramal Max 15L, Clix Max 20L, etc.
     const defaultPolicies = [
         { id:1, bankName:"TATA CAPITAL STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, maxUnsec:5, roiMin:18, roiMax:24, loanMin:1, loanMax:50, tenMin:12, tenMax:36 },
         { id:2, bankName:"ADITYA BIRLA STBL", prodType:"STBL", minTurn:25, minVin:2, minCibil:700, maxUnsec:5, roiMin:17.5, roiMax:22, loanMin:1, loanMax:40, tenMin:12, tenMax:36 },
         { id:3, bankName:"BAJAJ FINANCE TERM", prodType:"TERM", minTurn:40, minVin:3, minCibil:700, maxUnsec:5, roiMin:16.5, roiMax:21, loanMin:5, loanMax:50, tenMin:12, tenMax:48 },
-        { id:4, bankName:"PIRAMAL CAPITAL UBL", prodType:"UBL", minTurn:30, minVin:3, minCibil:700, maxUnsec:"", roiMin:19, roiMax:26, loanMin:1, loanMax:30, tenMin:12, tenMax:36 }, 
+        { id:4, bankName:"PIRAMAL CAPITAL UBL", prodType:"UBL", minTurn:30, minVin:3, minCibil:700, maxUnsec:"", roiMin:19, roiMax:26, loanMin:1, loanMax:15, tenMin:12, tenMax:36 }, // Max 15L
         { id:5, bankName:"PIRAMAL CAPITAL UBL+", prodType:"UBL+", minTurn:100, minVin:4, minCibil:700, maxUnsec:5, roiMin:15, roiMax:20, loanMin:30, loanMax:100, tenMin:12, tenMax:48 },
         { id:6, bankName:"TATA CAPITAL HTBL", prodType:"HTBL", minTurn:200, minVin:4, minCibil:700, maxUnsec:5, roiMin:14, roiMax:18, loanMin:50, loanMax:500, tenMin:12, tenMax:60 },
         { id:7, bankName:"ADITYA BIRLA BIG TICKET", prodType:"HTBL", minTurn:250, minVin:4, minCibil:700, maxUnsec:5, roiMin:13.5, roiMax:18, loanMin:50, loanMax:500, tenMin:12, tenMax:60 },
         { id:8, bankName:"ADITYA BIRLA DROP OD", prodType:"OD", minTurn:100, minVin:3, minCibil:700, maxUnsec:5, roiMin:12, roiMax:16, loanMin:10, loanMax:50, tenMin:12, tenMax:12 },
         { id:9, bankName:"TATA CAPITAL DROP OD", prodType:"OD", minTurn:100, minVin:3, minCibil:700, maxUnsec:5, roiMin:12.5, roiMax:16, loanMin:10, loanMax:50, tenMin:12, tenMax:12 },
-        { id:10, bankName:"BAJAJ FINANCE FLEXI OD", prodType:"OD", minTurn:50, minVin:2, minCibil:700, maxUnsec:5, roiMin:14.5, roiMax:22, loanMin:5, loanMax:25, tenMin:12, tenMax:24 },
-        { id:11, bankName:"CLIX CAPITAL", prodType:"NBFC", minTurn:15, minVin:2, minCibil:700, maxUnsec:5, roiMin:21, roiMax:28, loanMin:1, loanMax:20, tenMin:12, tenMax:30 }
+        { id:10, bankName:"BAJAJ FINANCE FLEXI OD", prodType:"OD", minTurn:50, minVin:2, minCibil:700, maxUnsec:5, roiMin:14.5, roiMax:22, loanMin:5, loanMax:25, tenMin:12, tenMax:24 }, // Max 25L
+        { id:11, bankName:"CLIX CAPITAL", prodType:"NBFC", minTurn:15, minVin:2, minCibil:700, maxUnsec:5, roiMin:21, roiMax:28, loanMin:1, loanMax:20, tenMin:12, tenMax:30 } // Max 20L
     ];
 
     const defaultUsers = [
@@ -225,18 +285,8 @@
         { name: "Sneha Agencies", mobile: "9988776655", user: "sneha_fin", pass: "Money#2025", status: "Active" }
     ];
 
-    // Attempt to recover old data if new key is empty
-    let policies = JSON.parse(localStorage.getItem('credit_engine_db'));
-    if(!policies) {
-        // Fallback checks
-        policies = JSON.parse(localStorage.getItem('admin_policies_master')) || defaultPolicies;
-    }
-
-    let users = JSON.parse(localStorage.getItem('credit_users_db'));
-    if(!users) {
-        // Fallback checks
-        users = JSON.parse(localStorage.getItem('admin_users_master')) || JSON.parse(localStorage.getItem('admin_users_final')) || defaultUsers;
-    }
+    let policies = JSON.parse(localStorage.getItem('credit_engine_db')) || defaultPolicies;
+    let users = JSON.parse(localStorage.getItem('credit_users_db')) || defaultUsers;
 
     // --- UI FUNCTIONS ---
     function showSection(id) { document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
@@ -252,14 +302,6 @@
     
     function closeModal(type) { document.getElementById(type==='policy'?'policyModal':'userModal').style.display='none'; }
 
-    // --- DYNAMIC ROWS ---
-    function addProg(d={}) {
-        const div = document.createElement('div');
-        div.className = 'dynamic-row';
-        div.innerHTML = `<select class="prog-type"><option>ABB</option><option>GST</option><option>ITR</option></select><input type="number" class="prog-min" placeholder="Min"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button>`;
-        document.getElementById('progContainer').appendChild(div);
-    }
-
     // --- SAVE LOGIC ---
     function savePolicy() {
         let idx = document.getElementById('p_id').value;
@@ -269,7 +311,6 @@
             loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
             tenMin: +document.getElementById('tenMin').value, tenMax: +document.getElementById('tenMax').value,
             roiMin: +document.getElementById('roiMin').value, roiMax: +document.getElementById('roiMax').value,
-            pfMin: +document.getElementById('pfMin').value, pfMax: +document.getElementById('pfMax').value,
             ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
             minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value,
             abbMin: +document.getElementById('abbMin').value,
@@ -292,6 +333,15 @@
         closeModal('user'); renderTable();
     }
 
+    // --- RESET DEFAULTS ---
+    function resetDefaults() {
+        if(confirm("Reset all 11 policies to System Defaults?")) {
+            policies = JSON.parse(JSON.stringify(defaultPolicies));
+            renderTable();
+        }
+    }
+
+    // --- EDIT & DELETE ---
     function editPolicy(i) {
         openModal('policy');
         let p = policies[i];
@@ -301,10 +351,7 @@
         document.getElementById('loanMin').value = p.loanMin; document.getElementById('loanMax').value = p.loanMax;
         document.getElementById('tenMin').value = p.tenMin; document.getElementById('tenMax').value = p.tenMax;
         document.getElementById('roiMin').value = p.roiMin; document.getElementById('roiMax').value = p.roiMax;
-        document.getElementById('pfMin').value = p.pfMin||''; document.getElementById('pfMax').value = p.pfMax||'';
-        document.getElementById('ageMin').value = p.ageMin||''; document.getElementById('ageMax').value = p.ageMax||'';
         document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn;
-        document.getElementById('abbMin').value = p.abbMin||'';
         document.getElementById('minCibil').value = p.minCibil; document.getElementById('maxUnsec').value = p.maxUnsec;
     }
 
@@ -321,13 +368,7 @@
     function delPolicy(i) { if(confirm('Delete Policy?')) { policies.splice(i,1); renderTable(); } }
     function delUser(i) { if(confirm('Delete User?')) { users.splice(i,1); renderTable(); } }
 
-    function resetDefaults() {
-        if(confirm("Reset all 11 policies?")) {
-            policies = JSON.parse(JSON.stringify(defaults));
-            renderTable();
-        }
-    }
-
+    // --- RENDER ---
     function renderTable() {
         const tbody = document.querySelector('#policyTable tbody');
         tbody.innerHTML = '';
