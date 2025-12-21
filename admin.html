@@ -3,168 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Admin - Mobile Ready</title>
+    <title>Super Admin - Functional</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* --- CORE STYLES --- */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; }
-        
-        /* SIDEBAR */
-        .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; transition: 0.3s; }
-        .logo { font-size: 22px; font-weight: bold; margin-bottom: 40px; }
+        .sidebar { width: 250px; background-color: #1a237e; color: white; display: flex; flex-direction: column; padding: 20px; }
         .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; }
         .nav-item:hover, .nav-item.active { background-color: #3949ab; }
-        .logout { margin-top: auto; background-color: #d32f2f; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; }
-
-        /* MAIN CONTENT */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         
         /* TABLES */
-        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-top: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f5f5f5; color: #333; }
+        th { background-color: #eee; }
         
         /* BUTTONS */
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; color: white; margin-right: 5px; }
-        .btn-edit { background-color: #ffa000; } /* Orange Edit Button */
-        .btn-deactivate { background-color: #fbc02d; color: #333; }
-        .btn-delete { background-color: #d32f2f; }
-        .btn-add { background-color: #2e7d32; padding: 10px 20px; font-size: 14px; }
-
-        /* VIEW TOGGLING */
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; }
+        .btn-add { background-color: #2e7d32; padding: 10px 20px; float: right; }
+        .btn-edit { background-color: #ffa000; } 
+        .btn-del { background-color: #d32f2f; }
+        
+        /* MODAL POPUP */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; width: 400px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 8px; box-sizing: border-box; }
+        
         .section { display: none; }
         .section.active { display: block; }
-
-        /* --- MOBILE RESPONSIVENESS --- */
-        .mobile-menu-btn { display: none; font-size: 24px; background: none; border: none; cursor: pointer; color: #1a237e; }
-        
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { position: fixed; left: -250px; height: 100%; z-index: 1000; width: 250px; }
-            .sidebar.show { left: 0; }
-            .mobile-menu-btn { display: block; margin-right: 15px; }
-            .header { justify-content: flex-start; }
-            table { display: block; overflow-x: auto; white-space: nowrap; }
-        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar" id="sidebar">
-        <div class="logo">Super Admin</div>
-        <div class="nav-item active" onclick="showSection('users')">👥 Manage Users</div>
-        <div class="nav-item" onclick="showSection('policies')">📜 Policy Library</div>
-        <div class="nav-item" onclick="showSection('settings')">⚙️ Settings</div>
-        <div class="logout">Logout</div>
+<div class="sidebar">
+    <h2>Super Admin</h2>
+    <div class="nav-item active" onclick="showSection('users')">👥 Manage Users</div>
+    <div class="nav-item" onclick="showSection('policies')">📜 Policy Library</div>
+</div>
+
+<div class="main-content">
+    
+    <div id="users" class="section active">
+        <h2>Manage DSA Users <button class="btn btn-add" onclick="openUserModal()">+ Create User</button></h2>
+        <table id="userTable">
+            <thead><tr><th>Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody></tbody> </table>
     </div>
 
-    <div class="main-content">
-        <div class="header">
-            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-            <h2>Admin Dashboard</h2>
-        </div>
-
-        <div id="users" class="section active">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                <h3>Registered DSA Users</h3>
-                <button class="btn btn-add">+ Create User</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>DSA Name</th>
-                        <th>Mobile</th>
-                        <th>Username</th>
-                        <th>Password</th> <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Rahul Kumar</td>
-                        <td>9876543210</td>
-                        <td>rahul_dsa</td>
-                        <td>Pass@123</td>
-                        <td><span style="color:green; font-weight:bold;">Active</span></td>
-                        <td>
-                            <button class="btn btn-edit">Edit</button>
-                            <button class="btn btn-delete">Block</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Sneha Agencies</td>
-                        <td>9988776655</td>
-                        <td>sneha_fin</td>
-                        <td>Money#2025</td>
-                        <td><span style="color:green; font-weight:bold;">Active</span></td>
-                        <td>
-                            <button class="btn btn-edit">Edit</button>
-                            <button class="btn btn-delete">Block</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div id="policies" class="section">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                <h3>Bank Policy Engine</h3>
-                <button class="btn btn-add">+ Add Policy</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Policy Name</th>
-                        <th>Status</th>
-                        <th>Action Queue</th> </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>TATA CAPITAL HTBL</td>
-                        <td>ACTIVE</td>
-                        <td>
-                            <button class="btn btn-edit">Edit</button>
-                            <button class="btn btn-deactivate">Deactivate</button>
-                            <button class="btn btn-delete">Del</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>PIRAMAL CAPITAL UBL</td>
-                        <td>ACTIVE</td>
-                        <td>
-                            <button class="btn btn-edit">Edit</button>
-                            <button class="btn btn-deactivate">Deactivate</button>
-                            <button class="btn btn-delete">Del</button>
-                        </td>
-                    </tr>
-                     <tr>
-                        <td>ADITYA BIRLA BIG TICKET</td>
-                        <td>ACTIVE</td>
-                        <td>
-                            <button class="btn btn-edit">Edit</button>
-                            <button class="btn btn-deactivate">Deactivate</button>
-                            <button class="btn btn-delete">Del</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
+    <div id="policies" class="section">
+        <h2>Bank Policy Engine <button class="btn btn-add" onclick="openPolicyModal()">+ Add Policy</button></h2>
+        <table id="policyTable">
+            <thead><tr><th>Policy Name</th><th>Min Turnover</th><th>Status</th><th>Action Queue</th></tr></thead>
+            <tbody></tbody> </table>
     </div>
 
-    <script>
-        function showSection(id) {
-            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            
-            // On mobile, hide sidebar after click
-            if(window.innerWidth < 768) toggleSidebar();
-        }
+</div>
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <h3>Add / Edit User</h3>
+        <input type="hidden" id="u_id">
+        <div class="form-group"><label>Name</label><input type="text" id="u_name"></div>
+        <div class="form-group"><label>Mobile</label><input type="text" id="u_mobile"></div>
+        <div class="form-group"><label>Username</label><input type="text" id="u_user"></div>
+        <div class="form-group"><label>Password</label><input type="text" id="u_pass"></div>
+        <button class="btn btn-add" onclick="saveUser()">Save User</button>
+        <button class="btn btn-del" onclick="closeModal('userModal')">Cancel</button>
+    </div>
+</div>
+
+<div id="policyModal" class="modal">
+    <div class="modal-content">
+        <h3>Add / Edit Policy</h3>
+        <input type="hidden" id="p_id">
+        <div class="form-group"><label>Bank Name</label><input type="text" id="p_name"></div>
+        <div class="form-group"><label>Min Turnover (Lakhs)</label><input type="number" id="p_turn"></div>
+        <button class="btn btn-add" onclick="savePolicy()">Save Policy</button>
+        <button class="btn btn-del" onclick="closeModal('policyModal')">Cancel</button>
+    </div>
+</div>
+
+<script>
+    // --- 1. DATA INITIALIZATION (Simulating Database) ---
+    let users = JSON.parse(localStorage.getItem('admin_users')) || [
+        { id: 1, name: "Rahul Kumar", mobile: "9876543210", user: "rahul_dsa", pass: "Pass@123", status: "Active" },
+        { id: 2, name: "Sneha Fin", mobile: "9988776655", user: "sneha_fin", pass: "Money#2025", status: "Active" }
+    ];
+
+    let policies = JSON.parse(localStorage.getItem('admin_policies')) || [
+        { id: 1, name: "TATA CAPITAL STBL", turn: 20, status: "ACTIVE" },
+        { id: 2, name: "ADITYA BIRLA STBL", turn: 25, status: "ACTIVE" },
+        { id: 3, name: "BAJAJ FINANCE TERM", turn: 40, status: "ACTIVE" },
+        { id: 4, name: "TATA CAPITAL HTBL", turn: 200, status: "ACTIVE" },
+        { id: 5, name: "ADITYA BIRLA BIG TICKET", turn: 250, status: "ACTIVE" },
+        { id: 6, name: "PIRAMAL CAPITAL UBL", turn: 30, status: "ACTIVE" },
+        { id: 7, name: "PIRAMAL CAPITAL UBL+", turn: 100, status: "ACTIVE" },
+        { id: 8, name: "ADITYA BIRLA DROP OD", turn: 100, status: "ACTIVE" },
+        { id: 9, name: "TATA CAPITAL DROP OD", turn: 100, status: "ACTIVE" },
+        { id: 10, name: "BAJAJ FINANCE FLEXI OD", turn: 50, status: "ACTIVE" },
+        { id: 11, name: "CLIX CAPITAL", turn: 15, status: "ACTIVE" }
+    ];
+
+    // --- 2. RENDER FUNCTIONS ---
+    function renderUsers() {
+        const tbody = document.querySelector('#userTable tbody');
+        tbody.innerHTML = '';
+        users.forEach((u, index) => {
+            tbody.innerHTML += `
+            <tr>
+                <td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td>
+                <td style="color:green; font-weight:bold;">${u.status}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editUser(${index})">Edit</button>
+                    <button class="btn btn-del" onclick="deleteUser(${index})">Block</button>
+                </td>
+            </tr>`;
+        });
+        localStorage.setItem('admin_users', JSON.stringify(users));
+    }
+
+    function renderPolicies() {
+        const tbody = document.querySelector('#policyTable tbody');
+        tbody.innerHTML = '';
+        policies.forEach((p, index) => {
+            tbody.innerHTML += `
+            <tr>
+                <td>${p.name}</td><td>${p.turn} Lakhs</td>
+                <td style="color:green;">${p.status}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editPolicy(${index})">Edit</button>
+                    <button class="btn btn-del" onclick="deletePolicy(${index})">Del</button>
+                </td>
+            </tr>`;
+        });
+        localStorage.setItem('admin_policies', JSON.stringify(policies));
+    }
+
+    // --- 3. LOGIC FUNCTIONS ---
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(d => d.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // USER ACTIONS
+    function openUserModal() { document.getElementById('userModal').style.display = 'flex'; document.getElementById('u_id').value = ''; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    function saveUser() {
+        const id = document.getElementById('u_id').value;
+        const newUser = {
+            name: document.getElementById('u_name').value,
+            mobile: document.getElementById('u_mobile').value,
+            user: document.getElementById('u_user').value,
+            pass: document.getElementById('u_pass').value,
+            status: "Active"
+        };
+        
+        if(id !== '') { users[id] = newUser; } // Edit Mode
+        else { users.push(newUser); } // Add Mode
+        
+        closeModal('userModal');
+        renderUsers();
+    }
+
+    function editUser(index) {
+        document.getElementById('u_id').value = index;
+        document.getElementById('u_name').value = users[index].name;
+        document.getElementById('u_mobile').value = users[index].mobile;
+        document.getElementById('u_user').value = users[index].user;
+        document.getElementById('u_pass').value = users[index].pass;
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function deleteUser(index) {
+        if(confirm("Are you sure you want to block/delete this user?")) {
+            users.splice(index, 1);
+            renderUsers();
         }
-    </script>
+    }
+
+    // POLICY ACTIONS (Same logic)
+    function openPolicyModal() { document.getElementById('policyModal').style.display = 'flex'; document.getElementById('p_id').value = ''; }
+    
+    function savePolicy() {
+        const id = document.getElementById('p_id').value;
+        const newPolicy = {
+            name: document.getElementById('p_name').value,
+            turn: document.getElementById('p_turn').value,
+            status: "ACTIVE"
+        };
+        if(id !== '') { policies[id] = newPolicy; }
+        else { policies.push(newPolicy); }
+        closeModal('policyModal');
+        renderPolicies();
+    }
+
+    function editPolicy(index) {
+        document.getElementById('p_id').value = index;
+        document.getElementById('p_name').value = policies[index].name;
+        document.getElementById('p_turn').value = policies[index].turn;
+        document.getElementById('policyModal').style.display = 'flex';
+    }
+
+    function deletePolicy(index) {
+        if(confirm("Delete this policy?")) {
+            policies.splice(index, 1);
+            renderPolicies();
+        }
+    }
+
+    // INITIAL RENDER
+    renderUsers();
+    renderPolicies();
+
+</script>
 </body>
 </html>
