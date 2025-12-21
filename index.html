@@ -8,7 +8,7 @@
     <style>
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #0047ab; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .card { background: white; padding: 40px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .title { font-size: 24px; font-weight: bold; color: #0047ab; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .title { font-size: 24px; font-weight: bold; color: #0047ab; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .btn { width: 100%; padding: 12px; background-color: #003380; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
         .btn:hover { background-color: #002255; }
@@ -59,43 +59,30 @@
             const p = document.getElementById('lPass').value.trim();
             const msg = document.getElementById('loginMsg');
 
-            if (!u || !p) {
-                msg.innerText = "Please enter username and password";
-                msg.style.display = 'block';
-                return;
-            }
+            if (!u || !p) { msg.innerText = "Enter credentials"; msg.style.display = 'block'; return; }
 
-            // 1. CHECK ACTIVE USERS (Priority)
+            // 1. CHECK ACTIVE USERS
             const activeUsers = JSON.parse(localStorage.getItem('credit_users_db')) || [];
             const validUser = activeUsers.find(user => user.user === u && user.pass === p);
 
             if (validUser) {
                 if (validUser.status === 'Active') {
-                    // SUCCESS: Redirect to User App
+                    // *** CRITICAL FIX: SAVE SESSION ***
+                    sessionStorage.setItem('active_dsa_user', JSON.stringify(validUser));
                     window.location.href = "user-app.html";
                     return;
                 } else {
-                    msg.innerText = "❌ Account Blocked/Inactive";
-                    msg.style.display = 'block';
-                    return;
+                    msg.innerText = "❌ Account Blocked"; msg.style.display = 'block'; return;
                 }
             }
 
-            // 2. CHECK PENDING REQUESTS (Only if not in Active)
+            // 2. CHECK PENDING
             const requests = JSON.parse(localStorage.getItem('dsa_requests')) || [];
-            const isPending = requests.find(req => req.user === u && req.pass === p);
-
-            if (isPending) {
-                msg.innerText = "⏳ Approval Pending. Contact Admin.";
-                msg.style.color = "#ff9800"; // Orange for warning
-                msg.style.display = 'block';
-                return;
+            if (requests.find(req => req.user === u && req.pass === p)) {
+                msg.innerText = "⏳ Approval Pending"; msg.style.color = "#ff9800"; msg.style.display = 'block'; return;
             }
 
-            // 3. FAILED
-            msg.innerText = "❌ Invalid Credentials";
-            msg.style.color = "#d32f2f"; // Red for error
-            msg.style.display = 'block';
+            msg.innerText = "❌ Invalid Credentials"; msg.style.color = "#d32f2f"; msg.style.display = 'block';
         }
 
         function register() {
@@ -103,25 +90,17 @@
             const m = document.getElementById('rMobile').value;
             const u = document.getElementById('rUser').value;
             const p = document.getElementById('rPass').value;
-            const msg = document.getElementById('regMsg');
-
-            if (!n || !m || !u || !p) {
-                alert("All fields are mandatory");
-                return;
-            }
+            
+            if (!n || !m || !u || !p) { alert("All fields required"); return; }
 
             let requests = JSON.parse(localStorage.getItem('dsa_requests')) || [];
             requests.push({ name: n, mobile: m, user: u, pass: p, status: "Pending" });
             localStorage.setItem('dsa_requests', JSON.stringify(requests));
 
-            msg.innerText = "✅ Request Sent! Wait for Admin Approval.";
-            msg.style.display = 'block';
-            
-            // Clear fields
-            document.getElementById('rName').value = "";
-            document.getElementById('rMobile').value = "";
-            document.getElementById('rUser').value = "";
-            document.getElementById('rPass').value = "";
+            document.getElementById('regMsg').innerText = "✅ Request Sent!";
+            document.getElementById('regMsg').style.display = 'block';
+            document.getElementById('rName').value = ""; document.getElementById('rMobile').value = "";
+            document.getElementById('rUser').value = ""; document.getElementById('rPass').value = "";
         }
     </script>
 </body>
