@@ -22,22 +22,19 @@
         .btn-add { background-color: #2e7d32; padding: 10px 15px; font-size: 14px; float: right; }
         .btn-edit { background-color: #ffa000; color: #333; }
         .btn-del { background-color: #d32f2f; }
-        .btn-plus { background-color: #1a237e; width: 100%; margin-top: 10px; }
+        .btn-plus { background-color: #1a237e; width: 100%; margin-top: 10px; padding: 10px; }
 
         /* MODAL */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 0; width: 800px; border-radius: 8px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
-        
-        /* TABS IN MODAL */
+        .modal-content { background: white; padding: 0; width: 900px; border-radius: 8px; height: 90vh; display: flex; flex-direction: column; }
         .modal-header { padding: 15px; background: #1a237e; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .tabs { display: flex; background: #eee; border-bottom: 1px solid #ccc; }
-        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-weight: bold; font-size: 12px; color: #555; }
-        .tab.active { background: white; border-top: 3px solid #1a237e; color: #1a237e; }
-        
-        .tab-content { padding: 20px; display: none; }
-        .tab-content.active { display: block; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; background: #fff; }
 
-        /* FORMS */
+        /* ACCORDION IN MODAL */
+        .sec-title { background: #eee; padding: 10px; font-weight: bold; margin-top: 15px; border-left: 5px solid #1a237e; cursor: pointer; }
+        .sec-content { padding: 15px; border: 1px solid #eee; display: block; }
+        
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
         .form-full { margin-bottom: 10px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #333; }
@@ -45,13 +42,12 @@
         
         .hidden-field { display: none; background: #f9f9f9; padding: 10px; border: 1px dashed #ccc; margin-top: 5px; }
         
-        .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; }
-        .dynamic-row input { flex: 1; }
+        .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; background: #f0f0f0; padding: 5px; border-radius: 4px; }
+        .dynamic-row input, .dynamic-row select { flex: 1; }
         .btn-remove { background: #d32f2f; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
 
-        /* CHECKBOX GROUP */
-        .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; }
-        .checkbox-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+        .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
+        .checkbox-item { display: flex; align-items: center; gap: 5px; font-size: 12px; background: #e8eaf6; padding: 5px 10px; border-radius: 15px; }
         .checkbox-item input { width: auto; }
     </style>
 </head>
@@ -87,310 +83,349 @@
             <span style="cursor:pointer; font-size:20px;" onclick="closeModal()">✖</span>
         </div>
 
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('tabA')">A. Product</div>
-            <div class="tab" onclick="switchTab('tabB')">B. Applicant</div>
-            <div class="tab" onclick="switchTab('tabC')">C. Banking</div>
-            <div class="tab" onclick="switchTab('tabD')">D. Credit</div>
-            <div class="tab" onclick="switchTab('tabE')">E. Programs</div>
-            <div class="tab" onclick="switchTab('tabF')">F. Rules</div>
-        </div>
+        <div class="modal-body">
+            <form id="policyForm">
+                <input type="hidden" id="p_id">
 
-        <form id="policyForm" onsubmit="event.preventDefault(); savePolicy();">
-            <input type="hidden" id="p_id">
-
-            <div id="tabA" class="tab-content active">
-                <h4>🔹 SECTION A – BASIC PRODUCT DETAILS</h4>
-                <div class="form-full">
-                    <label>Bank Name</label><input type="text" id="bankName" required>
+                <div class="sec-title">🔹 SECTION A – BASIC PRODUCT DETAILS</div>
+                <div class="sec-content">
+                    <div class="form-full"><label>Bank Name</label><input type="text" id="bankName"></div>
+                    <div class="form-row">
+                        <div><label>Product Type</label>
+                            <select id="prodType">
+                                <option>Small Ticket</option><option>Big Ticket</option><option>OD</option><option>Drop Line OD</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Loan Min (Lakhs)</label><input type="number" id="loanMin"></div>
+                        <div><label>Loan Max (Lakhs)</label><input type="number" id="loanMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Tenure Min (Months)</label><input type="number" id="tenureMin"></div>
+                        <div><label>Tenure Max (Months)</label><input type="number" id="tenureMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>ROI Min (%)</label><input type="number" step="0.1" id="roiMin"></div>
+                        <div><label>ROI Max (%)</label><input type="number" step="0.1" id="roiMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>PF Min (%)</label><input type="number" step="0.1" id="pfMin"></div>
+                        <div><label>PF Max (%)</label><input type="number" step="0.1" id="pfMax"></div>
+                    </div>
                 </div>
-                <div class="form-row">
-                    <div><label>Product Type</label>
-                        <select id="prodType">
-                            <option>Small Ticket</option><option>Big Ticket</option><option>OD</option><option>Drop Line OD</option>
+
+                <div class="sec-title">🔹 SECTION B – APPLICANT & CO-APPLICANT</div>
+                <div class="sec-content">
+                    <div class="form-row">
+                        <div><label>Applicant Age Min</label><input type="number" id="ageMin"></div>
+                        <div><label>Applicant Age Max</label><input type="number" id="ageMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <label>Co-Applicant Mandatory?</label>
+                        <select id="coAppReq" onchange="toggleField('coAppDetails', this.value === 'Yes')">
+                            <option>No</option><option>Yes</option>
                         </select>
                     </div>
+                    <div id="coAppDetails" class="hidden-field">
+                        <div class="form-row">
+                            <div><label>Co-App Age Min</label><input type="number" id="coAgeMin"></div>
+                            <div><label>Co-App Age Max</label><input type="number" id="coAgeMax"></div>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-top:10px;">
+                        <label>Own House Mandatory?</label>
+                        <select id="houseReq" onchange="toggleField('houseDetails', this.value === 'Yes')">
+                            <option>No</option><option>Yes</option>
+                        </select>
+                    </div>
+                    <div id="houseDetails" class="hidden-field">
+                        <div class="form-row">
+                            <div><label>Geo Limit</label><select id="houseGeo"><option>Local</option><option>Anywhere India</option></select></div>
+                            <div><label>Specific Pincodes (Comma sep)</label><input type="text" id="housePins"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-row">
-                    <div><label>Loan Min (Lakhs)</label><input type="number" id="loanMin"></div>
-                    <div><label>Loan Max (Lakhs)</label><input type="number" id="loanMax"></div>
-                </div>
-                <div class="form-row">
-                    <div><label>Tenure Min (Months)</label><input type="number" id="tenureMin"></div>
-                    <div><label>Tenure Max (Months)</label><input type="number" id="tenureMax"></div>
-                </div>
-                <div class="form-row">
-                    <div><label>ROI Min (%)</label><input type="number" step="0.1" id="roiMin"></div>
-                    <div><label>ROI Max (%)</label><input type="number" step="0.1" id="roiMax"></div>
-                </div>
-                <div class="form-row">
-                    <div><label>PF Min (%)</label><input type="number" step="0.1" id="pfMin"></div>
-                    <div><label>PF Max (%)</label><input type="number" step="0.1" id="pfMax"></div>
-                </div>
-            </div>
 
-            <div id="tabB" class="tab-content">
-                <h4>🔹 SECTION B – APPLICANT & CO-APPLICANT</h4>
-                <div class="form-row">
-                    <div><label>Applicant Age Min</label><input type="number" id="ageMin"></div>
-                    <div><label>Applicant Age Max</label><input type="number" id="ageMax"></div>
-                </div>
-                
-                <hr>
-                <div class="form-row">
-                    <label>Co-Applicant Mandatory?</label>
-                    <select id="coAppMandatory" onchange="toggleField('coAppDetails', this.value === 'Yes')">
-                        <option>No</option><option>Yes</option>
-                    </select>
-                </div>
-                <div id="coAppDetails" class="hidden-field">
+                <div class="sec-title">🔹 SECTION C – BUSINESS & BANKING</div>
+                <div class="sec-content">
                     <div class="form-row">
-                        <div><label>Co-App Age Min</label><input type="number" id="coAgeMin"></div>
-                        <div><label>Co-App Age Max</label><input type="number" id="coAgeMax"></div>
+                        <div><label>Business Vintage (Years)</label><input type="number" id="vintageMin"></div>
+                        <div><label>Min Turnover (Lakhs)</label><input type="number" id="turnMin"></div>
                     </div>
-                </div>
-
-                <hr>
-                <div class="form-row">
-                    <label>Own House Mandatory?</label>
-                    <select id="ownHouseReq" onchange="toggleField('houseDetails', this.value === 'Yes')">
-                        <option>No</option><option>Yes</option>
-                    </select>
-                </div>
-                <div id="houseDetails" class="hidden-field">
+                    <div class="form-full">
+                        <label>Min ABB (Rupees)</label><input type="number" id="abbMin">
+                    </div>
                     <div class="form-row">
-                        <div><label>Geo Limit</label><select id="houseGeo"><option>Local</option><option>Anywhere India</option></select></div>
-                        <div><label>Specific Pincodes (Comma sep)</label><input type="text" id="housePins"></div>
+                        <div><label>ITR Required?</label>
+                            <select id="itrReq" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
+                        </div>
+                        <div id="itrDetails" class="hidden-field"><label>Min ITR Turnover</label><input type="number" id="itrTurn"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>GST Required?</label>
+                            <select id="gstReq" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
+                        </div>
+                        <div id="gstDetails" class="hidden-field"><label>Min GST Turnover</label><input type="number" id="gstTurn"></div>
+                    </div>
+                    <label>Banking Type Accepted:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item"><input type="checkbox" class="bank-type" value="SA"> SA</label>
+                        <label class="checkbox-item"><input type="checkbox" class="bank-type" value="CA"> CA</label>
+                        <label class="checkbox-item"><input type="checkbox" class="bank-type" value="OD"> OD</label>
+                        <label class="checkbox-item"><input type="checkbox" class="bank-type" value="CC"> CC</label>
                     </div>
                 </div>
-            </div>
 
-            <div id="tabC" class="tab-content">
-                <h4>🔹 SECTION C – BUSINESS & BANKING</h4>
-                <div class="form-row">
-                    <div><label>Business Vintage (Years)</label><input type="number" id="vintageMin"></div>
-                    <div><label>Min Turnover (Lakhs)</label><input type="number" id="turnMin"></div>
-                </div>
-                <div class="form-full">
-                    <label>Min ABB (Rupees)</label><input type="number" id="abbMin">
-                </div>
-
-                <div class="form-row">
-                    <div><label>ITR Required?</label>
-                        <select id="itrReq" onchange="toggleField('itrDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
+                <div class="sec-title">🔹 SECTION D – CREDIT & OBLIGATIONS</div>
+                <div class="sec-content">
+                    <div class="form-row">
+                        <div><label>CIBIL Min</label><input type="number" id="cibilMin"></div>
+                        <div><label>CIBIL Max</label><input type="number" id="cibilMax"></div>
                     </div>
-                    <div id="itrDetails" class="hidden-field"><label>Min ITR Turnover</label><input type="number" id="itrTurnMin"></div>
-                </div>
-
-                <div class="form-row">
-                    <div><label>GST Required?</label>
-                        <select id="gstReq" onchange="toggleField('gstDetails', this.value === 'Yes')"><option>No</option><option>Yes</option></select>
+                    <div class="form-row">
+                        <div><label>Max Active Loans</label><input type="number" id="actLoans"></div>
+                        <div><label>Max Unsecured Loans</label><input type="number" id="unsecLoans"></div>
                     </div>
-                    <div id="gstDetails" class="hidden-field"><label>Min GST Turnover</label><input type="number" id="gstTurnMin"></div>
+                    <div class="form-row">
+                        <div><label>Loans (Last 6m)</label><input type="number" id="loans6m"></div>
+                        <div><label>Enquiries (Last 3m)</label><input type="number" id="enq3m"></div>
+                    </div>
                 </div>
 
-                <label>Banking Type Accepted (Click to Select)</label>
-                <div class="checkbox-group">
-                    <label class="checkbox-item"><input type="checkbox" class="bank-type" value="SA"> SA</label>
-                    <label class="checkbox-item"><input type="checkbox" class="bank-type" value="CA"> CA</label>
-                    <label class="checkbox-item"><input type="checkbox" class="bank-type" value="OD"> OD</label>
-                    <label class="checkbox-item"><input type="checkbox" class="bank-type" value="CC"> CC</label>
+                <div class="sec-title">🔹 SECTION E – PROGRAMS (Multipliers)</div>
+                <div class="sec-content">
+                    <div id="progContainer"></div>
+                    <button type="button" class="btn btn-plus" onclick="addProg()">➕ Add Program (ABB/GST/ITR/DSCR)</button>
                 </div>
-            </div>
 
-            <div id="tabD" class="tab-content">
-                <h4>🔹 SECTION D – CREDIT & OBLIGATIONS</h4>
-                <div class="form-row">
-                    <div><label>CIBIL Min</label><input type="number" id="cibilMin"></div>
-                    <div><label>CIBIL Max</label><input type="number" id="cibilMax"></div>
+                <div class="sec-title">🔹 SECTION F – CUSTOM RULES</div>
+                <div class="sec-content">
+                    <div id="ruleContainer"></div>
+                    <button type="button" class="btn btn-plus" onclick="addRule()">➕ Add Condition</button>
                 </div>
-                <div class="form-row">
-                    <div><label>Max Active Loans</label><input type="number" id="activeLoansMax"></div>
-                    <div><label>Min Active Loans (Unsecured)</label><input type="number" id="unsecLoansMax"></div>
-                </div>
-                <div class="form-row">
-                    <div><label>Max Loans (Last 6m)</label><input type="number" id="loans6m"></div>
-                    <div><label>Max Enquiries (Last 3m)</label><input type="number" id="enq3m"></div>
-                </div>
-            </div>
 
-            <div id="tabE" class="tab-content">
-                <h4>🔹 SECTION E – PROGRAMS (Multipliers)</h4>
-                <p style="font-size:11px;">Add specific calculation programs here.</p>
-                <div id="programContainer"></div>
-                <button type="button" class="btn btn-plus" onclick="addProgramRow()">➕ Add Program (ABB/ITR/GST)</button>
-            </div>
-
-            <div id="tabF" class="tab-content">
-                <h4>🔹 SECTION F – CUSTOM RULES</h4>
-                <div id="rulesContainer"></div>
-                <button type="button" class="btn btn-plus" onclick="addRuleRow()">➕ Add Condition</button>
-            </div>
-
-            <div style="padding:15px; border-top:1px solid #ddd; text-align:right;">
-                <button type="submit" class="btn btn-add" style="width:150px; float:none;">💾 SAVE POLICY</button>
-            </div>
-        </form>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-del" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-add" onclick="savePolicy()">💾 Save Policy</button>
+        </div>
     </div>
 </div>
 
 <script>
-    let policies = JSON.parse(localStorage.getItem('admin_policies_v2')) || [];
+    let policies = JSON.parse(localStorage.getItem('admin_policies_master')) || [];
 
-    // --- UI LOGIC ---
-    function openModal() { 
-        document.getElementById('policyForm').reset(); 
-        document.getElementById('p_id').value = ''; 
-        document.getElementById('programContainer').innerHTML = '';
-        document.getElementById('rulesContainer').innerHTML = '';
-        document.getElementById('policyModal').style.display = 'flex'; 
-        switchTab('tabA');
+    // --- UI FUNCTIONS ---
+    function openModal() {
+        document.getElementById('policyForm').reset();
+        document.getElementById('p_id').value = '';
+        document.getElementById('progContainer').innerHTML = '';
+        document.getElementById('ruleContainer').innerHTML = '';
+        document.getElementById('policyModal').style.display = 'flex';
+        // Reset toggles
+        toggleField('coAppDetails', false);
+        toggleField('houseDetails', false);
+        toggleField('itrDetails', false);
+        toggleField('gstDetails', false);
     }
+    
     function closeModal() { document.getElementById('policyModal').style.display = 'none'; }
-    function switchTab(id) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.target.classList.add('active');
-    }
     function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
 
     // --- DYNAMIC ROWS ---
-    function addProgramRow(data = {}) {
+    function addProg(d={}) {
         const div = document.createElement('div');
         div.className = 'dynamic-row';
         div.innerHTML = `
             <select class="prog-type">
-                <option ${data.type=='ABB'?'selected':''}>ABB</option>
-                <option ${data.type=='ITR'?'selected':''}>ITR</option>
-                <option ${data.type=='GST'?'selected':''}>GST</option>
-                <option ${data.type=='DSCR'?'selected':''}>DSCR</option>
+                <option value="ABB" ${d.type=='ABB'?'selected':''}>ABB</option>
+                <option value="GST" ${d.type=='GST'?'selected':''}>GST</option>
+                <option value="ITR" ${d.type=='ITR'?'selected':''}>ITR</option>
+                <option value="DSCR" ${d.type=='DSCR'?'selected':''}>DSCR</option>
             </select>
-            <input type="number" placeholder="Min Val" class="prog-min" value="${data.min||''}">
-            <input type="number" placeholder="Max Val" class="prog-max" value="${data.max||''}">
-            <input type="number" placeholder="Multiplier" class="prog-mult" value="${data.mult||''}">
+            <input type="number" placeholder="Min" class="prog-min" value="${d.min||''}">
+            <input type="number" placeholder="Max" class="prog-max" value="${d.max||''}">
+            <input type="number" placeholder="Multiplier (e.g. 0.2)" class="prog-mult" value="${d.mult||''}">
             <button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button>
         `;
-        document.getElementById('programContainer').appendChild(div);
+        document.getElementById('progContainer').appendChild(div);
     }
 
-    function addRuleRow(data = {}) {
+    function addRule(d={}) {
         const div = document.createElement('div');
         div.className = 'dynamic-row';
         div.innerHTML = `
-            <input type="text" placeholder="Condition Name" class="rule-name" value="${data.name||''}">
-            <input type="text" placeholder="Value / Logic" class="rule-val" value="${data.val||''}">
+            <input type="text" placeholder="Field Name" class="rule-name" value="${d.name||''}">
+            <input type="text" placeholder="Condition" class="rule-cond" value="${d.cond||''}">
             <button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button>
         `;
-        document.getElementById('rulesContainer').appendChild(div);
+        document.getElementById('ruleContainer').appendChild(div);
     }
 
     // --- SAVE LOGIC ---
     function savePolicy() {
         const p = {
             id: document.getElementById('p_id').value || Date.now(),
-            // A
             bankName: document.getElementById('bankName').value,
             prodType: document.getElementById('prodType').value,
+            // A
             loanMin: document.getElementById('loanMin').value,
             loanMax: document.getElementById('loanMax').value,
+            tenureMin: document.getElementById('tenureMin').value,
+            tenureMax: document.getElementById('tenureMax').value,
             roiMin: document.getElementById('roiMin').value,
             roiMax: document.getElementById('roiMax').value,
+            pfMin: document.getElementById('pfMin').value,
+            pfMax: document.getElementById('pfMax').value,
             // B
             ageMin: document.getElementById('ageMin').value,
-            coAppReq: document.getElementById('coAppMandatory').value,
+            ageMax: document.getElementById('ageMax').value,
+            coAppReq: document.getElementById('coAppReq').value,
             coAgeMin: document.getElementById('coAgeMin').value,
-            houseReq: document.getElementById('ownHouseReq').value,
+            coAgeMax: document.getElementById('coAgeMax').value,
+            houseReq: document.getElementById('houseReq').value,
             houseGeo: document.getElementById('houseGeo').value,
+            housePins: document.getElementById('housePins').value,
             // C
             vintageMin: document.getElementById('vintageMin').value,
             turnMin: document.getElementById('turnMin').value,
             abbMin: document.getElementById('abbMin').value,
             itrReq: document.getElementById('itrReq').value,
+            itrTurn: document.getElementById('itrTurn').value,
             gstReq: document.getElementById('gstReq').value,
+            gstTurn: document.getElementById('gstTurn').value,
             bankTypes: Array.from(document.querySelectorAll('.bank-type:checked')).map(cb => cb.value),
             // D
             cibilMin: document.getElementById('cibilMin').value,
-            activeLoans: document.getElementById('activeLoansMax').value,
-            // E & F (Arrays)
+            cibilMax: document.getElementById('cibilMax').value,
+            actLoans: document.getElementById('actLoans').value,
+            unsecLoans: document.getElementById('unsecLoans').value,
+            loans6m: document.getElementById('loans6m').value,
+            enq3m: document.getElementById('enq3m').value,
+            // E & F
             programs: [],
             rules: []
         };
 
-        // Collect Dynamic Rows
-        document.querySelectorAll('#programContainer .dynamic-row').forEach(row => {
+        // Programs
+        document.querySelectorAll('#progContainer .dynamic-row').forEach(r => {
             p.programs.push({
-                type: row.querySelector('.prog-type').value,
-                min: row.querySelector('.prog-min').value,
-                max: row.querySelector('.prog-max').value,
-                mult: row.querySelector('.prog-mult').value
+                type: r.querySelector('.prog-type').value,
+                min: r.querySelector('.prog-min').value,
+                max: r.querySelector('.prog-max').value,
+                mult: r.querySelector('.prog-mult').value
             });
         });
-        document.querySelectorAll('#rulesContainer .dynamic-row').forEach(row => {
+        // Rules
+        document.querySelectorAll('#ruleContainer .dynamic-row').forEach(r => {
             p.rules.push({
-                name: row.querySelector('.rule-name').value,
-                val: row.querySelector('.rule-val').value
+                name: r.querySelector('.rule-name').value,
+                cond: r.querySelector('.rule-cond').value
             });
         });
 
-        // Save
+        // Update Array
         const idx = policies.findIndex(x => x.id == p.id);
         if(idx > -1) policies[idx] = p; else policies.push(p);
         
-        localStorage.setItem('admin_policies_v2', JSON.stringify(policies));
+        localStorage.setItem('admin_policies_master', JSON.stringify(policies));
         closeModal();
         renderTable();
     }
 
-    // --- RENDER TABLE ---
-    function renderTable() {
-        const tbody = document.querySelector('#policyTable tbody');
-        tbody.innerHTML = '';
-        policies.forEach((p, index) => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${p.bankName}</td>
-                    <td>${p.prodType}</td>
-                    <td>₹${p.loanMin}L - ₹${p.loanMax}L</td>
-                    <td>${p.roiMin}% - ${p.roiMax}%</td>
-                    <td>
-                        <button class="btn btn-edit" onclick="editPolicy(${index})">Edit</button>
-                        <button class="btn btn-del" onclick="deletePolicy(${index})">Del</button>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-
+    // --- EDIT LOGIC (The Fix for Undefined) ---
     function editPolicy(index) {
         openModal();
         const p = policies[index];
         document.getElementById('p_id').value = p.id;
-        // Populate fields (A few examples shown, you must map all)
-        document.getElementById('bankName').value = p.bankName;
-        document.getElementById('prodType').value = p.prodType;
-        document.getElementById('loanMin').value = p.loanMin;
-        document.getElementById('loanMax').value = p.loanMax;
-        document.getElementById('roiMin').value = p.roiMin;
-        document.getElementById('roiMax').value = p.roiMax;
         
-        document.getElementById('coAppMandatory').value = p.coAppReq || 'No';
+        // Map Every Field Manually to ensure no "undefined"
+        document.getElementById('bankName').value = p.bankName || '';
+        document.getElementById('prodType').value = p.prodType || 'Small Ticket';
+        document.getElementById('loanMin').value = p.loanMin || '';
+        document.getElementById('loanMax').value = p.loanMax || '';
+        document.getElementById('tenureMin').value = p.tenureMin || '';
+        document.getElementById('tenureMax').value = p.tenureMax || '';
+        document.getElementById('roiMin').value = p.roiMin || '';
+        document.getElementById('roiMax').value = p.roiMax || '';
+        document.getElementById('pfMin').value = p.pfMin || '';
+        document.getElementById('pfMax').value = p.pfMax || '';
+        
+        document.getElementById('ageMin').value = p.ageMin || '';
+        document.getElementById('ageMax').value = p.ageMax || '';
+        
+        document.getElementById('coAppReq').value = p.coAppReq || 'No';
         toggleField('coAppDetails', p.coAppReq === 'Yes');
+        document.getElementById('coAgeMin').value = p.coAgeMin || '';
+        document.getElementById('coAgeMax').value = p.coAgeMax || '';
         
-        // Load Programs
-        if(p.programs) p.programs.forEach(prog => addProgramRow(prog));
-        if(p.rules) p.rules.forEach(rule => addRuleRow(rule));
+        document.getElementById('houseReq').value = p.houseReq || 'No';
+        toggleField('houseDetails', p.houseReq === 'Yes');
+        document.getElementById('houseGeo').value = p.houseGeo || 'Local';
+        document.getElementById('housePins').value = p.housePins || '';
+        
+        document.getElementById('vintageMin').value = p.vintageMin || '';
+        document.getElementById('turnMin').value = p.turnMin || '';
+        document.getElementById('abbMin').value = p.abbMin || '';
+        
+        document.getElementById('itrReq').value = p.itrReq || 'No';
+        toggleField('itrDetails', p.itrReq === 'Yes');
+        document.getElementById('itrTurn').value = p.itrTurn || '';
+        
+        document.getElementById('gstReq').value = p.gstReq || 'No';
+        toggleField('gstDetails', p.gstReq === 'Yes');
+        document.getElementById('gstTurn').value = p.gstTurn || '';
+        
+        // Checkboxes
+        document.querySelectorAll('.bank-type').forEach(cb => {
+            cb.checked = (p.bankTypes || []).includes(cb.value);
+        });
+        
+        document.getElementById('cibilMin').value = p.cibilMin || '';
+        document.getElementById('cibilMax').value = p.cibilMax || '';
+        document.getElementById('actLoans').value = p.actLoans || '';
+        document.getElementById('unsecLoans').value = p.unsecLoans || '';
+        document.getElementById('loans6m').value = p.loans6m || '';
+        document.getElementById('enq3m').value = p.enq3m || '';
+
+        // Dynamic Rows
+        if(p.programs) p.programs.forEach(x => addProg(x));
+        if(p.rules) p.rules.forEach(x => addRule(x));
     }
 
     function deletePolicy(index) {
-        if(confirm('Delete this policy?')) {
+        if(confirm('Delete?')) {
             policies.splice(index, 1);
-            localStorage.setItem('admin_policies_v2', JSON.stringify(policies));
+            localStorage.setItem('admin_policies_master', JSON.stringify(policies));
             renderTable();
         }
     }
 
-    renderTable(); // Init
+    function renderTable() {
+        const tbody = document.querySelector('#policyTable tbody');
+        tbody.innerHTML = '';
+        if(policies.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No policies found. Click + Create Policy.</td></tr>';
+            return;
+        }
+        policies.forEach((p, idx) => {
+            tbody.innerHTML += `
+            <tr>
+                <td>${p.bankName}</td>
+                <td>${p.prodType}</td>
+                <td>${p.loanMin}L - ${p.loanMax}L</td>
+                <td>${p.roiMin}% - ${p.roiMax}%</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editPolicy(${idx})">Edit</button>
+                    <button class="btn btn-del" onclick="deletePolicy(${idx})">Del</button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    renderTable();
 </script>
 </body>
 </html>
