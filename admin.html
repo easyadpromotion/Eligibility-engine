@@ -8,7 +8,8 @@
     <style>
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; }
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 20px; display: flex; flex-direction: column; }
-        .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; }
+        .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
         .main-content { flex: 1; padding: 20px; overflow-y: auto; }
         
@@ -26,7 +27,7 @@
         
         /* MODAL */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 0; width: 900px; border-radius: 8px; height: 90vh; display: flex; flex-direction: column; }
+        .modal-content { background: white; padding: 0; width: 900px; border-radius: 8px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { padding: 15px; background: #1a237e; color: white; display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; background: #fff; }
@@ -69,7 +70,7 @@
             <h2>Bank Policy Engine</h2>
             <div>
                 <button class="btn btn-reset" onclick="resetDefaults()">↻ Reset / Load Defaults</button>
-                <button class="btn btn-add" onclick="openModal()">+ Create Policy</button>
+                <button class="btn btn-add" onclick="openModal('policy')">+ Create Policy</button>
             </div>
         </div>
         <table id="policyTable">
@@ -79,7 +80,10 @@
     </div>
 
     <div id="users" class="section">
-        <h2>Manage DSA Users <button class="btn btn-add" style="float:right" onclick="alert('Feature coming soon')">+ Create User</button></h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Manage DSA Users</h2>
+            <button class="btn btn-add" onclick="openModal('user')">+ Create User</button>
+        </div>
         <table id="userTable">
             <thead><tr><th>DSA Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Status</th><th>Action</th></tr></thead>
             <tbody></tbody>
@@ -101,7 +105,7 @@
 
 <div id="policyModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header"><h3>Add / Edit Policy</h3><span style="cursor:pointer; font-size:20px;" onclick="closeModal()">✖</span></div>
+        <div class="modal-header"><h3>Add / Edit Policy</h3><span style="cursor:pointer; font-size:20px;" onclick="closeModal('policy')">✖</span></div>
         <div class="modal-body">
             <form id="policyForm">
                 <input type="hidden" id="p_id">
@@ -175,15 +179,34 @@
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-del" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-del" onclick="closeModal('policy')">Cancel</button>
             <button class="btn btn-add" onclick="savePolicy()">💾 Save Policy</button>
         </div>
     </div>
 </div>
 
+<div id="userModal" class="modal">
+    <div class="modal-content" style="width:500px; height:auto;">
+        <div class="modal-header"><h3>Add User</h3><span style="cursor:pointer; font-size:20px;" onclick="closeModal('user')">✖</span></div>
+        <div class="modal-body">
+            <form id="userForm">
+                <input type="hidden" id="u_id">
+                <div class="form-full"><label>DSA Name</label><input type="text" id="uName" required></div>
+                <div class="form-full"><label>Mobile</label><input type="number" id="uMob" required></div>
+                <div class="form-full"><label>Username</label><input type="text" id="uUser" required></div>
+                <div class="form-full"><label>Password</label><input type="text" id="uPass" required></div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-del" onclick="closeModal('user')">Cancel</button>
+            <button class="btn btn-add" onclick="saveUser()">💾 Save User</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // --- 11 CORRECT DEFAULT POLICIES (Matches User App) ---
-    const defaults = [
+    // --- 1. DATA INITIALIZATION & RECOVERY ---
+    const defaultPolicies = [
         { id:1, bankName:"TATA CAPITAL STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, maxUnsec:5, roiMin:18, roiMax:24, loanMin:1, loanMax:50, tenMin:12, tenMax:36 },
         { id:2, bankName:"ADITYA BIRLA STBL", prodType:"STBL", minTurn:25, minVin:2, minCibil:700, maxUnsec:5, roiMin:17.5, roiMax:22, loanMin:1, loanMax:40, tenMin:12, tenMax:36 },
         { id:3, bankName:"BAJAJ FINANCE TERM", prodType:"TERM", minTurn:40, minVin:3, minCibil:700, maxUnsec:5, roiMin:16.5, roiMax:21, loanMin:5, loanMax:50, tenMin:12, tenMax:48 },
@@ -202,14 +225,32 @@
         { name: "Sneha Agencies", mobile: "9988776655", user: "sneha_fin", pass: "Money#2025", status: "Active" }
     ];
 
-    let policies = JSON.parse(localStorage.getItem('credit_engine_db')) || defaults;
-    let users = JSON.parse(localStorage.getItem('credit_users_db')) || defaultUsers;
+    // Attempt to recover old data if new key is empty
+    let policies = JSON.parse(localStorage.getItem('credit_engine_db'));
+    if(!policies) {
+        // Fallback checks
+        policies = JSON.parse(localStorage.getItem('admin_policies_master')) || defaultPolicies;
+    }
+
+    let users = JSON.parse(localStorage.getItem('credit_users_db'));
+    if(!users) {
+        // Fallback checks
+        users = JSON.parse(localStorage.getItem('admin_users_master')) || JSON.parse(localStorage.getItem('admin_users_final')) || defaultUsers;
+    }
 
     // --- UI FUNCTIONS ---
     function showSection(id) { document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
     function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
-    function openModal() { document.getElementById('policyForm').reset(); document.getElementById('p_id').value=''; document.getElementById('policyModal').style.display='flex'; }
-    function closeModal() { document.getElementById('policyModal').style.display='none'; }
+    
+    function openModal(type) { 
+        if(type==='policy') {
+            document.getElementById('policyForm').reset(); document.getElementById('p_id').value=''; document.getElementById('policyModal').style.display='flex'; 
+        } else {
+            document.getElementById('userForm').reset(); document.getElementById('u_id').value=''; document.getElementById('userModal').style.display='flex';
+        }
+    }
+    
+    function closeModal(type) { document.getElementById(type==='policy'?'policyModal':'userModal').style.display='none'; }
 
     // --- DYNAMIC ROWS ---
     function addProg(d={}) {
@@ -219,47 +260,7 @@
         document.getElementById('progContainer').appendChild(div);
     }
 
-    // --- CRUD ---
-    function renderTable() {
-        const tbody = document.querySelector('#policyTable tbody');
-        tbody.innerHTML = '';
-        policies.forEach((p, i) => {
-            tbody.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}L</td><td>${p.roiMin}-${p.roiMax}%</td>
-            <td><button class="btn btn-edit" onclick="editPolicy(${i})">Edit</button><button class="btn btn-del" onclick="delPolicy(${i})">Del</button></td></tr>`;
-        });
-        localStorage.setItem('credit_engine_db', JSON.stringify(policies));
-
-        const ubody = document.querySelector('#userTable tbody');
-        ubody.innerHTML = '';
-        users.forEach(u => {
-            ubody.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td style="color:green;font-weight:bold">${u.status}</td><td><button class="btn btn-edit">Edit</button></td></tr>`;
-        });
-        localStorage.setItem('credit_users_db', JSON.stringify(users));
-    }
-
-    function resetDefaults() {
-        if(confirm("Reset all 11 policies?")) {
-            policies = JSON.parse(JSON.stringify(defaults));
-            renderTable();
-        }
-    }
-
-    function editPolicy(i) {
-        openModal();
-        let p = policies[i];
-        document.getElementById('p_id').value = i;
-        document.getElementById('bankName').value = p.bankName;
-        document.getElementById('prodType').value = p.prodType;
-        document.getElementById('loanMin').value = p.loanMin; document.getElementById('loanMax').value = p.loanMax;
-        document.getElementById('tenMin').value = p.tenMin; document.getElementById('tenMax').value = p.tenMax;
-        document.getElementById('roiMin').value = p.roiMin; document.getElementById('roiMax').value = p.roiMax;
-        document.getElementById('pfMin').value = p.pfMin||''; document.getElementById('pfMax').value = p.pfMax||'';
-        document.getElementById('ageMin').value = p.ageMin||''; document.getElementById('ageMax').value = p.ageMax||'';
-        document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn;
-        document.getElementById('abbMin').value = p.abbMin||'';
-        document.getElementById('minCibil').value = p.minCibil; document.getElementById('maxUnsec').value = p.maxUnsec;
-    }
-
+    // --- SAVE LOGIC ---
     function savePolicy() {
         let idx = document.getElementById('p_id').value;
         let p = {
@@ -275,10 +276,75 @@
             minCibil: +document.getElementById('minCibil').value, maxUnsec: document.getElementById('maxUnsec').value
         };
         if(idx !== '') policies[idx] = p; else policies.push(p);
-        closeModal(); renderTable();
+        closeModal('policy'); renderTable();
     }
 
-    function delPolicy(i) { if(confirm('Delete?')) { policies.splice(i,1); renderTable(); } }
+    function saveUser() {
+        let idx = document.getElementById('u_id').value;
+        let u = {
+            name: document.getElementById('uName').value,
+            mobile: document.getElementById('uMob').value,
+            user: document.getElementById('uUser').value,
+            pass: document.getElementById('uPass').value,
+            status: "Active"
+        };
+        if(idx !== '') users[idx] = u; else users.push(u);
+        closeModal('user'); renderTable();
+    }
+
+    function editPolicy(i) {
+        openModal('policy');
+        let p = policies[i];
+        document.getElementById('p_id').value = i;
+        document.getElementById('bankName').value = p.bankName;
+        document.getElementById('prodType').value = p.prodType;
+        document.getElementById('loanMin').value = p.loanMin; document.getElementById('loanMax').value = p.loanMax;
+        document.getElementById('tenMin').value = p.tenMin; document.getElementById('tenMax').value = p.tenMax;
+        document.getElementById('roiMin').value = p.roiMin; document.getElementById('roiMax').value = p.roiMax;
+        document.getElementById('pfMin').value = p.pfMin||''; document.getElementById('pfMax').value = p.pfMax||'';
+        document.getElementById('ageMin').value = p.ageMin||''; document.getElementById('ageMax').value = p.ageMax||'';
+        document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn;
+        document.getElementById('abbMin').value = p.abbMin||'';
+        document.getElementById('minCibil').value = p.minCibil; document.getElementById('maxUnsec').value = p.maxUnsec;
+    }
+
+    function editUser(i) {
+        openModal('user');
+        let u = users[i];
+        document.getElementById('u_id').value = i;
+        document.getElementById('uName').value = u.name;
+        document.getElementById('uMob').value = u.mobile;
+        document.getElementById('uUser').value = u.user;
+        document.getElementById('uPass').value = u.pass;
+    }
+
+    function delPolicy(i) { if(confirm('Delete Policy?')) { policies.splice(i,1); renderTable(); } }
+    function delUser(i) { if(confirm('Delete User?')) { users.splice(i,1); renderTable(); } }
+
+    function resetDefaults() {
+        if(confirm("Reset all 11 policies?")) {
+            policies = JSON.parse(JSON.stringify(defaults));
+            renderTable();
+        }
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector('#policyTable tbody');
+        tbody.innerHTML = '';
+        policies.forEach((p, i) => {
+            tbody.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}L</td><td>${p.roiMin}-${p.roiMax}%</td>
+            <td><button class="btn btn-edit" onclick="editPolicy(${i})">Edit</button><button class="btn btn-del" onclick="delPolicy(${i})">Del</button></td></tr>`;
+        });
+        localStorage.setItem('credit_engine_db', JSON.stringify(policies));
+
+        const ubody = document.querySelector('#userTable tbody');
+        ubody.innerHTML = '';
+        users.forEach((u, i) => {
+            ubody.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td style="color:green;font-weight:bold">${u.status}</td><td><button class="btn btn-edit" onclick="editUser(${i})">Edit</button> <button class="btn btn-del" onclick="delUser(${i})">Del</button></td></tr>`;
+        });
+        localStorage.setItem('credit_users_db', JSON.stringify(users));
+    }
+
     renderTable();
 </script>
 </body>
