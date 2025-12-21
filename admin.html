@@ -33,6 +33,7 @@
         .btn-reset { background-color: #ff9800; float: right; margin-right: 10px; }
         .btn-edit { background-color: #ffa000; color: #333; }
         .btn-del { background-color: #d32f2f; }
+        .btn-export { background-color: #008CBA; float:right; }
         
         /* MODAL */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -47,7 +48,7 @@
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
         .form-full { margin-bottom: 10px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #333; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .hidden-field { display: none; background: #f9f9f9; padding: 10px; border: 1px dashed #ccc; margin-top: 5px; }
         .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; background: #f0f0f0; padding: 5px; border-radius: 4px; }
         .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
@@ -72,8 +73,9 @@
     <h2>Super Admin</h2>
     <div class="nav-item active" onclick="showSection('policies')">📜 Policy Library</div>
     <div class="nav-item" onclick="showSection('users')">👥 Manage Users</div>
+    <div class="nav-item" onclick="showSection('apps')">📂 All Applications</div>
     <div class="nav-item" onclick="showSection('settings')">⚙️ Settings</div>
-    <div class="nav-item" style="margin-top:auto; background:#d32f2f;" onclick="location.reload()">🚪 Logout</div>
+    <div class="nav-item" style="margin-top:auto; background:#d32f2f;" onclick="logout()">🚪 Logout</div>
 </div>
 
 <div class="main-content">
@@ -105,6 +107,17 @@
         </div>
         <table id="userTable">
             <thead><tr><th>DSA Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="apps" class="section">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>📂 DSA Applications (Global View)</h2>
+            <button class="btn btn-export" onclick="exportToExcel()">⬇ Download Excel</button>
+        </div>
+        <table id="appTable">
+            <thead><tr><th>Date</th><th>Customer Name</th><th>Status</th><th>Amount (Lakhs)</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -188,11 +201,18 @@
                     <div class="form-row"><div><label>Loans (Last 6m)</label><input type="number" id="loans6m"></div><div><label>Enquiries (3m)</label><input type="number" id="enq3m"></div></div>
                 </div>
 
-                <div class="sec-title">🔹 SECTION E & F – PROGRAMS & RULES</div>
+                <div class="sec-title">🔹 SECTION E – PROGRAMS (ABB/GST/ITR)</div>
                 <div class="sec-content">
                     <div id="progContainer"></div>
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
                 </div>
+
+                <div class="sec-title">🔹 SECTION F – ADDITIONAL RULES & REMARKS</div>
+                <div class="sec-content">
+                    <label>Internal Policy Remarks / Constraints:</label>
+                    <textarea id="rulesText" rows="3" placeholder="e.g. Negative Profiles, Banned Pincodes, Special conditions..."></textarea>
+                </div>
+
             </form>
         </div>
         <div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">💾 Save Policy</button></div>
@@ -216,13 +236,29 @@
 </div>
 
 <script>
-    // --- AUTH ---
+    // --- 1. SESSION PERSISTENCE FIX ---
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
-    function checkAdminLogin() {
-        if(document.getElementById('adminLockPass').value === savedAdminPass) {
-            document.getElementById('loginOverlay').style.display = 'none';
-        } else { alert('Incorrect Password'); }
+    
+    // Check if already logged in on load
+    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+        document.getElementById('loginOverlay').style.display = 'none';
     }
+
+    function checkAdminLogin() {
+        const input = document.getElementById('adminLockPass').value;
+        if(input === savedAdminPass) {
+            sessionStorage.setItem('adminLoggedIn', 'true'); // Save session
+            document.getElementById('loginOverlay').style.display = 'none';
+        } else {
+            alert('Incorrect Password');
+        }
+    }
+
+    function logout() {
+        sessionStorage.removeItem('adminLoggedIn'); // Clear session
+        location.reload();
+    }
+
     function updateAdminPass() {
         const p = document.getElementById('newAdminPass').value;
         if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert('Admin Password Updated'); }
@@ -246,9 +282,11 @@
     let policies = JSON.parse(localStorage.getItem('credit_engine_db')) || defaultPolicies;
     let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
     let requests = JSON.parse(localStorage.getItem('dsa_requests')) || [];
+    let apps = JSON.parse(localStorage.getItem('dsa_app_history')) || [];
 
-    // --- RENDER ---
+    // --- RENDER & EXPORT LOGIC ---
     function renderTables() {
+        // Policies
         const pTbody = document.querySelector('#policyTable tbody');
         pTbody.innerHTML = '';
         policies.forEach((p, i) => {
@@ -257,6 +295,7 @@
         });
         localStorage.setItem('credit_engine_db', JSON.stringify(policies));
 
+        // Users
         const uTbody = document.querySelector('#userTable tbody');
         uTbody.innerHTML = '';
         users.forEach((u, i) => {
@@ -265,6 +304,7 @@
         });
         localStorage.setItem('credit_users_db', JSON.stringify(users));
 
+        // Requests
         const rTbody = document.querySelector('#requestTable tbody');
         rTbody.innerHTML = '';
         if(requests.length === 0) rTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">No New Requests</td></tr>';
@@ -273,29 +313,41 @@
             <td><button class="btn btn-approve" onclick="approveRequest(${i})">✅ Approve</button> <button class="btn btn-del" onclick="rejectRequest(${i})">❌ Reject</button></td></tr>`;
         });
         localStorage.setItem('dsa_requests', JSON.stringify(requests));
+
+        // NEW: APP TABLE
+        const aTbody = document.querySelector('#appTable tbody');
+        aTbody.innerHTML = '';
+        if(apps.length === 0) aTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">No Applications Found</td></tr>';
+        apps.forEach(a => {
+            aTbody.innerHTML += `<tr><td>${a.date}</td><td>${a.customer}</td><td style="font-weight:bold; color:${a.status==='Eligible'?'green':'red'}">${a.status}</td><td>-</td></tr>`;
+        });
     }
 
-    // --- FUNCTIONS ---
+    // --- EXPORT EXCEL ---
+    function exportToExcel() {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Date,Customer Name,Status,Details\n"; // Header
+        apps.forEach(a => {
+            csvContent += `${a.date},${a.customer},${a.status},View in App\n`;
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "dsa_applications.csv");
+        document.body.appendChild(link);
+        link.click();
+    }
+
+    // --- LOGIC FUNCTIONS ---
     function approveRequest(i) {
-        let req = requests[i];
-        req.status = "Active";
-        if(!req.pass) req.pass = "Welcome@123";
-        users.push(req);
-        requests.splice(i, 1);
-        renderTables();
-        alert(`User ${req.name} Approved!`);
+        let req = requests[i]; req.status = "Active"; users.push(req); requests.splice(i, 1);
+        renderTables(); alert(`User ${req.name} Approved!`);
     }
-
     function rejectRequest(i) { if(confirm("Reject?")) { requests.splice(i, 1); renderTables(); } }
-
+    
     function saveUser() {
-        let u = {
-            name: document.getElementById('uName').value,
-            mobile: document.getElementById('uMob').value,
-            user: document.getElementById('uUser').value,
-            pass: document.getElementById('uPass').value,
-            status: "Active"
-        };
+        let u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" };
         let idx = document.getElementById('u_id').value;
         if(idx !== '') users[idx] = u; else users.push(u);
         closeModal('user'); renderTables();
@@ -322,13 +374,13 @@
             minCibil: +document.getElementById('minCibil').value, maxCibil: +document.getElementById('maxCibil').value,
             actLoans: +document.getElementById('actLoans').value,
             maxUnsec: document.getElementById('maxUnsec').value,
-            loans6m: +document.getElementById('loans6m').value, enq3m: +document.getElementById('enq3m').value
+            loans6m: +document.getElementById('loans6m').value, enq3m: +document.getElementById('enq3m').value,
+            rulesText: document.getElementById('rulesText').value // Section F
         };
         if(idx !== '') policies[idx] = p; else policies.push(p);
         closeModal('policy'); renderTables();
     }
 
-    // --- HELPERS ---
     function showSection(id) { document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
     function toggleField(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
     function openModal(type) { 
@@ -343,32 +395,21 @@
         div.innerHTML = `<select><option>ABB</option><option>GST</option><option>ITR</option></select><input type="number" placeholder="Min"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button>`;
         document.getElementById('progContainer').appendChild(div);
     }
-
+    
     function editPolicy(i) {
-        openModal('policy');
-        let p = policies[i];
-        document.getElementById('p_id').value = i;
-        document.getElementById('bankName').value = p.bankName;
-        // Populate all fields
+        openModal('policy'); let p = policies[i];
+        document.getElementById('p_id').value = i; document.getElementById('bankName').value = p.bankName;
+        // ... Populate other fields ...
         document.getElementById('prodType').value = p.prodType;
         document.getElementById('loanMin').value = p.loanMin; document.getElementById('loanMax').value = p.loanMax;
-        document.getElementById('minTurn').value = p.minTurn; document.getElementById('minCibil').value = p.minCibil;
-        document.getElementById('maxUnsec').value = p.maxUnsec;
+        document.getElementById('tenMin').value = p.tenMin; document.getElementById('tenMax').value = p.tenMax;
+        document.getElementById('roiMin').value = p.roiMin; document.getElementById('roiMax').value = p.roiMax;
+        if(p.rulesText) document.getElementById('rulesText').value = p.rulesText;
     }
-    
-    function editUser(i) {
-        openModal('user');
-        let u = users[i];
-        document.getElementById('u_id').value = i;
-        document.getElementById('uName').value = u.name;
-        document.getElementById('uMob').value = u.mobile;
-        document.getElementById('uUser').value = u.user;
-        document.getElementById('uPass').value = u.pass;
-    }
-
+    function editUser(i) { openModal('user'); let u = users[i]; document.getElementById('u_id').value = i; document.getElementById('uName').value = u.name; document.getElementById('uUser').value = u.user; }
     function delPolicy(i) { if(confirm('Delete?')) { policies.splice(i,1); renderTables(); } }
     function delUser(i) { if(confirm('Delete?')) { users.splice(i,1); renderTables(); } }
-    function resetDefaults() { if(confirm('Reset all policies?')) { policies = JSON.parse(JSON.stringify(defaults)); renderTables(); } }
+    function resetDefaults() { if(confirm('Reset all policies?')) { policies = JSON.parse(JSON.stringify(defaultPolicies)); renderTables(); } }
 
     renderTables();
 </script>
