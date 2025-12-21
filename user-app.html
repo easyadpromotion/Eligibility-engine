@@ -45,6 +45,7 @@
 
         /* BUTTONS */
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); }
+        .submit-btn:hover { background-color: #1b5e20; }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
         /* DASHBOARD TABLE */
@@ -115,7 +116,12 @@
                         <div class="form-group"><label>Contact Number</label><input type="number" id="contact" class="pdf-data" data-label="Contact"></div>
                         <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" class="pdf-data" data-label="Vintage"></div>
                         <div class="form-group"><label>Turnover (Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
-                        <div class="form-group"><label>Entity Type</label><select id="entityType" class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option></select></div>
+                        
+                        <div class="form-group"><label>Entity Type</label>
+                            <select id="entityType" class="pdf-data" data-label="Entity">
+                                <option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>Sector</label>
                             <select id="sector" class="pdf-data" data-label="Sector">
                                 <option value="Trading">Trading (7% Margin)</option>
@@ -215,8 +221,8 @@
             <div class="dash-card">
                 <h3>🔐 User Settings</h3>
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="form-group"><label>Change Username</label><input type="text" id="set_user" placeholder="Enter username"></div>
-                    <div class="form-group"><label>Change Password</label><input type="password" id="set_pass" placeholder="New Password"></div>
+                    <div class="form-group"><label>New Username</label><input type="text" id="set_user" placeholder="Enter new username"></div>
+                    <div class="form-group"><label>New Password</label><input type="password" id="set_pass" placeholder="Enter new password"></div>
                 </div>
                 <button class="submit-btn" style="width:auto; margin-top:15px;" onclick="updateCredentials()">Update Credentials</button>
             </div>
@@ -274,9 +280,29 @@
         
         function logoutUser() {
             if(confirm("Are you sure you want to logout?")) {
-                alert("Logged out successfully.");
-                location.reload(); // Simulates logout
+                window.location.href = "index.html"; // Redirects to Login
             }
+        }
+
+        function updateCredentials() {
+            const u = document.getElementById('set_user').value;
+            const p = document.getElementById('set_pass').value;
+            if(!u || !p) { alert('Please enter both username and password.'); return; }
+            
+            // 1. Get existing users
+            let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
+            
+            // 2. Update first user (or create new if empty)
+            if(users.length > 0) {
+                users[0].user = u;
+                users[0].pass = p;
+            } else {
+                users.push({ name: "DSA User", mobile: "0000000000", user: u, pass: p, status: "Active" });
+            }
+            
+            // 3. Save back to storage
+            localStorage.setItem('credit_users_db', JSON.stringify(users));
+            alert('Credentials Updated! Please use these new details to login next time.');
         }
 
         function addCustomField(gridId) {
@@ -291,7 +317,7 @@
         const defaultPolicies = [
             { bank: "TATA CAPITAL STBL", type:"STBL", minTurn:20, minCibil:700, maxUnsec:5, loanMax:20, tenMax:36, roiMin:18, roiMax:24 },
             { bank: "ADITYA BIRLA STBL", type:"STBL", minTurn:25, minCibil:700, maxUnsec:5, loanMax:40, tenMax:36, roiMin:17.5, roiMax:22 },
-            { bank: "BAJAJ FINANCE TERM", type:"TERM", minTurn:40, minCibil:700, maxUnsec:5, loanMax:50, tenMax:48, roiMin:16.5, roiMax:21 },
+            { bank: "BAJAJ FINANCE TERM", type:"TERM", minTurn:40, minCibil:700, maxUnsec:5, loanMax:30, tenMax:48, roiMin:16.5, roiMax:21 },
             { bank: "PIRAMAL CAPITAL UBL", type:"UBL", minTurn:30, minCibil:700, maxUnsec:"", loanMax:15, tenMax:36, roiMin:16, roiMax:24 }, 
             { bank: "PIRAMAL CAPITAL UBL+", type:"UBL+", minTurn:100, minCibil:700, maxUnsec:5, loanMax:100, tenMax:48, roiMin:15, roiMax:20 },
             { bank: "TATA CAPITAL HTBL", type:"HTBL", minTurn:200, minCibil:700, maxUnsec:5, loanMax:500, tenMax:60, roiMin:14, roiMax:18 },
@@ -318,11 +344,12 @@
         function runEligibilityEngine() {
             latestResults = { eligible: [], declined: [] };
             
-            // Gather Data
+            // Gather Data (Robust)
             let formData = {};
             document.querySelectorAll('.pdf-data').forEach(el => {
-                // Save value regardless of visibility
-                formData[el.getAttribute('data-label')] = el.value;
+                // Ensure ID fallback if data-label missing
+                let key = el.getAttribute('data-label') || el.id;
+                formData[key] = el.value;
             });
 
             // Parse
@@ -408,24 +435,6 @@
             generateFullPDF(entry.results, entry.data);
         }
 
-        function updateCredentials() {
-            const u = document.getElementById('set_user').value;
-            const p = document.getElementById('set_pass').value;
-            if(!u || !p) { alert('Please enter both username and password.'); return; }
-            
-            // Update Local Storage
-            let users = JSON.parse(localStorage.getItem('credit_users_db')) || [];
-            // Simple logic: update first user or add new
-            if(users.length > 0) {
-                users[0].user = u;
-                users[0].pass = p;
-            } else {
-                users.push({ name: "DSA User", mobile: "0000000000", user: u, pass: p, status: "Active" });
-            }
-            localStorage.setItem('credit_users_db', JSON.stringify(users));
-            alert('Credentials Updated Successfully! Use these to login next time.');
-        }
-
         // --- PDF GENERATOR ---
         function generateFullPDF(resultsOverride = null, dataOverride = null) {
             const res = resultsOverride || latestResults;
@@ -455,7 +464,7 @@
             const dTable = document.getElementById('pdfRejectTable');
             dTable.innerHTML = res.declined.length === 0 ? "<tr><td colspan='4'>No Rejections</td></tr>" : "";
             res.declined.forEach(i => {
-                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Policy Failed</td><td class="status-declined">DECLINED</td></tr>`);
+                dTable.insertAdjacentHTML('beforeend', `<tr><td>${i.bank}</td><td>${i.reason}</td><td>Failed Policy</td><td class="status-declined">DECLINED</td></tr>`);
             });
 
             document.getElementById('fullReportModal').style.display = 'block';
