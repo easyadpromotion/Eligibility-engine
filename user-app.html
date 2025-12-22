@@ -14,13 +14,15 @@
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        
         .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
         .accordion { background: white; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
         .accordion-header { padding: 18px 25px; font-weight: 600; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
         .accordion-body { padding: 25px; display: none; } .accordion-body.open { display: block; }
+        
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         
-        /* FIX 3: Increased Height & Spacing for Bank Options */
+        /* FIX: Increased Height & Spacing for Bank Options */
         .bank-options { display: flex; gap: 15px; flex-wrap: wrap; padding-top: 5px; }
         .bank-opt { padding: 10px 20px; border: 1px solid #ddd; border-radius: 25px; cursor: pointer; font-weight: 500; background: #fff; transition: 0.2s; }
         .bank-opt:hover { background: #f5f5f5; }
@@ -30,7 +32,6 @@
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; font-size: 16px; font-weight: bold; }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; font-weight: bold; }
         
-        /* Auto-filled field style */
         .auto-filled { background-color: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; font-weight: bold; }
 
         /* Report Modal */
@@ -89,6 +90,8 @@
                 <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
                 <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
                 <div><label>Loans (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
+                <div><label>Loans Closing (6m)</label><input type="number" class="pdf-data" data-label="Closing (6m)"></div>
+                <div><label>Reduced EMI</label><input type="number" class="pdf-data" data-label="Reduced EMI" id="reducedEmi"></div>
                 <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
             </div></div></div>
 
@@ -162,7 +165,7 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
-        // --- FIX 4: PINCODE FETCH ---
+        // --- PINCODE FETCH ---
         async function fetchLocation() {
             const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
@@ -198,17 +201,17 @@
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
-            // 2. FINANCIALS (Sanitize Inputs)
-            const turn = (parseFloat(data['Turnover']) || 0) * 100000; // Lakhs to Absolute
+            // 2. FINANCIALS
+            const turn = (parseFloat(data['Turnover']) || 0) * 100000;
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
-            // FIX 2: Removed Reduced EMI logic
+            const redEmi = parseFloat(data['Reduced EMI']) || 0; // RESTORED
             
-            // 3. NET INCOME CALCULATION
+            // 3. NET INCOME CALCULATION (USING REDUCED EMI)
             const monthlyProfit = (turn / 12) * margin;
-            const obligations = Math.max(0, emi); // Only current EMI
-            const netIncome = Math.max(0, monthlyProfit - obligations); // DSCR Capacity
+            const obligations = Math.max(0, emi - redEmi); // Subtracts Reduced EMI from current obligations
+            const netIncome = Math.max(0, monthlyProfit - obligations);
 
             // FETCH POLICIES
             let policies = [];
@@ -223,35 +226,28 @@
                 // --- GATE CHECKS ---
                 if (data['Vintage'] < (p.minVin||0)) { pass=false; reasons.push(`Vintage < ${p.minVin}`); }
                 if ((turn/100000) < (p.minTurn||0)) { pass=false; reasons.push(`Turnover < ${p.minTurn}L`); }
-                if (abb < (p.abbMin||0)) { pass=false; reasons.push(`ABB < ${p.abbMin}`); } // Min ABB Check
+                if (abb < (p.abbMin||0)) { pass=false; reasons.push(`ABB < ${p.abbMin}`); }
                 if (p.gstReq==='Yes' && data['GST Reg']!=='Yes') { pass=false; reasons.push("GST Required"); }
                 if (p.itrReq==='Yes' && data['ITR Filed']!=='Yes') { pass=false; reasons.push("ITR Required"); }
                 if (data['CIBIL'] < (p.minCibil||0)) { pass=false; reasons.push(`CIBIL < ${p.minCibil}`); }
                 if (data['Age'] < (p.ageMin||18)) { pass=false; reasons.push(`Age < ${p.ageMin}`); }
 
-                // --- ELIGIBILITY CALCULATION ---
+                // --- ELIGIBILITY ---
                 if (pass) {
-                    const r = (p.roiMin / 100) / 12; // Monthly Rate
+                    const r = (p.roiMin / 100) / 12;
                     const n = p.tenMax || 36;
                     
-                    // PROGRAM 1: DSCR (Net Income)
                     let dscrAmt = calculatePV(r, n, netIncome);
-                    
-                    // PROGRAM 2: ABB (ABB as Capacity)
                     let abbAmt = calculatePV(r, n, abb);
 
-                    // Pick BEST of the two
                     let finalAmt = Math.max(dscrAmt, abbAmt);
                     let programUsed = dscrAmt > abbAmt ? "DSCR/Income" : "ABB";
 
-                    // CLAMP TO BANK POLICY MIN/MAX
                     let policyMax = (p.loanMax || 50) * 100000;
                     let policyMin = (p.loanMin || 1) * 100000;
 
-                    // Apply Max Limit
                     finalAmt = Math.min(finalAmt, policyMax);
 
-                    // Apply Min Limit (If calculated is less than Bank's Min, Reject)
                     if (finalAmt >= policyMin) {
                         eligible.push({
                             bank: p.bankName, 
@@ -272,12 +268,8 @@
             const status = eligible.length > 0 ? "Eligible" : "Declined";
             document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
             
-            // FIX 1: Ensure global vars are set BEFORE saving
-            window.latestResults = results; 
-            window.latestData = data;
-            
+            window.latestResults = results; window.latestData = data; // For PDF
             if(db) db.collection("applications").add({date:new Date().toLocaleDateString(), customer:data['Business Name'], dsaName:user.name, dsaUsername:user.user, status:status, data:data, results:results});
-            
             document.getElementById('dlReportBtn').style.display='block';
         }
 
