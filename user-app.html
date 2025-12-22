@@ -9,12 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; }
-        .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; font-size: 15px; display: flex; align-items: center; gap: 10px; }
-        .nav-item:hover, .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; }
+        .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
+        .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+        .nav-item:hover { background-color: #3949ab; }
+        .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
-        .accordion { background: white; border-radius: 10px; margin-bottom: 20px; padding: 0; border: 1px solid #eee; }
+        .accordion { background: white; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
         .accordion-header { padding: 18px 25px; font-weight: 600; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
         .accordion-body { padding: 25px; display: none; } .accordion-body.open { display: block; }
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
@@ -52,7 +53,7 @@
                 <div><label>Name</label><input type="text" class="pdf-data" data-label="Business Name"></div>
                 <div><label>Contact</label><input type="number" class="pdf-data" data-label="Contact"></div>
                 <div><label>Vintage (Yrs)</label><input type="number" class="pdf-data" data-label="Vintage"></div>
-                <div><label>Turnover (Lakhs)</label><input type="number" class="pdf-data" data-label="Turnover"></div>
+                <div><label>Turnover (Lakhs)</label><input type="number" class="pdf-data" data-label="Turnover" placeholder="e.g. 120"></div>
                 <div><label>Entity</label><select class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
                 <div><label>Sector</label><select class="pdf-data" data-label="Sector" id="sector"><option value="Trading">Trading (7%)</option><option value="Manufacturing">Manufacturing (9%)</option><option value="Service">Service (11%)</option></select></div>
                 <div><label>Premises</label><select class="pdf-data" data-label="Premises"><option>Owned</option><option>Rented</option></select></div>
@@ -79,14 +80,14 @@
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">4. Applicant Details</div><div class="accordion-body"><div class="form-grid">
                 <div><label>Age</label><input type="number" class="pdf-data" data-label="Age"></div>
                 <div><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
-                <div><label>Co-App?</label><select class="pdf-data" data-label="Co-App" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><label>Co-App Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
+                <div><label>Co-Applicant?</label><select class="pdf-data" data-label="Co-App" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><label>Co-App Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
                 <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="houseBox" class="hidden-field"><label>Pincode</label><input type="number" class="pdf-data" data-label="Pincode" onblur="fetchLocation()"></div>
                 <div><label>Location (City)</label><input type="text" class="pdf-data" data-label="City" id="cityField" readonly></div>
                 <div><label>State</label><input type="text" class="pdf-data" data-label="State" id="stateField" readonly></div>
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">5. Requirement</div><div class="accordion-body"><div class="form-grid">
-                <div><label>Req Amount (L)</label><input type="number" class="pdf-data" data-label="Req Amount"></div>
+                <div><label>Req Amount (Lakhs)</label><input type="number" class="pdf-data" data-label="Req Amount"></div>
                 <div><label>Purpose</label><input type="text" class="pdf-data" data-label="Purpose"></div>
             </div></div></div>
 
@@ -109,7 +110,7 @@
     <div id="fullReportModal"><div class="report-paper"><button class="no-print" onclick="document.getElementById('fullReportModal').style.display='none'">Close</button><button class="no-print" onclick="window.print()">Print</button><div class="report-header"><h3>PROVISIONAL OFFER LETTER</h3></div><div id="pdfAppDetails" class="details-grid"></div><br><h3>ELIGIBILITY</h3><table class="report-table"><thead><tr><th>Bank</th><th>Prog</th><th>Amt</th><th>Tenure</th><th>ROI</th></tr></thead><tbody id="pdfEligibleTable"></tbody></table><br><h3>REJECTIONS</h3><table class="report-table"><thead><tr><th>Bank</th><th>Reason</th></tr></thead><tbody id="pdfRejectTable"></tbody></table></div></div>
 
     <script>
-        // --- FIREBASE KEYS ---
+        // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -167,33 +168,35 @@
             let data = {};
             document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
             
-            let bankStmts = [];
-            document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
-            data['Bank Statements'] = bankStmts.join(', ');
+            let stmts = []; document.querySelectorAll('.bank-opt.selected').forEach(el => stmts.push(el.innerText));
+            data['Bank Statements'] = stmts.join(', ');
             data['DSA Name'] = user.name; data['DSA Username'] = user.user;
 
             const sectorVal = document.getElementById('sector').value.split(' ')[0];
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
-            const turn = (parseFloat(data['Turnover']) || 0) * 100000;
+            // --- CRITICAL MATH FIX: Convert Lakhs to Absolute ---
+            const turn = (parseFloat(data['Turnover']) || 0) * 100000; 
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
             const redEmi = parseFloat(data['Reduced EMI']) || 0;
             
+            // Financials
             const monthlyProfit = (turn / 12) * margin;
             const obligations = Math.max(0, emi - redEmi);
             const netIncome = Math.max(0, monthlyProfit - obligations);
 
             let policies = [];
             if(db) { const snap = await db.collection("policies").get(); policies = snap.docs.map(d => d.data()); }
-            if(policies.length === 0) { alert("No Policies found."); return; }
+            if(policies.length === 0) { alert("No Policies found. Ask Admin to 'Reset Defaults'."); return; }
 
             let eligible = [], declined = [];
 
             policies.forEach(p => {
                 let pass = true, reasons = [];
+                // 11 GATE CHECKS
                 if (data['Vintage'] < (p.minVin||0)) { pass=false; reasons.push(`Vintage < ${p.minVin}`); }
                 if ((turn/100000) < (p.minTurn||0)) { pass=false; reasons.push(`Turnover < ${p.minTurn}L`); }
                 if (abb < (p.abbMin||0)) { pass=false; reasons.push(`ABB < ${p.abbMin}`); }
@@ -215,7 +218,7 @@
                     if (finalAmt >= policyMin) {
                         eligible.push({ bank: p.bankName, prog: p.prodType, amt: (finalAmt / 100000).toFixed(2), ten: n, roi: `${p.roiMin}-${p.roiMax}%` });
                     } else {
-                        declined.push({ bank: p.bankName, reason: `Eligible Amount (${(finalAmt/100000).toFixed(2)}L) < Bank Min (${p.loanMin}L)` });
+                        declined.push({ bank: p.bankName, reason: `Eligible Amount < ${p.loanMin}L` });
                     }
                 } else {
                     declined.push({ bank: p.bankName, reason: reasons.join(", ") });
@@ -224,9 +227,15 @@
 
             const results = {eligible, declined};
             const status = eligible.length > 0 ? "Eligible" : "Declined";
-            document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
             
-            // GLOBAL VARS FOR PDF
+            // --- FIX: Show specific failures if 0 eligible ---
+            let resultHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
+            if(eligible.length === 0) {
+                resultHTML += `<div style="color:red; font-size:12px;">Common Rejection: ${declined[0]?.reason || 'Criteria Mismatch'}</div>`;
+            }
+            document.getElementById('resultsArea').innerHTML = resultHTML;
+            
+            // --- FIX: Save to Window for Download Button ---
             window.latestResults = results; window.latestData = data;
             
             if(db) db.collection("applications").add({date:new Date().toLocaleDateString(), customer:data['Business Name'], dsaName:user.name, dsaUsername:user.user, status:status, data:data, results:results});
@@ -236,10 +245,11 @@
 
         function generateFullPDF() {
             const res = window.latestResults, data = window.latestData;
+            if(!res) { alert("No data to print. Run check first."); return; } // Safety check
             document.getElementById('pdfCustomerName').innerText = data['Business Name'] || "Customer";
             document.getElementById('pdfAppDetails').innerHTML = Object.entries(data).map(([k,v])=>`<div class="detail-item"><strong>${k}:</strong> ${v}</div>`).join('');
-            document.getElementById('pdfEligibleTable').innerHTML = res.eligible.map(i=>`<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`).join('');
-            document.getElementById('pdfRejectTable').innerHTML = res.declined.map(i=>`<tr><td>${i.bank}</td><td>${i.reason}</td></tr>`).join('');
+            document.getElementById('pdfEligibleTable').innerHTML = res.eligible.length ? res.eligible.map(i=>`<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`).join('') : "<tr><td colspan='5'>No Eligible Banks Found</td></tr>";
+            document.getElementById('pdfRejectTable').innerHTML = res.declined.length ? res.declined.map(i=>`<tr><td>${i.bank}</td><td>${i.reason}</td></tr>`).join('') : "<tr><td colspan='2'>No Rejections</td></tr>";
             document.getElementById('fullReportModal').style.display='block';
         }
 
