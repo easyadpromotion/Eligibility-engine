@@ -12,7 +12,6 @@
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
         .logo { font-size: 24px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; color: #fff; }
         
-        /* SIDEBAR SPACING FIX */
         .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
@@ -37,7 +36,6 @@
         
         .hidden-field { display: none; background-color: #f8f9fa; padding: 15px; border: 1px dashed #ccc; margin-top: 10px; border-radius: 6px; }
         
-        /* BANK OPTIONS FIX */
         .bank-options { display: flex; gap: 10px; flex-wrap: wrap; }
         .bank-opt { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 13px; background: #fff; transition: 0.2s; font-weight: 500; }
         .bank-opt:hover { background: #f0f0f0; }
@@ -47,7 +45,6 @@
         .submit-btn:hover { background-color: #1b5e20; transform: translateY(-2px); }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
-        /* DASHBOARD */
         .dash-card { background: white; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .dash-card h3 { margin-top: 0; color: #1a237e; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
         .dash-table { width: 100%; border-collapse: collapse; }
@@ -61,7 +58,6 @@
         @media (max-width: 1024px) { .form-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .sidebar { display: none; } }
 
-        /* PDF MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .report-paper { background: white; width: 900px; margin: 0 auto; padding: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: 'Arial', sans-serif; min-height: 1000px; }
         .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
@@ -118,7 +114,7 @@
                     <div class="form-grid">
                         <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
                         <div class="form-group">
-                            <label>Bank Statements</label>
+                            <label>Bank Statement type</label>
                             <div class="bank-options" id="bankOpts">
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
@@ -169,7 +165,7 @@
                 <div id="sec5" class="accordion-body">
                     <div class="form-grid">
                         <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
-                        <div class="form-group"><label>Purpose</label><select class="pdf-data" data-label="Purpose"><option>Working Capital</option><option>Expansion</option><option>Asset Purchase</option></select></div>
+                        <div class="form-group"><label>Purpose</label><input type="text" class="pdf-data" data-label="Purpose"></div>
                     </div>
                 </div>
             </div>
@@ -181,19 +177,14 @@
 
         <div id="dashView" style="display:none;">
             <h2>DSA Dashboard</h2>
-            
             <div class="dash-card">
                 <h3>📂 My Application History</h3>
                 <table class="dash-table" id="historyTable"><thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>View</th></tr></thead><tbody></tbody></table>
             </div>
-
             <div class="dash-card">
                 <h3>🔐 Security Settings</h3>
                 <div class="form-grid" style="grid-template-columns: 1fr;">
-                    <div class="form-group">
-                        <label>New Password</label>
-                        <input type="password" id="new_pass" placeholder="Enter new password to update">
-                    </div>
+                    <div class="form-group"><label>New Password</label><input type="password" id="new_pass" placeholder="Enter new password to update"></div>
                 </div>
                 <button class="submit-btn" style="width:auto; margin-top:15px; background:#ffa000; color:#333;" onclick="updateCredentials()">Update Password</button>
             </div>
@@ -216,9 +207,7 @@
     </div>
 
     <script>
-        // ---------------------------------------------------------
-        // 🚨 PASTE FIREBASE KEYS BELOW 🚨
-        // ---------------------------------------------------------
+        // --- 1. FIREBASE KEYS (Paste here) ---
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -228,7 +217,6 @@
             appId: "1:249073295308:web:e3db899190a4d2506d0769",
             measurementId: "G-YBXMM1J129"
         };
-        // ---------------------------------------------------------
 
         let db;
         try {
@@ -236,19 +224,17 @@
             db = firebase.firestore();
         } catch(e) { console.error("Firebase Init Error:", e); }
 
-        // SESSION CHECK
         const loggedUser = JSON.parse(sessionStorage.getItem('active_dsa_user'));
         if(!loggedUser) window.location.href = "index.html";
         document.getElementById('displayUser').innerText = loggedUser.name;
 
-        // LOAD POLICY COUNT (Fix 5)
+        // LOAD POLICY COUNT
         if(db) {
             db.collection('policies').get().then(snap => {
                 document.getElementById('policyCount').innerText = snap.size;
             });
         }
 
-        // GLOBAL UI FUNCTIONS
         function switchView(v){
             document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
             if(v==='appView') document.getElementById('nav-app').classList.add('active');
@@ -262,7 +248,7 @@
         function toggleBankOpt(e){e.classList.toggle('selected');}
         function logoutUser(){if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";}}
 
-        // --- CORE ENGINE LOGIC (Fix 1, 6) ---
+        // --- 11-POINT GATE CHECK ENGINE ---
         async function runEligibilityEngine() {
             let data = {};
             document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
@@ -273,24 +259,26 @@
             data['DSA Name'] = loggedUser.name;
             data['DSA Username'] = loggedUser.user;
 
-            // PROFIT MARGIN LOGIC
-            const sectorVal = document.getElementById('sector').value.split(' ')[0]; // Trading, Manufacturing...
+            // PREPARE VALUES
+            const sectorVal = document.getElementById('sector').value.split(' ')[0];
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
-            // FINANCIAL CALCS
+            const vintage = parseFloat(data['Vintage']) || 0;
             const turn = parseFloat(data['Turnover']) || 0;
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
+            const unsec = parseFloat(data['Unsec Loans']) || 0;
+            const enquiries = parseFloat(data['Enquiries']) || 0;
+            const age = parseFloat(data['Age']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
-            const redEmi = parseFloat(data['Reduced EMI']) || 0; // Exclude next 6m closing EMIs
+            const redEmi = parseFloat(data['Reduced EMI']) || 0;
             
-            // NET INCOME FORMULA: (Turnover/12 * Margin) - (Obligations - ClosingObligations)
+            // Financial Capacity
             const monthlyProfit = (turn * 100000) / 12 * margin;
             const obligations = Math.max(0, emi - redEmi);
             const netIncome = Math.max(0, monthlyProfit - obligations);
 
-            // PV FORMULA
             function calculatePV(rate, nper, pmt) {
                 if (rate === 0) return pmt * nper;
                 return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -302,40 +290,56 @@
                 const snap = await db.collection("policies").get();
                 policies = snap.docs.map(d => d.data());
             }
-            if(policies.length === 0) { alert("No Policies found in System."); return; }
+            if(policies.length === 0) { alert("No Policies found."); return; }
 
             let eligible = [], declined = [];
 
             policies.forEach(p => {
-                let pass = true, reason = "";
-                
-                // 1. GATE CHECKS
-                if (turn < (p.minTurn || 0)) { pass = false; reason = `Turnover < ${p.minTurn}L`; }
-                else if (cibil < (p.minCibil || 0)) { pass = false; reason = `CIBIL < ${p.minCibil}`; }
-                // Add more gate checks (Vintage, Unsecured, etc.) here if needed
+                let pass = true;
+                let reasons = [];
 
+                // --- 11-POINT GATE CHECKS ---
+                // 1. Vintage
+                if (vintage < (p.minVin || 0)) { pass = false; reasons.push(`Vintage < ${p.minVin} yrs`); }
+                // 2. Turnover
+                if (turn < (p.minTurn || 0)) { pass = false; reasons.push(`Turnover < ${p.minTurn}L`); }
+                // 3. ABB
+                if (abb < (p.abbMin || 0)) { pass = false; reasons.push(`ABB < ${p.abbMin}`); }
+                // 4. Bank Statements (Check if policy requires specific types)
+                if (p.bankingTypes && p.bankingTypes.length > 0) {
+                    const hasMatch = p.bankingTypes.some(type => bankStmts.includes(type));
+                    if (!hasMatch) { pass = false; reasons.push(`Accepted Stmts: ${p.bankingTypes.join(',')}`); }
+                }
+                // 5. GST
+                if (p.gstReq === 'Yes' && data['GST Reg'] !== 'Yes') { pass = false; reasons.push("GST Mandatory"); }
+                // 6. ITR
+                if (p.itrReq === 'Yes' && data['ITR Filed'] !== 'Yes') { pass = false; reasons.push("ITR Mandatory"); }
+                // 7. CIBIL
+                if (cibil < (p.minCibil || 0)) { pass = false; reasons.push(`CIBIL < ${p.minCibil}`); }
+                if (p.maxCibil && cibil > p.maxCibil) { pass = false; reasons.push(`CIBIL > ${p.maxCibil}`); }
+                // 8. Unsecured Loans
+                if (p.maxUnsec && unsec > p.maxUnsec) { pass = false; reasons.push(`Max Unsec Loans: ${p.maxUnsec}`); }
+                // 9. Enquiries
+                if (p.enq3m && enquiries > p.enq3m) { pass = false; reasons.push(`Max Enquiries(3m): ${p.enq3m}`); }
+                // 10. Age
+                if (age < (p.ageMin || 18)) { pass = false; reasons.push(`Age < ${p.ageMin}`); }
+                if (p.ageMax && age > p.ageMax) { pass = false; reasons.push(`Age > ${p.ageMax}`); }
+                // 11. Own House
+                if (p.houseReq === 'Yes' && data['Own House'] !== 'Yes') { pass = false; reasons.push("Own House Mandatory"); }
+
+                // --- CALCULATION IF PASSED ---
                 if (pass) {
-                    const r = (p.roiMin / 100) / 12; // Monthly Rate
-                    const n = p.tenMax; // Max Tenure
+                    const r = (p.roiMin / 100) / 12;
+                    const n = p.tenMax; 
                     
-                    // CALC ELIGIBILITY FOR BOTH PROGRAMS (ABB & DSCR)
-                    // You requested to calculate based on available programs. 
-                    // I will calculate both and take the MAX, or specific if policy requires.
-                    
-                    // DSCR (Net Income) Eligibility
+                    // Calc both methods
                     let loanDSCR = calculatePV(r, n, netIncome);
-                    
-                    // ABB Eligibility (Assumes ABB can be used as EMI capacity)
                     let loanABB = calculatePV(r, n, abb); 
-
-                    // Logic: Use whichever is higher, or restrict based on Policy "Programs" field if complex.
-                    // For now, maximizing eligibility:
-                    let finalLoan = Math.max(loanDSCR, loanABB);
                     
-                    // Cap at Max Policy Loan
+                    let finalLoan = Math.max(loanDSCR, loanABB);
                     finalLoan = Math.min(finalLoan, (p.loanMax * 100000));
 
-                    if (finalLoan >= 100000) { // Min 1 Lakh
+                    if (finalLoan >= 100000) {
                         eligible.push({
                             bank: p.bankName, 
                             prog: p.prodType, 
@@ -347,7 +351,7 @@
                         declined.push({ bank: p.bankName, reason: "Eligible Amount < 1L" });
                     }
                 } else {
-                    declined.push({ bank: p.bankName, reason: reason });
+                    declined.push({ bank: p.bankName, reason: reasons.join(", ") });
                 }
             });
 
