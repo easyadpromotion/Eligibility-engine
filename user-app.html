@@ -12,13 +12,12 @@
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
         .logo { font-size: 24px; font-weight: bold; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; color: #fff; }
         
-        /* FIX 3: SIDEBAR SPACING */
+        /* SIDEBAR SPACING FIX */
         .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
         .logout { margin-top: auto; background-color: #d32f2f; padding: 12px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .logout:hover { background-color: #b71c1c; }
-
+        
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .page-title { font-size: 22px; font-weight: bold; color: #333; margin: 0; }
@@ -38,7 +37,7 @@
         
         .hidden-field { display: none; background-color: #f8f9fa; padding: 15px; border: 1px dashed #ccc; margin-top: 10px; border-radius: 6px; }
         
-        /* FIX 2: BANK OPTIONS STYLING */
+        /* BANK OPTIONS FIX */
         .bank-options { display: flex; gap: 10px; flex-wrap: wrap; }
         .bank-opt { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 13px; background: #fff; transition: 0.2s; font-weight: 500; }
         .bank-opt:hover { background: #f0f0f0; }
@@ -46,21 +45,17 @@
 
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 30px; box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3); transition: 0.2s; }
         .submit-btn:hover { background-color: #1b5e20; transform: translateY(-2px); }
-        
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; }
 
-        /* DASHBOARD CARDS */
+        /* DASHBOARD */
         .dash-card { background: white; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .dash-card h3 { margin-top: 0; color: #1a237e; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
-        
         .dash-table { width: 100%; border-collapse: collapse; }
         .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
         .dash-table th { background-color: #f8f9fa; color: #333; font-weight: bold; }
-        
         .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-eligible { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
         .status-declined { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-        
         .btn-view { padding: 6px 14px; background: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
 
         @media (max-width: 1024px) { .form-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -75,7 +70,6 @@
         .report-table th, .report-table td { border: 1px solid #333; padding: 10px; text-align: center; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
-        
         @media print { 
             body > * { display: none !important; } 
             #fullReportModal { display: block !important; position: absolute; top: 0; left: 0; background: white; width: 100%; height: auto; padding: 0; margin: 0; z-index: 9999; }
@@ -98,7 +92,7 @@
             <h2 class="page-title">DSA Portal</h2>
             <div class="user-info">
                 👤 <span id="displayUser">Guest</span> 
-                <span class="badge">Shield: <span id="policyCount">Loading...</span> Active</span>
+                <span class="badge">Shield: <span id="policyCount">0</span> Active</span>
             </div>
         </div>
 
@@ -112,7 +106,7 @@
                         <div class="form-group"><label>Vintage (Years)</label><input type="number" id="vintage" class="pdf-data" data-label="Vintage"></div>
                         <div class="form-group"><label>Turnover (Lakhs)</label><input type="number" id="turnover" class="pdf-data" data-label="Turnover"></div>
                         <div class="form-group"><label>Entity Type</label><select id="entityType" class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option><option>LLP</option></select></div>
-                        <div class="form-group"><label>Sector (Margin %)</label><select id="sector" class="pdf-data" data-label="Sector"><option value="Trading">Trading (7%)</option><option value="Manufacturing">Manufacturing (9%)</option><option value="Service">Service (11%)</option></select></div>
+                        <div class="form-group"><label>Sector (Margin)</label><select id="sector" class="pdf-data" data-label="Sector"><option value="Trading">Trading (7%)</option><option value="Manufacturing">Manufacturing (9%)</option><option value="Service">Service (11%)</option></select></div>
                         <div class="form-group"><label>Business Premises</label><select id="premises" class="pdf-data" data-label="Premises"><option>Rented</option><option>Leased</option><option>Owned</option></select></div>
                     </div>
                 </div>
@@ -124,7 +118,7 @@
                     <div class="form-grid">
                         <div class="form-group"><label>ABB (Avg Balance) ₹</label><input type="number" id="abb" class="pdf-data" data-label="ABB"></div>
                         <div class="form-group">
-                            <label>Bank Statement type</label>
+                            <label>Bank Statements</label>
                             <div class="bank-options" id="bankOpts">
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">SA</div>
                                 <div class="bank-opt" onclick="toggleBankOpt(this)">CA</div>
@@ -175,7 +169,7 @@
                 <div id="sec5" class="accordion-body">
                     <div class="form-grid">
                         <div class="form-group"><label>Required Amount (Lakhs)</label><input type="number" id="reqAmount" class="pdf-data" data-label="Req Amount"></div>
-                        <div class="form-group"><label>Purpose</label><input type="text" class="pdf-data" data-label="Purpose"></div>
+                        <div class="form-group"><label>Purpose</label><select class="pdf-data" data-label="Purpose"><option>Working Capital</option><option>Expansion</option><option>Asset Purchase</option></select></div>
                     </div>
                 </div>
             </div>
@@ -247,7 +241,7 @@
         if(!loggedUser) window.location.href = "index.html";
         document.getElementById('displayUser').innerText = loggedUser.name;
 
-        // LOAD POLICY COUNT (FIX 5)
+        // LOAD POLICY COUNT (Fix 5)
         if(db) {
             db.collection('policies').get().then(snap => {
                 document.getElementById('policyCount').innerText = snap.size;
@@ -268,7 +262,7 @@
         function toggleBankOpt(e){e.classList.toggle('selected');}
         function logoutUser(){if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";}}
 
-        // ENGINE LOGIC
+        // --- CORE ENGINE LOGIC (Fix 1, 6) ---
         async function runEligibilityEngine() {
             let data = {};
             document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
@@ -279,51 +273,91 @@
             data['DSA Name'] = loggedUser.name;
             data['DSA Username'] = loggedUser.user;
 
-            // FIX 1: Margin Logic
-            const sectorMap = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
-            const margin = sectorMap[document.getElementById('sector').value.split(' ')[0]] || 0.07;
+            // PROFIT MARGIN LOGIC
+            const sectorVal = document.getElementById('sector').value.split(' ')[0]; // Trading, Manufacturing...
+            const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
+            const margin = margins[sectorVal] || 0.07;
 
-            // CALCULATION
-            const turn=parseFloat(data['Turnover'])||0, cibil=parseFloat(data['CIBIL'])||0;
-            const emi=parseFloat(data['Monthly EMI'])||0, redEmi=parseFloat(data['Reduced EMI'])||0;
-            const netIncome = Math.max(0, ((turn*100000)/12 * margin) - Math.max(0, emi-redEmi));
+            // FINANCIAL CALCS
+            const turn = parseFloat(data['Turnover']) || 0;
+            const abb = parseFloat(data['ABB']) || 0;
+            const cibil = parseFloat(data['CIBIL']) || 0;
+            const emi = parseFloat(data['Monthly EMI']) || 0;
+            const redEmi = parseFloat(data['Reduced EMI']) || 0; // Exclude next 6m closing EMIs
+            
+            // NET INCOME FORMULA: (Turnover/12 * Margin) - (Obligations - ClosingObligations)
+            const monthlyProfit = (turn * 100000) / 12 * margin;
+            const obligations = Math.max(0, emi - redEmi);
+            const netIncome = Math.max(0, monthlyProfit - obligations);
 
-            // FETCH POLICIES & RUN
+            // PV FORMULA
+            function calculatePV(rate, nper, pmt) {
+                if (rate === 0) return pmt * nper;
+                return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
+            }
+
+            // FETCH POLICIES
             let policies = [];
             if(db) {
                 const snap = await db.collection("policies").get();
                 policies = snap.docs.map(d => d.data());
             }
-            if(policies.length===0) { alert("No Policies Found! Ask Admin to add policies."); return; }
+            if(policies.length === 0) { alert("No Policies found in System."); return; }
 
-            let eligible=[], declined=[];
-            
+            let eligible = [], declined = [];
+
             policies.forEach(p => {
-                let pass=true, reason="";
-                if(turn < p.minTurn) { pass=false; reason=`Turnover < ${p.minTurn}L`; }
-                else if(cibil < p.minCibil) { pass=false; reason=`CIBIL < ${p.minCibil}`; }
-                // Add more logic here as needed (ABB, etc.)
+                let pass = true, reason = "";
+                
+                // 1. GATE CHECKS
+                if (turn < (p.minTurn || 0)) { pass = false; reason = `Turnover < ${p.minTurn}L`; }
+                else if (cibil < (p.minCibil || 0)) { pass = false; reason = `CIBIL < ${p.minCibil}`; }
+                // Add more gate checks (Vintage, Unsecured, etc.) here if needed
 
-                if(pass) {
-                    // PV Calculation Formula
-                    const r = (p.roiMin/100)/12;
-                    const n = p.tenMax; 
-                    let amt = (netIncome * (1 - Math.pow(1 + r, -n))) / r;
-                    amt = Math.min(amt, (p.loanMax*100000));
+                if (pass) {
+                    const r = (p.roiMin / 100) / 12; // Monthly Rate
+                    const n = p.tenMax; // Max Tenure
+                    
+                    // CALC ELIGIBILITY FOR BOTH PROGRAMS (ABB & DSCR)
+                    // You requested to calculate based on available programs. 
+                    // I will calculate both and take the MAX, or specific if policy requires.
+                    
+                    // DSCR (Net Income) Eligibility
+                    let loanDSCR = calculatePV(r, n, netIncome);
+                    
+                    // ABB Eligibility (Assumes ABB can be used as EMI capacity)
+                    let loanABB = calculatePV(r, n, abb); 
 
-                    if(amt > 100000) {
-                        eligible.push({bank:p.bankName, prog:p.prodType, amt:(amt/100000).toFixed(2), ten:p.tenMax, roi:p.roiMin+"-"+p.roiMax});
+                    // Logic: Use whichever is higher, or restrict based on Policy "Programs" field if complex.
+                    // For now, maximizing eligibility:
+                    let finalLoan = Math.max(loanDSCR, loanABB);
+                    
+                    // Cap at Max Policy Loan
+                    finalLoan = Math.min(finalLoan, (p.loanMax * 100000));
+
+                    if (finalLoan >= 100000) { // Min 1 Lakh
+                        eligible.push({
+                            bank: p.bankName, 
+                            prog: p.prodType, 
+                            amt: (finalLoan / 100000).toFixed(2), 
+                            ten: `${p.tenMax}m`, 
+                            roi: `${p.roiMin}-${p.roiMax}%`
+                        });
                     } else {
-                        declined.push({bank:p.bankName, reason:"Eligible Amount < 1L"});
+                        declined.push({ bank: p.bankName, reason: "Eligible Amount < 1L" });
                     }
                 } else {
-                    declined.push({bank:p.bankName, reason:reason});
+                    declined.push({ bank: p.bankName, reason: reason });
                 }
             });
 
-            const results = {eligible, declined};
+            const results = { eligible, declined };
             const status = eligible.length > 0 ? "Eligible" : "Declined";
-            document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">Result: ${status} (${eligible.length} Banks)</h3>`;
+            
+            document.getElementById('resultsArea').innerHTML = `
+                <h3 style="color:${status === 'Eligible' ? '#2e7d32' : '#c62828'}">
+                    Result: ${status} (${eligible.length} Banks)
+                </h3>`;
             
             // SAVE TO CLOUD
             if(db) {
@@ -336,9 +370,10 @@
                     data: data,
                     results: results
                 });
+                alert("Calculation Complete & Saved!");
             }
             
-            document.getElementById('dlReportBtn').style.display='block';
+            document.getElementById('dlReportBtn').style.display = 'block';
             window.latestResults = results; 
             window.latestData = data;
         }
