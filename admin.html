@@ -7,7 +7,6 @@
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -54,14 +53,15 @@
         .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; background: #fff; }
 
         /* FORM ELEMENTS */
-        .sec-title { background: #f5f5f5; padding: 10px 15px; font-weight: bold; margin-top: 20px; border-left: 5px solid #1a237e; color: #333; }
+        .sec-title { background: #f5f5f5; padding: 10px 15px; font-weight: bold; margin-top: 20px; border-left: 5px solid #1a237e; color: #333; cursor:pointer; }
         .sec-content { padding: 15px; border: 1px solid #eee; border-top: none; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #555; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .hidden-field { display:none; background:#fafafa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
         .checkbox-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px; }
-        .dynamic-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .dynamic-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #f9f9f9; padding: 8px; border-radius: 4px; border:1px solid #eee; }
+        .dynamic-row input, .dynamic-row select { margin:0; }
     </style>
 </head>
 <body>
@@ -178,7 +178,7 @@
                     </div>
                 </div>
 
-                <div class="sec-title">SECTION D - CREDIT & OBLIGATIONS</div>
+                <div class="sec-title">SECTION D - CREDIT</div>
                 <div class="sec-content">
                     <div class="form-row"><div><label>CIBIL Min</label><input type="number" id="minCibil"></div><div><label>CIBIL Max</label><input type="number" id="maxCibil"></div></div>
                     <div class="form-row"><div><label>Max Active Loans</label><input type="number" id="actLoans"></div><div><label>Monthly EMI (Max)</label><input type="number" id="maxEmi"></div></div>
@@ -188,10 +188,16 @@
                 </div>
 
                 <div class="sec-title">SECTION E - PROGRAMS</div>
-                <div class="sec-content"><div id="progContainer"></div><button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button></div>
+                <div class="sec-content">
+                    <div id="progContainer"></div>
+                    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
+                </div>
 
-                <div class="sec-title">SECTION F - RULES</div>
-                <div class="sec-content"><textarea id="rulesText" rows="3" placeholder="Rules..."></textarea></div>
+                <div class="sec-title">SECTION F - RULES & CONDITIONS</div>
+                <div class="sec-content">
+                    <div id="condContainer"></div>
+                    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
+                </div>
             </form>
         </div>
         <div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">💾 Save Policy</button></div>
@@ -216,12 +222,11 @@
 
 <script>
     // --- 1. SESSION LOGIC (Run Immediately) ---
-    // This checks if you are already logged in BEFORE the page fully loads
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
         document.getElementById('loginOverlay').style.display = 'none';
     }
 
-    // --- 2. FIREBASE CONFIG (Your Keys Integrated) ---
+    // --- 2. FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
         authDomain: "credir-engine-new.firebaseapp.com",
@@ -283,17 +288,26 @@
     window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { db.collection("dsa_users").add({...r, status:"Active"}); db.collection("dsa_requests").doc(id).delete(); } };
     window.delDoc = (col, id) => { if(confirm("Delete?")) db.collection(col).doc(id).delete(); };
 
-    // USER SAVE
     window.saveUser = () => {
         const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" };
         db.collection("dsa_users").add(u); closeModal('user');
     };
 
-    // POLICY SAVE
     window.savePolicy = () => {
         let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
-        let progs = []; document.querySelectorAll('#progContainer .dynamic-row').forEach(row => progs.push({ type: row.querySelector('select').value, val: row.querySelector('input').value }));
         
+        // Harvest Programs (Sec E)
+        let progs = []; 
+        document.querySelectorAll('#progContainer .dynamic-row').forEach(row => {
+            progs.push({ type: row.querySelector('select').value, val: row.querySelector('input').value });
+        });
+
+        // Harvest Conditions (Sec F)
+        let conds = [];
+        document.querySelectorAll('#condContainer .dynamic-row input').forEach(inp => {
+            if(inp.value.trim()) conds.push(inp.value.trim());
+        });
+
         const p = {
             bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
             loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
@@ -312,7 +326,10 @@
             minUnsec: +document.getElementById('minUnsec').value, maxUnsec: +document.getElementById('maxUnsec').value,
             loans6m: +document.getElementById('loans6m').value, loansClosed6m: +document.getElementById('loansClosed6m').value,
             reducedEmi: +document.getElementById('reducedEmi').value, enq3m: +document.getElementById('enq3m').value,
-            rulesText: document.getElementById('rulesText').value, bankingTypes: bTypes, programs: progs
+            
+            bankingTypes: bTypes, 
+            programs: progs, // Sec E
+            conditions: conds // Sec F
         };
         
         let idx = document.getElementById('p_id').value;
@@ -320,7 +337,6 @@
         closeModal('policy');
     };
 
-    // POLICY EDIT
     window.editPolicy = (id) => {
         let p = policies.find(x => x.id === id); if(!p) return;
         document.getElementById('p_id').value = id;
@@ -337,21 +353,27 @@
         document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn; document.getElementById('abbMin').value = p.abbMin||'';
         document.getElementById('itrReq').value = p.itrReq||'No'; toggleField('itrBox', p.itrReq==='Yes'); document.getElementById('itrVal').value = p.itrVal||'';
         document.getElementById('gstReq').value = p.gstReq||'No'; toggleField('gstBox', p.gstReq==='Yes'); document.getElementById('gstVal').value = p.gstVal||'';
+        // SEC D
         document.getElementById('minCibil').value = p.minCibil; document.getElementById('maxCibil').value = p.maxCibil||'';
         document.getElementById('actLoans').value = p.actLoans||''; document.getElementById('maxEmi').value = p.maxEmi||'';
         document.getElementById('minUnsec').value = p.minUnsec||''; document.getElementById('maxUnsec').value = p.maxUnsec;
         document.getElementById('loans6m').value = p.loans6m||''; document.getElementById('loansClosed6m').value = p.loansClosed6m||'';
         document.getElementById('reducedEmi').value = p.reducedEmi||''; document.getElementById('enq3m').value = p.enq3m||'';
-        document.getElementById('rulesText').value = p.rulesText||'';
         
         document.querySelectorAll('.bank-chk').forEach(c => c.checked = false);
         if(p.bankingTypes) p.bankingTypes.forEach(t=>{ let el=document.querySelector(`.bank-chk[value="${t}"]`); if(el)el.checked=true; });
+        
+        // POPULATE E (Programs)
         document.getElementById('progContainer').innerHTML='';
         if(p.programs) p.programs.forEach(pr=>addProg(pr.type, pr.val));
+
+        // POPULATE F (Conditions)
+        document.getElementById('condContainer').innerHTML='';
+        if(p.conditions) p.conditions.forEach(cd=>addCond(cd));
+        
         openModal('policy');
     };
 
-    // EXCEL EXPORT
     window.exportToExcel = () => {
         let csv = "Date,Customer Name,Contact Number,Vintage,Turnover,Entity type,Sector,Business Premises,ABB,Bank Statement type,GST Reg,ITR Filed,Cibil,Active Loans,Monthly EMI,Unsecured Loans,Loans Taken (6Months),Loans Closing(Next 6Months),Reduced EMI(Next 6 Months),Enquiries(3 Months),Applicant Age,Gender,Co-Applicant?,Co-Applicant Age,Own House?,Own House Pincode,Required Loan Amount(lakhs),Purpose,DSA Name\n";
         apps.forEach(app => {
@@ -369,14 +391,16 @@
 
     // HELPER FUNCTIONS
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
-    window.openModal=(t)=>{document.getElementById(t+'Form').reset();document.getElementById(t==='policy'?'p_id':'u_id').value='';if(t==='policy')document.getElementById('progContainer').innerHTML='';document.getElementById(t+'Modal').style.display='flex';};
+    window.openModal=(t)=>{document.getElementById(t+'Form').reset();document.getElementById(t==='policy'?'p_id':'u_id').value='';if(t==='policy'){document.getElementById('progContainer').innerHTML='';document.getElementById('condContainer').innerHTML='';}document.getElementById(t+'Modal').style.display='flex';};
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
-    window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option></select><input type="number" placeholder="Min" value="${v}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
     
-    // LOGIN & PASSWORD LOGIC
-    let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
+    // UPDATED ADD PROG (WITH DSCR)
+    window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Min" value="${v}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
     
+    // UPDATED ADD COND (SECTION F)
+    window.addCond=(val='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Enter Condition (e.g. No Past DPD)" value="${val}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
+
     window.checkAdminLogin = () => {
         if(document.getElementById('adminLockPass').value === savedAdminPass) { 
             sessionStorage.setItem('adminLoggedIn','true'); 
