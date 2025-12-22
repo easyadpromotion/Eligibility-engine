@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSA Login - Cloud System</title>
+    <title>DSA Login - Cloud</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #0047ab; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -11,15 +11,14 @@
         .title { font-size: 24px; font-weight: bold; color: #0047ab; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .btn { width: 100%; padding: 12px; background-color: #003380; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
-        .btn:hover { background-color: #002255; }
-        .link { display: block; margin-top: 15px; color: #666; font-size: 13px; cursor: pointer; text-decoration: none; }
+        .link { display: block; margin-top: 15px; color: #666; font-size: 13px; cursor: pointer; }
         .msg { font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="card" id="loginCard">
-        <div class="title">🔒 DSA Login (Online)</div>
+        <div class="title">🔒 DSA Login</div>
         <input type="text" id="lUser" placeholder="Username">
         <input type="password" id="lPass" placeholder="Password">
         <button class="btn" id="btnLogin">Login</button>
@@ -39,83 +38,78 @@
     </div>
 
     <script type="module">
-        // --------------------------------------------------------------
-        // 1. PASTE YOUR FIREBASE CONFIG HERE (Replace the dummy lines)
-        // --------------------------------------------------------------
+        // -----------------------------------------------------------
+        // 🚨 PASTE YOUR FIREBASE CONFIG HERE 🚨
+        // -----------------------------------------------------------
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // ↓↓↓ PASTE YOUR CONFIG INSIDE THESE BRACKETS ↓↓↓
         const firebaseConfig = {
-            // apiKey: "...",
-            // authDomain: "...",
-            // projectId: "...",
-            // ... (Paste your actual config here)
+            // apiKey: "PASTE_YOUR_KEY_HERE",
+            // authDomain: "PASTE_HERE",
+            // projectId: "PASTE_HERE",
+            // ...
         };
-        // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 
-        // Initialize
-        let app, db;
+        let db;
         try {
-            app = initializeApp(firebaseConfig);
+            const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
-        } catch (e) {
-            console.error("Firebase Error: Paste your config in the code!", e);
-            document.getElementById('loginMsg').innerText = "⚠️ Error: Firebase Config Missing in Code";
-            document.getElementById('loginMsg').style.display = "block";
+        } catch(e) { 
+            document.getElementById('loginMsg').innerText = "⚠️ Config Missing. Open Code to Paste Keys.";
+            document.getElementById('loginMsg').style.display="block";
         }
 
-        // TOGGLE VIEW
         window.toggleView = () => {
-            const l = document.getElementById('loginCard'), r = document.getElementById('regCard');
+            const l = document.getElementById('loginCard');
+            const r = document.getElementById('regCard');
             l.style.display = l.style.display === 'none' ? 'block' : 'none';
             r.style.display = r.style.display === 'none' ? 'block' : 'none';
-            document.querySelectorAll('.msg').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.msg').forEach(m => m.style.display='none');
         };
 
-        // LOGIN FUNCTION
+        // LOGIN LOGIC
         document.getElementById('btnLogin').addEventListener('click', async () => {
             const u = document.getElementById('lUser').value.trim();
             const p = document.getElementById('lPass').value.trim();
             const msg = document.getElementById('loginMsg');
-            
-            if(!u || !p) { msg.innerText = "Enter credentials"; msg.style.display="block"; return; }
-            msg.innerText = "Checking..."; msg.style.display="block"; msg.style.color="#333";
+
+            if(!u || !p) { msg.innerText = "Enter username & password"; msg.style.display="block"; return; }
+            msg.innerText = "Connecting to Cloud..."; msg.style.display="block"; msg.style.color="#333";
 
             try {
-                // 1. Check Active Users
+                // 1. Check Active Users Collection
                 const qUser = query(collection(db, "dsa_users"), where("user", "==", u), where("pass", "==", p));
                 const snapUser = await getDocs(qUser);
 
                 if (!snapUser.empty) {
                     const userData = snapUser.docs[0].data();
                     if(userData.status === 'Active') {
-                        // SAVE SESSION
                         sessionStorage.setItem('active_dsa_user', JSON.stringify(userData));
                         window.location.href = "user-app.html";
                     } else {
-                        msg.innerText = "❌ Account Inactive/Blocked"; msg.style.color="red";
+                        msg.innerText = "❌ Account Blocked/Inactive"; msg.style.color="red";
                     }
                     return;
                 }
 
-                // 2. Check Pending Requests
+                // 2. Check Pending Requests Collection
                 const qReq = query(collection(db, "dsa_requests"), where("user", "==", u), where("pass", "==", p));
                 const snapReq = await getDocs(qReq);
 
                 if(!snapReq.empty) {
-                    msg.innerText = "⏳ Approval Pending. Contact Admin."; msg.style.color = "#ff9800";
+                    msg.innerText = "⏳ Approval Pending. Ask Admin."; msg.style.color="#ff9800";
                 } else {
-                    msg.innerText = "❌ Invalid Username or Password"; msg.style.color = "red";
+                    msg.innerText = "❌ Invalid Credentials"; msg.style.color="red";
                 }
 
             } catch(e) {
                 console.error(e);
-                msg.innerText = "⚠️ Connection Error. Check Internet."; msg.style.color="red";
+                msg.innerText = "⚠️ Network Error or Config Missing"; msg.style.color="red";
             }
         });
 
-        // REGISTER FUNCTION
+        // REGISTRATION LOGIC
         document.getElementById('btnReg').addEventListener('click', async () => {
             const n = document.getElementById('rName').value;
             const m = document.getElementById('rMobile').value;
@@ -124,18 +118,18 @@
             const msg = document.getElementById('regMsg');
 
             if(!n || !m || !u || !p) { alert("All fields required"); return; }
-            msg.innerText = "Sending Request..."; msg.style.display="block"; msg.style.color="#333";
+            msg.innerText = "Sending..."; msg.style.display="block";
 
             try {
                 await addDoc(collection(db, "dsa_requests"), {
                     name: n, mobile: m, user: u, pass: p, status: "Pending", date: new Date().toLocaleDateString()
                 });
-                msg.innerText = "✅ Request Sent! Wait for Admin Approval."; msg.style.color="green";
+                msg.innerText = "✅ Sent! Admin must approve before login."; msg.style.color="green";
                 document.getElementById('rName').value=""; document.getElementById('rMobile').value="";
                 document.getElementById('rUser').value=""; document.getElementById('rPass').value="";
             } catch(e) {
                 console.error(e);
-                msg.innerText = "⚠️ Error Sending Request."; msg.style.color="red";
+                msg.innerText = "⚠️ Error Sending. Check Console."; msg.style.color="red";
             }
         });
     </script>
