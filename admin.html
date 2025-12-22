@@ -3,136 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSA Login - Cloud System</title>
+    <title>Super Admin - Master Control</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #0047ab; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: white; padding: 40px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .title { font-size: 24px; font-weight: bold; color: #0047ab; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 12px; background-color: #003380; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
-        .btn:hover { background-color: #002255; }
-        .link { display: block; margin-top: 15px; color: #666; font-size: 13px; cursor: pointer; text-decoration: none; }
-        .msg { font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
+        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; overflow: hidden; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a237e; z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .login-box { background: white; padding: 30px; border-radius: 8px; width: 300px; color: #333; text-align: center; }
+        .login-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+        .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 20px; display: flex; flex-direction: column; }
+        .nav-item { padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; }
+        .nav-item:hover, .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
+        th { background-color: #e8eaf6; color: #1a237e; font-weight: bold; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; margin-right: 5px; }
+        .btn-add, .btn-approve { background-color: #2e7d32; } .btn-del { background-color: #d32f2f; } .btn-edit { background-color: #ffa000; color: #333; } .btn-export { background-color: #008CBA; float:right; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 0; width: 900px; border-radius: 8px; height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { padding: 15px; background: #1a237e; color: white; display: flex; justify-content: space-between; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; }
+        .sec-title { background: #eee; padding: 10px; font-weight: bold; margin-top: 15px; border-left: 5px solid #1a237e; cursor:pointer; }
+        .sec-content { padding: 15px; border: 1px solid #eee; display: block; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+        .hidden-field { display:none; background:#f9f9f9; padding:10px; border:1px dashed #ccc; }
+        .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
+        .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; }
+        .section { display: none; } .section.active { display: block; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-    <div class="card" id="loginCard">
-        <div class="title">🔒 DSA Login</div>
-        <input type="text" id="lUser" placeholder="Username">
-        <input type="password" id="lPass" placeholder="Password">
-        <button class="btn" id="btnLogin">Login</button>
-        <div class="link" onclick="toggleView()">New DSA? Register Here</div>
-        <div id="loginMsg" class="msg"></div>
-    </div>
+<div id="loginOverlay">
+    <div class="login-box"><h2>🔒 Admin Access</h2><input type="password" id="adminLockPass" placeholder="Enter Admin Password"><button class="btn btn-add" style="width:100%" onclick="checkAdminLogin()">Login</button></div>
+</div>
 
-    <div class="card" id="regCard" style="display:none;">
-        <div class="title">📝 DSA Registration</div>
-        <input type="text" id="rName" placeholder="Full Name">
-        <input type="number" id="rMobile" placeholder="Mobile Number">
-        <input type="text" id="rUser" placeholder="Choose Username">
-        <input type="password" id="rPass" placeholder="Choose Password">
-        <button class="btn" id="btnReg">Request Access</button>
-        <div class="link" onclick="toggleView()">Back to Login</div>
-        <div id="regMsg" class="msg"></div>
-    </div>
+<div class="sidebar">
+    <h2>Super Admin</h2>
+    <div class="nav-item active" onclick="showSection('policies')">📜 Policy Library</div>
+    <div class="nav-item" onclick="showSection('users')">👥 Manage Users</div>
+    <div class="nav-item" onclick="showSection('apps')">📂 All Applications</div>
+    <div class="nav-item" style="margin-top:auto; background:#d32f2f;" onclick="location.reload()">🚪 Logout</div>
+</div>
 
-    <script>
-        // --- FIREBASE CONFIGURATION (Integrated) ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
-            authDomain: "credir-engine-new.firebaseapp.com",
-            projectId: "credir-engine-new",
-            storageBucket: "credir-engine-new.firebasestorage.app",
-            messagingSenderId: "249073295308",
-            appId: "1:249073295308:web:e3db899190a4d2506d0769",
-            measurementId: "G-YBXMM1J129"
+<div class="main-content">
+    <div id="policies" class="section active">
+        <div style="display:flex; justify-content:space-between;"><h2>Bank Policy Engine</h2><button class="btn btn-add" onclick="openModal('policy')">+ Create Policy</button></div>
+        <table id="policyTable"><thead><tr><th>Bank Name</th><th>Product</th><th>Loan Range</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+    
+    <div id="users" class="section">
+        <h2>🔔 Pending Requests (Cloud)</h2><table id="requestTable"><thead><tr><th>DSA Name</th><th>Mobile</th><th>Username</th><th>Action</th></tr></thead><tbody></tbody></table>
+        <h2>👥 Active DSA Users</h2><div style="text-align:right;"><button class="btn btn-add" onclick="openModal('user')">+ Add User</button></div>
+        <table id="userTable"><thead><tr><th>DSA Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
+    </div>
+    
+    <div id="apps" class="section">
+        <div style="display:flex; justify-content:space-between;"><h2>📂 DSA Applications</h2><button class="btn btn-export" onclick="exportToExcel()">⬇ Excel (29 Cols)</button></div>
+        <table id="appTable"><thead><tr><th>Date</th><th>Customer</th><th>DSA</th><th>Status</th><th>Amount</th></tr></thead><tbody></tbody></table>
+    </div>
+</div>
+
+<div id="policyModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Policy Editor</h3><span style="cursor:pointer;" onclick="closeModal('policy')">✖</span></div>
+<div class="modal-body"><form id="policyForm"><input type="hidden" id="p_id">
+<div class="sec-title">SECTION A - BASIC</div><div class="sec-content"><div class="form-row"><div><label>Bank</label><input id="bankName"></div><div><label>Type</label><select id="prodType"><option>STBL</option><option>HTBL</option><option>OD</option><option>TERM</option><option>NBFC</option><option>UBL</option><option>UBL+</option></select></div></div><div class="form-row"><div><label>Loan Min</label><input type="number" id="loanMin"></div><div><label>Loan Max</label><input type="number" id="loanMax"></div></div><div class="form-row"><div><label>Tenure Min</label><input type="number" id="tenMin"></div><div><label>Tenure Max</label><input type="number" id="tenMax"></div></div><div class="form-row"><div><label>ROI Min</label><input type="number" step="0.1" id="roiMin"></div><div><label>ROI Max</label><input type="number" step="0.1" id="roiMax"></div></div><div class="form-row"><div><label>PF Min</label><input type="number" step="0.1" id="pfMin"></div><div><label>PF Max</label><input type="number" step="0.1" id="pfMax"></div></div></div>
+<div class="sec-title">SECTION B - APPLICANT</div><div class="sec-content"><div class="form-row"><div><label>Age Min</label><input type="number" id="ageMin"></div><div><label>Age Max</label><input type="number" id="ageMax"></div></div><div class="form-row"><label>Co-App?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><div class="form-row"><div><label>Co-App Age Min</label><input type="number" id="coAgeMin"></div><div><label>Co-App Age Max</label><input type="number" id="coAgeMax"></div></div></div><div class="form-row"><label>Own House?</label><select id="houseReq" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="houseBox" class="hidden-field"><div class="form-row"><div><label>Geo</label><select id="houseGeo"><option>Local</option><option>India</option></select></div><div><label>Pincodes</label><input type="text" id="housePins"></div></div></div></div>
+<div class="sec-title">SECTION C - BUSINESS</div><div class="sec-content"><div class="form-row"><div><label>Vin Min</label><input type="number" id="minVin"></div><div><label>Turn Min</label><input type="number" id="minTurn"></div></div><div class="form-row"><div><label>ABB Min</label><input type="number" id="abbMin"></div></div><div class="form-row"><div><label>ITR Req?</label><select id="itrReq" onchange="toggleField('itrBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="itrBox" class="hidden-field"><input type="number" id="itrVal" placeholder="Min ITR"></div></div><div class="form-row"><div><label>GST Req?</label><select id="gstReq" onchange="toggleField('gstBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="gstBox" class="hidden-field"><input type="number" id="gstVal" placeholder="Min GST"></div></div><label>Banking Types:</label><div class="checkbox-group"><label><input type="checkbox" class="bank-chk" value="SA"> SA</label><label><input type="checkbox" class="bank-chk" value="CA"> CA</label><label><input type="checkbox" class="bank-chk" value="OD"> OD</label><label><input type="checkbox" class="bank-chk" value="CC"> CC</label></div></div>
+<div class="sec-title">SECTION D - CREDIT & OBLIGATIONS</div><div class="sec-content"><div class="form-row"><div><label>CIBIL Min</label><input type="number" id="minCibil"></div><div><label>CIBIL Max</label><input type="number" id="maxCibil"></div></div><div class="form-row"><div><label>Max Active Loans</label><input type="number" id="actLoans"></div><div><label>Monthly EMI (Max)</label><input type="number" id="maxEmi"></div></div><div class="form-row"><div><label>Min Unsec Loans</label><input type="number" id="minUnsec"></div><div><label>Max Unsec Loans</label><input type="number" id="maxUnsec"></div></div><div class="form-row"><div><label>Loans (6m)</label><input type="number" id="loans6m"></div><div><label>Closed (6m)</label><input type="number" id="loansClosed6m"></div></div><div class="form-row"><div><label>Reduced EMI</label><input type="number" id="reducedEmi"></div><div><label>Enquiries (3m)</label><input type="number" id="enq3m"></div></div></div>
+<div class="sec-title">SECTION E - PROGRAMS</div><div class="sec-content"><div id="progContainer"></div><button type="button" class="btn btn-add" onclick="addProg()">+ Add Program</button></div>
+<div class="sec-title">SECTION F - RULES</div><div class="sec-content"><textarea id="rulesText" rows="3" placeholder="Rules..."></textarea></div>
+</form></div><div class="modal-footer"><button class="btn btn-add" onclick="savePolicy()">Save</button></div></div></div>
+
+<div id="userModal" class="modal"><div class="modal-content" style="width:500px;height:auto;"><div class="modal-header"><h3>User</h3><span onclick="closeModal('user')">✖</span></div><div class="modal-body"><form id="userForm"><input type="hidden" id="u_id"><input type="text" id="uName" placeholder="Name" style="width:100%;margin-bottom:10px;"><input type="number" id="uMob" placeholder="Mobile" style="width:100%;margin-bottom:10px;"><input type="text" id="uUser" placeholder="User" style="width:100%;margin-bottom:10px;"><input type="text" id="uPass" placeholder="Pass" style="width:100%;margin-bottom:10px;"></form></div><div class="modal-footer"><button class="btn btn-add" onclick="saveUser()">Save</button></div></div></div>
+
+<script>
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
+        authDomain: "credir-engine-new.firebaseapp.com",
+        projectId: "credir-engine-new",
+        storageBucket: "credir-engine-new.firebasestorage.app",
+        messagingSenderId: "249073295308",
+        appId: "1:249073295308:web:e3db899190a4d2506d0769",
+        measurementId: "G-YBXMM1J129"
+    };
+
+    let db;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+    } catch(e) {
+        alert("Firebase Error: " + e.message);
+    }
+
+    let policies=[], users=[], requests=[], apps=[];
+
+    // LOAD DATA
+    function loadAllData() {
+        if(!db) return;
+        
+        db.collection("policies").onSnapshot(snap => {
+            policies = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            renderTables();
+        });
+        
+        db.collection("dsa_users").onSnapshot(snap => {
+            users = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            renderTables();
+        });
+
+        db.collection("dsa_requests").onSnapshot(snap => {
+            requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            renderTables();
+        });
+
+        db.collection("applications").onSnapshot(snap => {
+            apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            renderTables();
+        });
+    }
+
+    function renderTables() {
+        const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
+        policies.forEach(p => pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button></td></tr>`);
+        
+        const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
+        requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
+        
+        const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
+        users.forEach(u => uT.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td>${u.status}</td><td><button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button></td></tr>`);
+        
+        const aT = document.querySelector('#appTable tbody'); aT.innerHTML='';
+        apps.forEach(a => aT.innerHTML += `<tr><td>${a.date}</td><td>${a.customer}</td><td>${a.dsaName||'-'}</td><td>${a.status}</td><td>${a.data['Req Amount']||'-'} L</td></tr>`);
+    }
+
+    window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { db.collection("dsa_users").add({...r, status:"Active"}); db.collection("dsa_requests").doc(id).delete(); } };
+    window.delDoc = (col, id) => { if(confirm("Delete?")) db.collection(col).doc(id).delete(); };
+
+    window.saveUser = () => {
+        const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" };
+        db.collection("dsa_users").add(u); closeModal('user');
+    };
+
+    window.savePolicy = () => {
+        let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
+        let progs = []; document.querySelectorAll('#progContainer .dynamic-row').forEach(row => progs.push({ type: row.querySelector('select').value, val: row.querySelector('input').value }));
+        
+        const p = {
+            bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
+            loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
+            tenMin: +document.getElementById('tenMin').value, tenMax: +document.getElementById('tenMax').value,
+            roiMin: +document.getElementById('roiMin').value, roiMax: +document.getElementById('roiMax').value,
+            pfMin: +document.getElementById('pfMin').value, pfMax: +document.getElementById('pfMax').value,
+            ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
+            coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
+            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value, housePins: document.getElementById('housePins').value,
+            minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value, abbMin: +document.getElementById('abbMin').value,
+            itrReq: document.getElementById('itrReq').value, itrVal: document.getElementById('itrVal').value,
+            gstReq: document.getElementById('gstReq').value, gstVal: document.getElementById('gstVal').value,
+            // SECTION D
+            minCibil: +document.getElementById('minCibil').value, maxCibil: +document.getElementById('maxCibil').value,
+            actLoans: +document.getElementById('actLoans').value, maxEmi: +document.getElementById('maxEmi').value,
+            minUnsec: +document.getElementById('minUnsec').value, maxUnsec: +document.getElementById('maxUnsec').value,
+            loans6m: +document.getElementById('loans6m').value, loansClosed6m: +document.getElementById('loansClosed6m').value,
+            reducedEmi: +document.getElementById('reducedEmi').value, enq3m: +document.getElementById('enq3m').value,
+            rulesText: document.getElementById('rulesText').value, bankingTypes: bTypes, programs: progs
         };
+        
+        let idx = document.getElementById('p_id').value;
+        if(idx) db.collection("policies").doc(idx).update(p); else db.collection("policies").add(p);
+        closeModal('policy');
+    };
 
-        let db;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            console.log("Database Connected");
-        } catch (e) {
-            console.error("Firebase Error:", e);
-            document.getElementById('loginMsg').innerText = "⚠️ System Error: Database Connection Failed";
-            document.getElementById('loginMsg').style.display = "block";
-        }
+    window.editPolicy = (id) => {
+        let p = policies.find(x => x.id === id); if(!p) return;
+        document.getElementById('p_id').value = id;
+        document.getElementById('bankName').value = p.bankName; document.getElementById('prodType').value = p.prodType;
+        document.getElementById('loanMin').value = p.loanMin; document.getElementById('loanMax').value = p.loanMax;
+        document.getElementById('tenMin').value = p.tenMin; document.getElementById('tenMax').value = p.tenMax;
+        document.getElementById('roiMin').value = p.roiMin; document.getElementById('roiMax').value = p.roiMax;
+        document.getElementById('pfMin').value = p.pfMin||''; document.getElementById('pfMax').value = p.pfMax||'';
+        document.getElementById('ageMin').value = p.ageMin||''; document.getElementById('ageMax').value = p.ageMax||'';
+        document.getElementById('coAppReq').value = p.coAppReq||'No'; toggleField('coBox', p.coAppReq==='Yes');
+        document.getElementById('coAgeMin').value = p.coAgeMin||''; document.getElementById('coAgeMax').value = p.coAgeMax||'';
+        document.getElementById('houseReq').value = p.houseReq||'No'; toggleField('houseBox', p.houseReq==='Yes');
+        document.getElementById('houseGeo').value = p.houseGeo||'Local'; document.getElementById('housePins').value = p.housePins||'';
+        document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn; document.getElementById('abbMin').value = p.abbMin||'';
+        document.getElementById('itrReq').value = p.itrReq||'No'; toggleField('itrBox', p.itrReq==='Yes'); document.getElementById('itrVal').value = p.itrVal||'';
+        document.getElementById('gstReq').value = p.gstReq||'No'; toggleField('gstBox', p.gstReq==='Yes'); document.getElementById('gstVal').value = p.gstVal||'';
+        // SEC D
+        document.getElementById('minCibil').value = p.minCibil; document.getElementById('maxCibil').value = p.maxCibil||'';
+        document.getElementById('actLoans').value = p.actLoans||''; document.getElementById('maxEmi').value = p.maxEmi||'';
+        document.getElementById('minUnsec').value = p.minUnsec||''; document.getElementById('maxUnsec').value = p.maxUnsec;
+        document.getElementById('loans6m').value = p.loans6m||''; document.getElementById('loansClosed6m').value = p.loansClosed6m||'';
+        document.getElementById('reducedEmi').value = p.reducedEmi||''; document.getElementById('enq3m').value = p.enq3m||'';
+        document.getElementById('rulesText').value = p.rulesText||'';
+        
+        document.querySelectorAll('.bank-chk').forEach(c => c.checked = false);
+        if(p.bankingTypes) p.bankingTypes.forEach(t=>{ let el=document.querySelector(`.bank-chk[value="${t}"]`); if(el)el.checked=true; });
+        document.getElementById('progContainer').innerHTML='';
+        if(p.programs) p.programs.forEach(pr=>addProg(pr.type, pr.val));
+        openModal('policy');
+    };
 
-        // TOGGLE VIEW
-        function toggleView() {
-            const l = document.getElementById('loginCard'), r = document.getElementById('regCard');
-            l.style.display = l.style.display === 'none' ? 'block' : 'none';
-            r.style.display = r.style.display === 'none' ? 'block' : 'none';
-            document.querySelectorAll('.msg').forEach(m => m.style.display = 'none');
-        }
-
-        // LOGIN
-        document.getElementById('btnLogin').addEventListener('click', async () => {
-            const u = document.getElementById('lUser').value.trim();
-            const p = document.getElementById('lPass').value.trim();
-            const msg = document.getElementById('loginMsg');
-            
-            if(!u || !p) { msg.innerText = "Enter credentials"; msg.style.display="block"; return; }
-            msg.innerText = "Checking..."; msg.style.display="block"; msg.style.color="#333";
-
-            try {
-                // 1. Check Active Users
-                const snapUser = await db.collection("dsa_users").where("user", "==", u).where("pass", "==", p).get();
-
-                if (!snapUser.empty) {
-                    const userData = snapUser.docs[0].data();
-                    if(userData.status === 'Active') {
-                        sessionStorage.setItem('active_dsa_user', JSON.stringify(userData));
-                        window.location.href = "user-app.html";
-                    } else {
-                        msg.innerText = "❌ Account Inactive/Blocked"; msg.style.color="red";
-                    }
-                    return;
-                }
-
-                // 2. Check Pending Requests
-                const snapReq = await db.collection("dsa_requests").where("user", "==", u).where("pass", "==", p).get();
-
-                if(!snapReq.empty) {
-                    msg.innerText = "⏳ Approval Pending. Contact Admin."; msg.style.color = "#ff9800";
-                } else {
-                    msg.innerText = "❌ Invalid Username or Password"; msg.style.color = "red";
-                }
-
-            } catch(e) {
-                console.error(e);
-                msg.innerText = "⚠️ Network/Database Error."; msg.style.color="red";
-            }
+    window.exportToExcel = () => {
+        let csv = "Date,Customer Name,Contact Number,Vintage,Turnover,Entity type,Sector,Business Premises,ABB,Bank Statement type,GST Reg,ITR Filed,Cibil,Active Loans,Monthly EMI,Unsecured Loans,Loans Taken (6Months),Loans Closing(Next 6Months),Reduced EMI(Next 6 Months),Enruiries(3 Months),Applicant Age,Gender,Co-Applicant?,Co-Applicant Age,Own House?,Own House Pincode,Required Loan Amount(lakhs),Pupose,DSA Name\n";
+        apps.forEach(app => {
+            let d = app.data || {};
+            const g = (k) => (d[k] || "").toString().replace(/,/g, " ");
+            let row = [
+                app.date, g('Business Name'), g('Contact'), g('Vintage'), g('Turnover'), g('Entity'), g('Sector'), g('Premises'), g('ABB'), g('Bank Statements'),
+                g('GST Reg'), g('ITR Filed'), g('CIBIL'), g('Active Loans'), g('Monthly EMI'), g('Unsec Loans'), g('Loans (6m)'), g('Closing (6m)'), g('Reduced EMI'), g('Enquiries'),
+                g('Age'), g('Gender'), g('Co-App'), g('Co-App Age'), g('Own House'), g('Pincode'), g('Req Amount'), g('Purpose'), app.dsaName || "Admin"
+            ];
+            csv += row.join(",") + "\n";
         });
+        const link = document.createElement("a"); link.href = encodeURI("data:text/csv;charset=utf-8," + csv); link.download = "dsa_applications.csv"; link.click();
+    };
 
-        // REGISTER
-        document.getElementById('btnReg').addEventListener('click', async () => {
-            const n = document.getElementById('rName').value;
-            const m = document.getElementById('rMobile').value;
-            const u = document.getElementById('rUser').value;
-            const p = document.getElementById('rPass').value;
-            const msg = document.getElementById('regMsg');
+    window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
+    window.openModal=(t)=>{document.getElementById(t+'Form').reset();document.getElementById(t==='policy'?'p_id':'u_id').value='';if(t==='policy')document.getElementById('progContainer').innerHTML='';document.getElementById(t+'Modal').style.display='flex';};
+    window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
+    window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
+    window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option></select><input type="number" placeholder="Min" value="${v}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
+    window.checkAdminLogin=()=>{if(document.getElementById('adminLockPass').value==='admin123')document.getElementById('loginOverlay').style.display='none';};
 
-            if(!n || !m || !u || !p) { alert("All fields required"); return; }
-            msg.innerText = "Sending Request..."; msg.style.display="block"; msg.style.color="#333";
-
-            try {
-                await db.collection("dsa_requests").add({
-                    name: n, mobile: m, user: u, pass: p, status: "Pending", date: new Date().toLocaleDateString()
-                });
-                msg.innerText = "✅ Request Sent! Wait for Admin Approval."; msg.style.color="green";
-                document.getElementById('rName').value=""; document.getElementById('rMobile').value="";
-                document.getElementById('rUser').value=""; document.getElementById('rPass').value="";
-            } catch(e) {
-                console.error(e);
-                msg.innerText = "⚠️ Error Sending Request."; msg.style.color="red";
-            }
-        });
-    </script>
+    loadAllData();
+</script>
 </body>
 </html>
