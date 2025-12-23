@@ -8,26 +8,22 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* MAIN STYLES */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* LOGIN */
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a237e; z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
         .login-box { background: white; padding: 40px; border-radius: 8px; width: 350px; text-align: center; }
-        .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-
-        /* LAYOUT */
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 20px; display: flex; flex-direction: column; }
-        .nav-item { padding: 12px 15px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .nav-item { padding: 12px 15px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; }
         .nav-item:hover, .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         
-        /* TABLES */
+        /* TABLE */
         .table-container { overflow-x: auto; background: white; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 1200px; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; white-space: nowrap; }
         th { background-color: #e8eaf6; color: #1a237e; font-weight: bold; position: sticky; top: 0; }
         
-        /* UI ELEMENTS */
+        /* BUTTONS */
         .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; margin-right: 5px; }
         .btn-add { background-color: #2e7d32; } 
         .btn-del { background-color: #c62828; } 
@@ -41,7 +37,8 @@
         .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; }
         
-        .sec-title { background: #f5f5f5; padding: 10px; font-weight: bold; margin-top: 15px; border-left: 5px solid #1a237e; color: #333; }
+        /* FORM ELEMENTS */
+        .sec-title { background: #f5f5f5; padding: 10px; font-weight: bold; margin-top: 20px; border-left: 5px solid #1a237e; color: #333; }
         .sec-content { padding: 15px; border: 1px solid #eee; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
         .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; }
@@ -125,24 +122,28 @@
                     <div class="form-row"><div><label>ITR Required?</label><select id="itrReq"><option>No</option><option>Yes</option></select></div><div><label>GST Required?</label><select id="gstReq"><option>No</option><option>Yes</option></select></div></div>
                     <label>Accepted Bank Statements:</label>
                     <div style="display:flex; gap:10px; margin-top:5px;">
-                        <label><input type="checkbox" class="bank-chk" value="SA"> SA</label><label><input type="checkbox" class="bank-chk" value="CA"> CA</label>
-                        <label><input type="checkbox" class="bank-chk" value="OD"> OD</label><label><input type="checkbox" class="bank-chk" value="CC"> CC</label>
+                        <label><input type="checkbox" class="bank-chk" value="SA"> SA</label>
+                        <label><input type="checkbox" class="bank-chk" value="CA"> CA</label>
+                        <label><input type="checkbox" class="bank-chk" value="OD"> OD</label>
+                        <label><input type="checkbox" class="bank-chk" value="CC"> CC</label>
                     </div>
                 </div>
 
                 <div class="sec-title">SECTION C - APPLICANT & PROPERTY</div>
                 <div class="sec-content">
                     <div class="form-row"><div><label>Min Age</label><input type="number" id="ageMin"></div><div><label>Max Age</label><input type="number" id="ageMax"></div></div>
+                    
                     <div class="form-row"><div><label>Co-Applicant Req?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
                     <div id="coBox" class="hidden-field"><input type="number" id="coAgeMin" placeholder="Min Age"><input type="number" id="coAgeMax" placeholder="Max Age" style="margin-top:5px;"></div></div>
-                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
-                    <div id="houseBox" class="hidden-field"><label>House Geo</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div></div>
+                    
+                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseGeoDiv',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+                    <div id="houseGeoDiv" class="hidden-field"><label>House Geo</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div></div>
                 </div>
 
                 <div class="sec-title">SECTION D - CREDIT LIMITS</div>
                 <div class="sec-content">
                     <div class="form-row"><div><label>Max Unsecured Loans</label><input type="number" id="maxUnsec"></div><div><label>Max Active Loans</label><input type="number" id="maxActive"></div></div>
-                    <div class="form-row"><div><label>Max Enquiries (3m)</label><input type="number" id="maxEnq"></div><div><label>Loans Taken (last 6 Months)</label><input type="number" id="loans6m"></div></div>
+                    <div class="form-row"><div><label>Max Enquiries (3m)</label><input type="number" id="maxEnq"></div><div><label>Loans Taken (6m)</label><input type="number" id="loans6m"></div></div>
                 </div>
 
                 <div class="sec-title">SECTION E - PROGRAMS</div>
@@ -155,7 +156,7 @@
                 <div class="sec-content">
                     <div id="condContainer"></div>
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
-                    <div style="margin-top:15px;"><label>Internal Remarks</label><textarea id="remarks" rows="3" placeholder="Enter notes..."></textarea></div>
+                    <div style="margin-top:15px;"><label>Internal Remarks</label><textarea id="remarks" rows="3" style="width:100%" placeholder="Enter internal notes..."></textarea></div>
                 </div>
 
             </form>
@@ -180,7 +181,7 @@
 </div>
 
 <script>
-    // 1. FIREBASE CONFIG
+    // 1. FIREBASE
     const firebaseConfig = {
         apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
         authDomain: "credir-engine-new.firebaseapp.com",
@@ -207,11 +208,8 @@
 
     function loadAllData() {
         if(!db) return;
-        // Fix 3: Robust Policy Loading
-        db.collection("policies").onSnapshot(snap => { 
-            policies = snap.docs.map(d => ({id: doc.id, ...doc.data()})); 
-            renderTables(); 
-        });
+        // Fix 2: Robust table loading
+        db.collection("policies").onSnapshot(snap => { policies = snap.docs.map(d => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("dsa_users").onSnapshot(snap => { users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("dsa_requests").onSnapshot(snap => { requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("applications").onSnapshot(snap => { apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
@@ -247,13 +245,7 @@
     window.savePolicy = () => {
         let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
         let progs = []; document.querySelectorAll('#progContainer .dynamic-row').forEach(r => progs.push({type: r.children[0].value, val: r.children[1].value}));
-        
-        // FIX 2: SAVE CONDITION PAIRS (Name, Value)
-        let conds = []; 
-        document.querySelectorAll('#condContainer .dynamic-row').forEach(r => {
-            let inps = r.querySelectorAll('input');
-            if(inps[0].value && inps[1].value) conds.push({name: inps[0].value, val: inps[1].value});
-        });
+        let conds = []; document.querySelectorAll('#condContainer .dynamic-row').forEach(r => { let i = r.querySelectorAll('input'); if(i[0].value) conds.push({name:i[0].value, val:i[1].value}); });
 
         const p = {
             bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
@@ -268,13 +260,12 @@
             
             ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
             coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
-            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value,
+            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value, // Fix 1
             
-            // Fix 1: Save Loans6m
             maxUnsec: +document.getElementById('maxUnsec').value, maxActive: +document.getElementById('maxActive').value, 
             maxEnq: +document.getElementById('maxEnq').value, loans6m: +document.getElementById('loans6m').value,
             
-            bankingTypes: bTypes, programs: progs, conditions: conds, remarks: document.getElementById('remarks').value
+            bankingTypes: bTypes, programs: progs, conditions: conds, remarks: document.getElementById('remarks').value // Fix 4
         };
         
         let idx = document.getElementById('p_id').value;
@@ -286,15 +277,15 @@
         let p = policies.find(x => x.id === id); if(!p) return;
         document.getElementById('p_id').value = id;
         
-        // Fill Basic Fields
+        // Basic Fields
         ['bankName','prodType','itrReq','gstReq','coAppReq','houseReq', 'houseGeo', 'remarks'].forEach(k => { let el = document.getElementById(k); if(el) el.value = p[k]||''; });
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => { let el = document.getElementById(k); if(el) el.value = p[k]||''; });
         
-        // Fill Programs
+        // Programs
         document.getElementById('progContainer').innerHTML='';
         if(p.programs) p.programs.forEach(pr=>addProg(pr.type, pr.val));
         
-        // Fill Conditions (Pairs)
+        // Conditions
         document.getElementById('condContainer').innerHTML='';
         if(p.conditions) p.conditions.forEach(c=>addCond(c.name, c.val));
         
@@ -302,7 +293,7 @@
         document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
         
         toggleField('coBox', p.coAppReq==='Yes');
-        toggleField('houseBox', p.houseReq==='Yes'); 
+        toggleField('houseGeoDiv', p.houseReq==='Yes'); // Fix 1 Logic
         openModal('policy');
     };
 
@@ -316,11 +307,9 @@
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
     
-    // ADD PROGRAM
+    // FIX 3: Added ITR to list
     window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
-    
-    // FIX 2: ADD CONDITION PAIRS
-    window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Field Name" value="${n}"><input type="text" placeholder="Field Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
+    window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Name" value="${n}"><input type="text" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
 
     // AUTH
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
