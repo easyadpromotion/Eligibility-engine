@@ -27,7 +27,7 @@
         
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         
-        /* BANK BUTTONS (Increased Height) */
+        /* BANK BUTTONS */
         .bank-options { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; padding-bottom: 5px; }
         .bank-opt { padding: 12px 24px; border: 1px solid #ddd; border-radius: 30px; cursor: pointer; font-weight: 600; background: #fff; transition: 0.2s; min-width: 50px; text-align: center; }
         .bank-opt:hover { background: #f5f5f5; }
@@ -47,6 +47,7 @@
         .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-eligible { background: #e8f5e9; color: #2e7d32; }
         .status-declined { background: #ffebee; color: #c62828; }
+        .btn-view { background: #1a237e; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; border: none; }
 
         /* OFFER LETTER MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; overflow-y: auto; padding: 20px; }
@@ -145,9 +146,7 @@
     <div id="fullReportModal"><div class="report-paper"><button class="no-print" onclick="document.getElementById('fullReportModal').style.display='none'">Close</button><button class="no-print" onclick="window.print()">Print</button><div class="report-header"><h3>PROVISIONAL OFFER LETTER</h3></div><div id="pdfAppDetails" class="details-grid"></div><br><h3>ELIGIBILITY</h3><table class="report-table"><thead><tr><th>Bank</th><th>Prog</th><th>Amt</th><th>Tenure</th><th>ROI</th></tr></thead><tbody id="pdfEligibleTable"></tbody></table><br><h3>REJECTIONS</h3><table class="report-table"><thead><tr><th>Bank</th><th>Reason</th></tr></thead><tbody id="pdfRejectTable"></tbody></table></div></div>
 
     <script>
-        // ---------------------------------------------------------
-        // 🚨 PASTE FIREBASE KEYS BELOW 🚨
-        // ---------------------------------------------------------
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -157,7 +156,6 @@
             appId: "1:249073295308:web:e3db899190a4d2506d0769",
             measurementId: "G-YBXMM1J129"
         };
-        // ---------------------------------------------------------
 
         let db;
         try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.error(e); }
@@ -168,8 +166,9 @@
 
         if(db) db.collection('policies').get().then(snap => document.getElementById('policyCount').innerText = snap.size);
 
-        // --- GLOBAL VARIABLES (FIX 1: Ensure PDF data is always available) ---
-        window.latestResults = { eligible: [], declined: [] };
+        // --- GLOBAL VARIABLES (CRITICAL FOR VIEW BUTTON) ---
+        window.historyData = []; 
+        window.latestResults = {}; 
         window.latestData = {};
 
         function switchView(v){
@@ -186,11 +185,9 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
-        // --- PINCODE FETCH ---
         async function checkPincode() {
             const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
-                document.getElementById('cityField').value = "Fetching...";
                 try {
                     const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
                     const data = await res.json();
@@ -198,14 +195,11 @@
                         const info = data[0].PostOffice[0];
                         document.getElementById('cityField').value = info.District;
                         document.getElementById('stateField').value = info.State;
-                    } else {
-                        document.getElementById('cityField').value = "Invalid Pin";
                     }
                 } catch(e) { console.log("Pin fetch failed"); }
             }
         }
 
-        // --- CALCULATION LOGIC ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -215,35 +209,32 @@
             let data = {};
             document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
             
-            let bankStmts = [];
-            document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
-            data['Bank Statements'] = bankStmts.join(', ');
+            let stmts = []; document.querySelectorAll('.bank-opt.selected').forEach(el => stmts.push(el.innerText));
+            data['Bank Statements'] = stmts.join(', ');
             data['DSA Name'] = user.name; data['DSA Username'] = user.user;
 
             const sectorVal = document.getElementById('sector').value.split(' ')[0];
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
-            // Math: 120 -> 1.2 Crores
             const turn = (parseFloat(data['Turnover']) || 0) * 100000;
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
             
-            // Logic: Net Income = Profit - Obligations (Simple)
+            // Logic without Reduced EMI
             const monthlyProfit = (turn / 12) * margin;
             const obligations = Math.max(0, emi); 
             const netIncome = Math.max(0, monthlyProfit - obligations);
 
             let policies = [];
             if(db) { const snap = await db.collection("policies").get(); policies = snap.docs.map(d => d.data()); }
-            if(policies.length === 0) { alert("No Policies found."); return; }
+            if(policies.length === 0) { alert("No Policies found. Contact Admin."); return; }
 
             let eligible = [], declined = [];
 
             policies.forEach(p => {
                 let pass = true, reasons = [];
-                // 11 GATE CHECKS
                 if (data['Vintage'] < (p.minVin||0)) { pass=false; reasons.push(`Vintage < ${p.minVin}`); }
                 if ((turn/100000) < (p.minTurn||0)) { pass=false; reasons.push(`Turnover < ${p.minTurn}L`); }
                 if (abb < (p.abbMin||0)) { pass=false; reasons.push(`ABB < ${p.abbMin}`); }
@@ -265,7 +256,7 @@
                     if (finalAmt >= policyMin) {
                         eligible.push({ bank: p.bankName, prog: p.prodType, amt: (finalAmt / 100000).toFixed(2), ten: n, roi: `${p.roiMin}-${p.roiMax}%` });
                     } else {
-                        declined.push({ bank: p.bankName, reason: `Eligible Amount (${(finalAmt/100000).toFixed(2)}L) < Bank Min (${p.loanMin}L)` });
+                        declined.push({ bank: p.bankName, reason: `Eligible Amount < ${p.loanMin}L` });
                     }
                 } else {
                     declined.push({ bank: p.bankName, reason: reasons.join(", ") });
@@ -276,27 +267,23 @@
             const status = eligible.length > 0 ? "Eligible" : "Declined";
             document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
             
-            // SAVE TO GLOBALS
+            // Store for PDF
             window.latestResults = results; window.latestData = data;
             
             if(db) db.collection("applications").add({date:new Date().toLocaleDateString(), customer:data['Business Name'], dsaName:user.name, dsaUsername:user.user, status:status, data:data, results:results});
-            
             document.getElementById('dlReportBtn').style.display='block';
         }
 
-        // --- PDF GENERATOR ---
+        // --- PDF GENERATOR (NOW WORKS FROM DASHBOARD TOO) ---
         function generateFullPDF() {
             const res = window.latestResults;
             const data = window.latestData;
             
-            // Check if data exists before showing
-            if (!data['Business Name']) { alert("Please run eligibility check first."); return; }
+            if (!data['Business Name']) { alert("No data to display."); return; }
 
             document.getElementById('pdfCustomerName').innerText = data['Business Name'];
             document.getElementById('pdfAppDetails').innerHTML = Object.entries(data).map(([k,v])=>`<div class="detail-item"><strong>${k}:</strong> ${v}</div>`).join('');
-            
             document.getElementById('pdfEligibleTable').innerHTML = res.eligible.length ? res.eligible.map(i=>`<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`).join('') : "<tr><td colspan='5'>No Eligible Banks Found</td></tr>";
-            
             document.getElementById('pdfRejectTable').innerHTML = res.declined.length ? res.declined.map(i=>`<tr><td>${i.bank}</td><td>${i.reason}</td></tr>`).join('') : "<tr><td colspan='2'>No Rejections</td></tr>";
             
             document.getElementById('fullReportModal').style.display='block';
@@ -304,15 +291,25 @@
 
         async function loadHistory() {
             const t = document.querySelector('#historyTable tbody'); t.innerHTML="<tr><td colspan='4'>Loading...</td></tr>";
+            window.historyData = [];
             if(db) {
                 const snap = await db.collection("applications").where("dsaUsername", "==", user.user).get();
                 t.innerHTML = "";
-                snap.forEach(doc => {
+                snap.forEach((doc, index) => {
                     const v = doc.data();
-                    t.innerHTML += `<tr><td>${v.date}</td><td>${v.customer}</td><td><span class="status-badge ${v.status==='Eligible'?'status-eligible':'status-declined'}">${v.status}</span></td><td><button class="btn-view" onclick='window.latestResults=${JSON.stringify(v.results)};window.latestData=${JSON.stringify(v.data)};generateFullPDF()'>View</button></td></tr>`;
+                    window.historyData.push(v); // STORE DATA
+                    t.innerHTML += `<tr><td>${v.date}</td><td>${v.customer}</td><td><span class="status-badge ${v.status==='Eligible'?'status-eligible':'status-declined'}">${v.status}</span></td><td><button class="btn-view" onclick="viewHistory(${index})">View</button></td></tr>`;
                 });
             }
         }
+
+        // --- DASHBOARD VIEW ACTION ---
+        window.viewHistory = (index) => {
+            const item = window.historyData[index];
+            window.latestData = item.data;
+            window.latestResults = item.results;
+            generateFullPDF();
+        };
 
         async function updateCredentials() {
             const p = document.getElementById('new_pass').value;
