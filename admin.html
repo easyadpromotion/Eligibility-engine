@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* STYLES */
+        /* MAIN STYLES */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; overflow: hidden; }
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a237e; z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
         .login-box { background: white; padding: 40px; border-radius: 8px; width: 350px; text-align: center; }
@@ -44,7 +44,7 @@
         .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; }
         .section { display: none; } .section.active { display: block; }
         
-        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; box-sizing: border-box; }
         .hidden-field { display:none; background:#fafafa; padding:10px; border:1px dashed #ccc; margin-top:5px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
     </style>
@@ -134,7 +134,9 @@
                     <div class="form-row"><div><label>Min Age</label><input type="number" id="ageMin"></div><div><label>Max Age</label><input type="number" id="ageMax"></div></div>
                     <div class="form-row"><div><label>Co-Applicant Req?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
                     <div id="coBox" class="hidden-field"><input type="number" id="coAgeMin" placeholder="Min Age"><input type="number" id="coAgeMax" placeholder="Max Age" style="margin-top:5px;"></div></div>
-                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq"><option>No</option><option>Yes</option></select></div></div>
+                    
+                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+                    <div id="houseBox" class="hidden-field"><label>House Geo</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div></div>
                 </div>
 
                 <div class="sec-title">SECTION D - CREDIT LIMITS</div>
@@ -149,10 +151,11 @@
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
                 </div>
 
-                <div class="sec-title">SECTION F - CONDITIONS</div>
+                <div class="sec-title">SECTION F - CONDITIONS & REMARKS</div>
                 <div class="sec-content">
                     <div id="condContainer"></div>
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
+                    <div style="margin-top:15px;"><label>Internal Remarks</label><textarea id="remarks" rows="3" placeholder="Enter any internal policy notes..."></textarea></div>
                 </div>
 
             </form>
@@ -204,7 +207,11 @@
 
     function loadAllData() {
         if(!db) return;
-        db.collection("policies").onSnapshot(snap => { policies = snap.docs.map(d => ({id: doc.id, ...doc.data()})); renderTables(); });
+        // Fix 2: Robust Loading
+        db.collection("policies").onSnapshot(snap => { 
+            policies = snap.docs.map(d => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
         db.collection("dsa_users").onSnapshot(snap => { users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("dsa_requests").onSnapshot(snap => { requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("applications").onSnapshot(snap => { apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
@@ -213,7 +220,7 @@
     function renderTables() {
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
         policies.forEach(p => {
-            pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td>
+            pT.innerHTML += `<tr><td>${p.bankName||'-'}</td><td>${p.prodType||'-'}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td>
             <td><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`;
         });
         
@@ -255,11 +262,11 @@
             
             ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
             coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
-            houseReq: document.getElementById('houseReq').value,
+            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value, // Fix 1
             
             maxUnsec: +document.getElementById('maxUnsec').value, maxActive: +document.getElementById('maxActive').value, maxEnq: +document.getElementById('maxEnq').value,
             
-            bankingTypes: bTypes, programs: progs, conditions: conds
+            bankingTypes: bTypes, programs: progs, conditions: conds, remarks: document.getElementById('remarks').value // Fix 4
         };
         
         let idx = document.getElementById('p_id').value;
@@ -272,8 +279,12 @@
         document.getElementById('p_id').value = id;
         
         // Fill Basic Fields
-        ['bankName','prodType','itrReq','gstReq','coAppReq','houseReq'].forEach(k => document.getElementById(k).value = p[k]);
-        ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq'].forEach(k => document.getElementById(k).value = p[k]||'');
+        ['bankName','prodType','itrReq','gstReq','coAppReq','houseReq', 'houseGeo', 'remarks'].forEach(k => { // Added houseGeo, remarks
+            let el = document.getElementById(k); if(el) el.value = p[k]||'';
+        });
+        ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq'].forEach(k => {
+            let el = document.getElementById(k); if(el) el.value = p[k]||'';
+        });
         
         // Fill Programs
         document.getElementById('progContainer').innerHTML='';
@@ -287,6 +298,7 @@
         document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
         
         toggleField('coBox', p.coAppReq==='Yes');
+        toggleField('houseBox', p.houseReq==='Yes'); // Fix 1 Logic
         openModal('policy');
     };
 
@@ -300,8 +312,8 @@
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
     
-    // WORKING ADD BUTTONS
-    window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
+    // WORKING ADD BUTTONS (Fix 3: Added ITR)
+    window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
     window.addCond=(v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Condition" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
 
     // AUTH
