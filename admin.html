@@ -132,6 +132,7 @@
                 <div class="sec-title">SECTION C - APPLICANT & PROPERTY</div>
                 <div class="sec-content">
                     <div class="form-row"><div><label>Min Age</label><input type="number" id="ageMin"></div><div><label>Max Age</label><input type="number" id="ageMax"></div></div>
+                    
                     <div class="form-row"><div><label>Co-Applicant Req?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
                     <div id="coBox" class="hidden-field"><input type="number" id="coAgeMin" placeholder="Min Age"><input type="number" id="coAgeMax" placeholder="Max Age" style="margin-top:5px;"></div></div>
                     
@@ -155,7 +156,7 @@
                 <div class="sec-content">
                     <div id="condContainer"></div>
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
-                    <div style="margin-top:15px;"><label>Remarks / Internal Notes</label><textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter policy remarks..."></textarea></div>
+                    <div style="margin-top:15px;"><label>Internal Remarks</label><textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea></div>
                 </div>
 
             </form>
@@ -283,15 +284,19 @@
         let p = policies.find(x => x.id === id); if(!p) return;
         document.getElementById('p_id').value = id;
         
+        // Basic Fields
         ['bankName','prodType','itrReq','gstReq','coAppReq','houseReq', 'houseGeo', 'remarks'].forEach(k => { let el = document.getElementById(k); if(el) el.value = p[k]||''; });
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => { let el = document.getElementById(k); if(el) el.value = p[k]||''; });
         
+        // Programs
         document.getElementById('progContainer').innerHTML='';
         if(p.programs) p.programs.forEach(pr=>addProg(pr.type, pr.val));
         
+        // Conditions
         document.getElementById('condContainer').innerHTML='';
         if(p.conditions) p.conditions.forEach(c=>addCond(c.name, c.val));
         
+        // Checkboxes
         document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
         
         toggleField('coBox', p.coAppReq==='Yes');
@@ -299,6 +304,7 @@
         openModal('policy');
     };
 
+    // HELPERS
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
     window.openModal=(t)=>{
         if(t==='policy') { document.getElementById('policyForm').reset(); document.getElementById('p_id').value=''; document.getElementById('progContainer').innerHTML=''; document.getElementById('condContainer').innerHTML=''; }
@@ -312,6 +318,7 @@
     window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
     window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Name" value="${n}"><input type="text" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
 
+    // AUTH
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong"); };
     window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Updated"); } };
