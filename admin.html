@@ -4,43 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Super Admin - Master Control</title>
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* (Styles kept identical for consistency) */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* LOGIN OVERLAY */
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a237e; z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
-        .login-box { background: white; padding: 40px; border-radius: 8px; width: 350px; text-align: center; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        /* SIDEBAR */
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 20px; display: flex; flex-direction: column; }
-        .nav-item { padding: 12px 15px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; }
+        .nav-item { padding: 12px 15px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
         .nav-item:hover, .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
+        
+        /* MAIN CONTENT */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        
+        /* TABLES */
         .table-container { overflow-x: auto; background: white; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; white-space: nowrap; }
         th { background-color: #e8eaf6; color: #1a237e; font-weight: bold; position: sticky; top: 0; }
-        .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; margin-right: 5px; }
-        .btn-add { background-color: #2e7d32; } .btn-del { background-color: #c62828; } .btn-edit { background-color: #ffa000; color: #333; } .btn-reset { background-color: #ff9800; float: right; margin-right: 10px; }
+        
+        /* BUTTONS */
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; margin-right: 5px; }
+        .btn-add { background-color: #2e7d32; } 
+        .btn-del { background-color: #c62828; } 
+        .btn-edit { background-color: #ffa000; color: #333; } 
+        .btn-reset { background-color: #ff9800; float: right; margin-right: 10px; }
+
+        /* MODALS */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 0; width: 900px; border-radius: 8px; height: 90vh; display: flex; flex-direction: column; }
         .modal-header { padding: 15px; background: #1a237e; color: white; display: flex; justify-content: space-between; }
         .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; }
+        
+        /* FORM */
         .sec-title { background: #f5f5f5; padding: 10px; font-weight: bold; margin-top: 15px; border-left: 5px solid #1a237e; }
         .sec-content { padding: 15px; border: 1px solid #eee; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
         .hidden-field { display:none; background:#fafafa; padding:10px; border:1px dashed #ccc; margin-top:10px; }
         .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; }
         .section { display: none; } .section.active { display: block; }
-        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; box-sizing: border-box; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div id="loginOverlay">
-    <div class="login-box"><h2>🔒 Admin Access</h2><input type="password" id="adminLockPass" placeholder="Enter Password"><br><br><button class="btn btn-add" style="width:100%" onclick="checkAdminLogin()">Login</button></div>
+    <div class="login-box">
+        <h2>🔒 Admin Access</h2>
+        <input type="password" id="adminLockPass" placeholder="Enter Password">
+        <br><br>
+        <button class="btn btn-add" style="width:100%" onclick="checkAdminLogin()">Login</button>
+    </div>
 </div>
 
 <div class="sidebar">
@@ -52,38 +76,130 @@
 </div>
 
 <div class="main-content">
+    
     <div id="policies" class="section active">
-        <div style="display:flex; justify-content:space-between;"><h2>Bank Policy Engine</h2><div><button class="btn btn-reset" onclick="uploadDefaultPolicies()">↻ Load Defaults</button><button class="btn btn-add" onclick="openModal('policy')">+ Create Policy</button></div></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Bank Policy Engine</h2>
+            <div>
+                <button class="btn btn-reset" onclick="uploadDefaultPolicies()">↻ Load Defaults</button>
+                <button class="btn btn-add" onclick="openModal('policy')">+ Create Policy</button>
+            </div>
+        </div>
         <div class="table-container">
-            <table id="policyTable"><thead><tr><th>Bank</th><th>Product</th><th>Loan (L)</th><th>Min ABB</th><th>ROI %</th><th>GST?</th><th>ITR?</th><th>Actions</th></tr></thead><tbody></tbody></table>
+            <table id="policyTable">
+                <thead>
+                    <tr>
+                        <th>Bank Name</th>
+                        <th>Product</th>
+                        <th>Loan (L)</th>
+                        <th>Min ABB</th>
+                        <th>ROI %</th>
+                        <th>GST Req?</th>
+                        <th>ITR Req?</th>
+                        <th>Actions</th> </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
     
     <div id="users" class="section">
-        <h2>👥 Active DSA Users</h2><div style="text-align:right;"><button class="btn btn-add" onclick="openModal('user')">+ Add User</button></div>
-        <table id="userTable"><thead><tr><th>DSA Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Action</th></tr></thead><tbody></tbody></table>
+        <h2>👥 Active DSA Users</h2>
+        <div style="text-align:right; margin-bottom:10px;">
+            <button class="btn btn-add" onclick="openModal('user')">+ Add User</button>
+        </div>
+        <div class="table-container">
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>DSA Name</th>
+                        <th>Mobile</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <h2 style="margin-top:30px;">🔔 Pending Requests</h2>
+        <div class="table-container">
+            <table id="requestTable">
+                <thead><tr><th>DSA Name</th><th>Mobile</th><th>Username</th><th>Action</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
     
     <div id="apps" class="section">
-        <h2>📂 DSA Applications</h2><button class="btn btn-add" style="background:#008CBA; float:right;" onclick="exportToExcel()">⬇ Excel</button>
-        <table id="appTable"><thead><tr><th>Date</th><th>Customer</th><th>DSA</th><th>Status</th><th>Amount</th></tr></thead><tbody></tbody></table>
+        <div style="display:flex; justify-content:space-between;">
+            <h2>📂 DSA Applications</h2>
+            <button class="btn btn-add" style="background:#008CBA;" onclick="exportToExcel()">⬇ Excel</button>
+        </div>
+        <div class="table-container">
+            <table id="appTable">
+                <thead><tr><th>Date</th><th>Customer</th><th>DSA</th><th>Status</th><th>Amount</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<div id="policyModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Policy Editor</h3><span style="cursor:pointer;" onclick="closeModal('policy')">✖</span></div>
-<div class="modal-body"><form id="policyForm"><input type="hidden" id="p_id">
-<div class="sec-title">SECTION A - BASIC</div><div class="sec-content"><div class="form-row"><div><label>Bank</label><input id="bankName"></div><div><label>Type</label><select id="prodType"><option>STBL</option><option>HTBL</option><option>OD</option><option>TERM</option><option>NBFC</option><option>UBL</option></select></div></div><div class="form-row"><div><label>Loan Min</label><input type="number" id="loanMin"></div><div><label>Loan Max</label><input type="number" id="loanMax"></div></div><div class="form-row"><div><label>Tenure Min</label><input type="number" id="tenMin"></div><div><label>Tenure Max</label><input type="number" id="tenMax"></div></div><div class="form-row"><div><label>ROI Min</label><input type="number" step="0.1" id="roiMin"></div><div><label>ROI Max</label><input type="number" step="0.1" id="roiMax"></div></div><div class="form-row"><div><label>PF Min</label><input type="number" step="0.1" id="pfMin"></div><div><label>PF Max</label><input type="number" step="0.1" id="pfMax"></div></div></div>
-<div class="sec-title">SECTION B - APPLICANT</div><div class="sec-content"><div class="form-row"><div><label>Age Min</label><input type="number" id="ageMin"></div><div><label>Age Max</label><input type="number" id="ageMax"></div></div><div class="form-row"><label>Co-App?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><div class="form-row"><div><label>Co-App Age Min</label><input type="number" id="coAgeMin"></div><div><label>Co-App Age Max</label><input type="number" id="coAgeMax"></div></div></div><div class="form-row"><label>Own House?</label><select id="houseReq" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="houseBox" class="hidden-field"><div class="form-row"><div><label>Geo</label><select id="houseGeo"><option>Local</option><option>India</option></select></div><div><label>Pincodes</label><input type="text" id="housePins"></div></div></div></div>
-<div class="sec-title">SECTION C - BUSINESS</div><div class="sec-content"><div class="form-row"><div><label>Vin Min</label><input type="number" id="minVin"></div><div><label>Turn Min</label><input type="number" id="minTurn"></div></div><div class="form-row"><div><label>ABB Min</label><input type="number" id="abbMin"></div></div><div class="form-row"><div><label>ITR Req?</label><select id="itrReq" onchange="toggleField('itrBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="itrBox" class="hidden-field"><input type="number" id="itrVal" placeholder="Min ITR"></div></div><div class="form-row"><div><label>GST Req?</label><select id="gstReq" onchange="toggleField('gstBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="gstBox" class="hidden-field"><input type="number" id="gstVal" placeholder="Min GST"></div></div><div style="margin-top:10px;"><label>Banking Types:</label><br><label style="margin-right:10px;"><input type="checkbox" class="bank-chk" value="SA"> SA</label><label style="margin-right:10px;"><input type="checkbox" class="bank-chk" value="CA"> CA</label><label style="margin-right:10px;"><input type="checkbox" class="bank-chk" value="OD"> OD</label><label><input type="checkbox" class="bank-chk" value="CC"> CC</label></div></div>
-<div class="sec-title">SECTION D - CREDIT (5 Fields)</div><div class="sec-content"><div class="form-row"><div><label>CIBIL Min</label><input type="number" id="minCibil"></div><div><label>CIBIL Max</label><input type="number" id="maxCibil"></div></div><div class="form-row"><div><label>Max Active Loans</label><input type="number" id="actLoans"></div><div><label>Max Unsec Loans</label><input type="number" id="maxUnsec"></div></div><div class="form-row"><div><label>Loans (6m)</label><input type="number" id="loans6m"></div></div></div>
-<div class="sec-title">SECTION E - PROGRAMS</div><div class="sec-content"><div id="progContainer"></div><button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button></div>
-<div class="sec-title">SECTION F - CONDITIONS</div><div class="sec-content"><div id="condContainer"></div><button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button></div>
-</form></div><div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">Save</button></div></div></div>
+<div id="policyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3>Policy Editor</h3><span style="cursor:pointer;" onclick="closeModal('policy')">✖</span></div>
+        <div class="modal-body">
+            <form id="policyForm">
+                <input type="hidden" id="p_id">
+                <div class="sec-title">SECTION A - BASIC</div>
+                <div class="sec-content">
+                    <div class="form-row"><div><label>Bank</label><input id="bankName"></div><div><label>Type</label><select id="prodType"><option>STBL</option><option>HTBL</option><option>OD</option><option>TERM</option><option>NBFC</option><option>UBL</option></select></div></div>
+                    <div class="form-row"><div><label>Loan Min</label><input type="number" id="loanMin"></div><div><label>Loan Max</label><input type="number" id="loanMax"></div></div>
+                    <div class="form-row"><div><label>Tenure Min</label><input type="number" id="tenMin"></div><div><label>Tenure Max</label><input type="number" id="tenMax"></div></div>
+                    <div class="form-row"><div><label>ROI Min</label><input type="number" step="0.1" id="roiMin"></div><div><label>ROI Max</label><input type="number" step="0.1" id="roiMax"></div></div>
+                </div>
+                <div class="sec-title">SECTION B - REQUIREMENTS</div>
+                <div class="sec-content">
+                    <div class="form-row"><div><label>Min Vintage</label><input type="number" id="minVin"></div><div><label>Min Turnover</label><input type="number" id="minTurn"></div></div>
+                    <div class="form-row"><div><label>Min ABB</label><input type="number" id="abbMin"></div><div><label>Min CIBIL</label><input type="number" id="minCibil"></div></div>
+                    <div class="form-row"><div><label>ITR Req?</label><select id="itrReq"><option>No</option><option>Yes</option></select></div><div><label>GST Req?</label><select id="gstReq"><option>No</option><option>Yes</option></select></div></div>
+                </div>
+                <div class="sec-title">SECTION C - PROGRAMS & CONDITIONS</div>
+                <div class="sec-content">
+                    <div id="progContainer"></div><button type="button" class="btn btn-add" onclick="addProg()">+ Add Program</button>
+                    <div id="condContainer" style="margin-top:10px;"></div><button type="button" class="btn btn-add" onclick="addCond()">+ Add Condition</button>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">Save Policy</button></div>
+    </div>
+</div>
 
-<div id="userModal" class="modal"><div class="modal-content" style="width:500px;height:auto;"><div class="modal-header"><h3>User</h3><span onclick="closeModal('user')">✖</span></div><div class="modal-body"><form id="userForm"><input type="hidden" id="u_id"><div class="form-row" style="grid-template-columns:1fr;"><label>Name</label><input type="text" id="uName"></div><div class="form-row" style="grid-template-columns:1fr;"><label>Mobile</label><input type="number" id="uMob"></div><div class="form-row" style="grid-template-columns:1fr;"><label>Username</label><input type="text" id="uUser"></div><div class="form-row" style="grid-template-columns:1fr;"><label>Password</label><input type="text" id="uPass"></div></form></div><div class="modal-footer"><button class="btn btn-add" onclick="saveUser()">Save</button></div></div></div>
+<div id="userModal" class="modal">
+    <div class="modal-content" style="width:500px;height:auto;">
+        <div class="modal-header"><h3>User Editor</h3><span onclick="closeModal('user')">✖</span></div>
+        <div class="modal-body">
+            <form id="userForm">
+                <input type="hidden" id="u_id">
+                <div class="form-row" style="grid-template-columns:1fr;"><label>Name</label><input type="text" id="uName"></div>
+                <div class="form-row" style="grid-template-columns:1fr;"><label>Mobile</label><input type="number" id="uMob"></div>
+                <div class="form-row" style="grid-template-columns:1fr;"><label>Username</label><input type="text" id="uUser"></div>
+                <div class="form-row" style="grid-template-columns:1fr;"><label>Password</label><input type="text" id="uPass"></div>
+            </form>
+        </div>
+        <div class="modal-footer"><button class="btn btn-add" onclick="saveUser()">Save User</button></div>
+    </div>
+</div>
 
 <script>
-    // --- 1. FIREBASE CONFIG ---
+    // --- 1. SESSION CHECK (Fixes Refresh Logout Issue) ---
+    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+        document.getElementById('loginOverlay').style.display = 'none';
+    }
+
+    // --- 2. FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
         authDomain: "credir-engine-new.firebaseapp.com",
@@ -98,75 +214,97 @@
     try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("Firebase Error", e); }
 
-    // --- 2. UPDATED DEFAULTS (MIXED GST/ITR REQUIREMENTS) ---
+    // --- 3. DEFAULTS ---
     const defaultPolicies = [
-        { bankName:"TATA CAPITAL STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, maxUnsec:5, loanMax:20, tenMax:36, roiMin:18, roiMax:24, abbMin:5000, itrReq:'Yes', gstReq:'Yes' },
-        { bankName:"ADITYA BIRLA STBL", prodType:"STBL", minTurn:25, minVin:2, minCibil:700, maxUnsec:5, loanMax:40, tenMax:36, roiMin:17.5, roiMax:22, abbMin:10000, itrReq:'Yes', gstReq:'Yes' },
-        { bankName:"BAJAJ FINANCE TERM", prodType:"TERM", minTurn:40, minVin:3, minCibil:700, maxUnsec:5, loanMax:50, tenMax:48, roiMin:16.5, roiMax:21, abbMin:15000, itrReq:'Yes', gstReq:'Yes' },
-        { bankName:"CLIX CAPITAL (No GST)", prodType:"NBFC", minTurn:15, minVin:2, minCibil:680, maxUnsec:5, loanMax:10, tenMax:30, roiMin:21, roiMax:28, abbMin:3000, itrReq:'No', gstReq:'No' }, // ALLOWS NO GST
-        { bankName:"BAJAJ OD (No ITR)", prodType:"OD", minTurn:50, minVin:2, minCibil:720, maxUnsec:5, loanMax:25, tenMax:24, roiMin:14.5, roiMax:22, abbMin:20000, itrReq:'No', gstReq:'Yes' }
+        { bankName:"TATA CAPITAL STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, loanMin:3, loanMax:20, tenMax:36, roiMin:18, roiMax:24, abbMin:5000, itrReq:'Yes', gstReq:'Yes' },
+        { bankName:"ADITYA BIRLA STBL", prodType:"STBL", minTurn:25, minVin:2, minCibil:700, loanMin:2, loanMax:40, tenMax:36, roiMin:17.5, roiMax:22, abbMin:10000, itrReq:'Yes', gstReq:'Yes' },
+        { bankName:"BAJAJ FINANCE TERM", prodType:"TERM", minTurn:40, minVin:3, minCibil:700, loanMin:3, loanMax:50, tenMax:48, roiMin:16.5, roiMax:21, abbMin:15000, itrReq:'Yes', gstReq:'Yes' },
+        { bankName:"CLIX CAPITAL (No GST)", prodType:"NBFC", minTurn:15, minVin:2, minCibil:680, loanMin:2, loanMax:10, tenMax:30, roiMin:21, roiMax:28, abbMin:3000, itrReq:'No', gstReq:'No' },
+        { bankName:"BAJAJ OD (No ITR)", prodType:"OD", minTurn:50, minVin:2, minCibil:720, loanMin:5, loanMax:25, tenMax:24, roiMin:14.5, roiMax:22, abbMin:20000, itrReq:'No', gstReq:'Yes' }
     ];
 
     let policies=[], users=[], requests=[], apps=[];
 
     function loadAllData() {
         if(!db) return;
-        db.collection("policies").onSnapshot(snap => { policies = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
-        db.collection("dsa_users").onSnapshot(snap => { users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
-        db.collection("dsa_requests").onSnapshot(snap => { requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
-        db.collection("applications").onSnapshot(snap => { apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
+        
+        // Load Policies
+        db.collection("policies").onSnapshot(snap => { 
+            policies = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
+        
+        // Load Users (Fix for "Manage Users data not showing")
+        db.collection("dsa_users").onSnapshot(snap => { 
+            users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
+        
+        // Load Requests
+        db.collection("dsa_requests").onSnapshot(snap => { 
+            requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
+        
+        // Load Apps
+        db.collection("applications").onSnapshot(snap => { 
+            apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
     }
 
     function renderTables() {
+        // Render Policies with Actions
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
         policies.forEach(p => {
             pT.innerHTML += `<tr>
-                <td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td><td>${p.gstReq||'No'}</td><td>${p.itrReq||'No'}</td>
-                <td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button></td>
+                <td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td>
+                <td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td><td>${p.gstReq||'No'}</td><td>${p.itrReq||'No'}</td>
+                <td><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td>
             </tr>`;
         });
         
+        // Render Users (Fix for missing users)
+        const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
+        if(users.length === 0) uT.innerHTML = "<tr><td colspan='6'>No Active Users Found</td></tr>";
+        users.forEach(u => {
+            uT.innerHTML += `<tr>
+                <td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td><span style="color:green">Active</span></td>
+                <td><button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Remove</button></td>
+            </tr>`;
+        });
+        
+        // Render Requests
         const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
         requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
-        const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
-        users.forEach(u => uT.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td><button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button></td></tr>`);
+        
+        // Render Apps
         const aT = document.querySelector('#appTable tbody'); aT.innerHTML='';
         apps.forEach(a => aT.innerHTML += `<tr><td>${a.date}</td><td>${a.customer}</td><td>${a.dsaName||'-'}</td><td>${a.status}</td><td>${a.data['Req Amount']||'-'} L</td></tr>`);
     }
 
+    // --- ACTIONS ---
     window.uploadDefaultPolicies = () => { if(confirm("Upload Defaults?")) { defaultPolicies.forEach(p => db.collection("policies").add(p)); } };
     window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { db.collection("dsa_users").add({...r, status:"Active"}); db.collection("dsa_requests").doc(id).delete(); } };
     window.delDoc = (col, id) => { if(confirm("Delete?")) db.collection(col).doc(id).delete(); };
 
+    // --- SAVE USER ---
     window.saveUser = () => {
         const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" };
         db.collection("dsa_users").add(u); closeModal('user');
     };
 
+    // --- SAVE POLICY ---
     window.savePolicy = () => {
-        let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
-        let progs = []; document.querySelectorAll('#progContainer .dynamic-row').forEach(row => progs.push({ type: row.querySelector('select').value, val: row.querySelector('input').value }));
-        let conds = []; document.querySelectorAll('#condContainer .dynamic-row input').forEach(inp => { if(inp.value.trim()) conds.push(inp.value.trim()); });
-
         const p = {
             bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
             loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
             tenMin: +document.getElementById('tenMin').value, tenMax: +document.getElementById('tenMax').value,
             roiMin: +document.getElementById('roiMin').value, roiMax: +document.getElementById('roiMax').value,
-            pfMin: +document.getElementById('pfMin').value, pfMax: +document.getElementById('pfMax').value,
-            ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
-            coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
-            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value, housePins: document.getElementById('housePins').value,
-            minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value, abbMin: +document.getElementById('abbMin').value,
-            itrReq: document.getElementById('itrReq').value, itrVal: document.getElementById('itrVal').value,
-            gstReq: document.getElementById('gstReq').value, gstVal: document.getElementById('gstVal').value,
-            // SECTION D
-            minCibil: +document.getElementById('minCibil').value, maxCibil: +document.getElementById('maxCibil').value,
-            actLoans: +document.getElementById('actLoans').value, maxUnsec: +document.getElementById('maxUnsec').value,
-            loans6m: +document.getElementById('loans6m').value,
-            bankingTypes: bTypes, programs: progs, conditions: conds
+            minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value, abbMin: +document.getElementById('abbMin').value, minCibil: +document.getElementById('minCibil').value,
+            itrReq: document.getElementById('itrReq').value, gstReq: document.getElementById('gstReq').value
         };
         
         let idx = document.getElementById('p_id').value;
@@ -174,6 +312,7 @@
         closeModal('policy');
     };
 
+    // --- EDIT POLICY ---
     window.editPolicy = (id) => {
         let p = policies.find(x => x.id === id); if(!p) return;
         document.getElementById('p_id').value = id;
@@ -181,46 +320,25 @@
         document.getElementById('loanMin').value = p.loanMin; document.getElementById('loanMax').value = p.loanMax;
         document.getElementById('tenMin').value = p.tenMin; document.getElementById('tenMax').value = p.tenMax;
         document.getElementById('roiMin').value = p.roiMin; document.getElementById('roiMax').value = p.roiMax;
-        document.getElementById('pfMin').value = p.pfMin||''; document.getElementById('pfMax').value = p.pfMax||'';
-        document.getElementById('ageMin').value = p.ageMin||''; document.getElementById('ageMax').value = p.ageMax||'';
-        document.getElementById('coAppReq').value = p.coAppReq||'No'; toggleField('coBox', p.coAppReq==='Yes');
-        document.getElementById('coAgeMin').value = p.coAgeMin||''; document.getElementById('coAgeMax').value = p.coAgeMax||'';
-        document.getElementById('houseReq').value = p.houseReq||'No'; toggleField('houseBox', p.houseReq==='Yes');
-        document.getElementById('houseGeo').value = p.houseGeo||'Local'; document.getElementById('housePins').value = p.housePins||'';
-        document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn; document.getElementById('abbMin').value = p.abbMin||'';
-        document.getElementById('itrReq').value = p.itrReq||'No'; toggleField('itrBox', p.itrReq==='Yes'); document.getElementById('itrVal').value = p.itrVal||'';
-        document.getElementById('gstReq').value = p.gstReq||'No'; toggleField('gstBox', p.gstReq==='Yes'); document.getElementById('gstVal').value = p.gstVal||'';
-        
-        document.getElementById('minCibil').value = p.minCibil; document.getElementById('maxCibil').value = p.maxCibil||'';
-        document.getElementById('actLoans').value = p.actLoans||''; document.getElementById('maxUnsec').value = p.maxUnsec||'';
-        document.getElementById('loans6m').value = p.loans6m||'';
-        
-        document.querySelectorAll('.bank-chk').forEach(c => c.checked = false);
-        if(p.bankingTypes) p.bankingTypes.forEach(t=>{ let el=document.querySelector(`.bank-chk[value="${t}"]`); if(el)el.checked=true; });
-        document.getElementById('progContainer').innerHTML='';
-        if(p.programs) p.programs.forEach(pr=>addProg(pr.type, pr.val));
-        document.getElementById('condContainer').innerHTML='';
-        if(p.conditions) p.conditions.forEach(cd=>addCond(cd));
+        document.getElementById('minVin').value = p.minVin; document.getElementById('minTurn').value = p.minTurn; document.getElementById('abbMin').value = p.abbMin; document.getElementById('minCibil').value = p.minCibil;
+        document.getElementById('itrReq').value = p.itrReq; document.getElementById('gstReq').value = p.gstReq;
         
         openModal('policy');
     };
 
+    // --- HELPERS ---
+    window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
+    window.openModal=(t)=>{document.getElementById(t+'Form').reset();document.getElementById(t==='policy'?'p_id':'u_id').value='';document.getElementById(t+'Modal').style.display='flex';};
+    window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.exportToExcel = () => {
         let csv = "Date,Customer,DSA,Status,Amount\n";
         apps.forEach(app => csv += `${app.date},${app.customer},${app.dsaName},${app.status},${app.data['Req Amount']}\n`);
         const link = document.createElement("a"); link.href = encodeURI("data:text/csv;charset=utf-8," + csv); link.download = "dsa_apps.csv"; link.click();
     };
 
-    window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
-    window.openModal=(t)=>{document.getElementById(t+'Form').reset();document.getElementById(t==='policy'?'p_id':'u_id').value='';if(t==='policy'){document.getElementById('progContainer').innerHTML='';document.getElementById('condContainer').innerHTML='';}document.getElementById(t+'Modal').style.display='flex';};
-    window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
-    window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
-    window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Min" value="${v}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
-    window.addCond=(val='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Condition" value="${val}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
-
+    // --- LOGIN LOGIC ---
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong Password"); };
-    window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Success"); } };
     window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
 
     loadAllData();
