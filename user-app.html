@@ -33,7 +33,7 @@
         .report-paper { background: white; width: 900px; margin: 0 auto; padding: 40px; border-radius: 8px; }
         .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .report-table th, .report-table td { border: 1px solid #333; padding: 10px; text-align: center; }
-        .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
         @media print { .no-print { display: none !important; } #fullReportModal { position: absolute; background: white; width: 100%; height: auto; top:0; left:0; } }
     </style>
 </head>
@@ -76,25 +76,20 @@
                 <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
                 <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
                 <div><label>Loans (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
-                <div><label>Loans Closing (6m)</label><input type="number" class="pdf-data" data-label="Closing (6m)"></div>
-                <div><label>Reduced EMI</label><input type="number" class="pdf-data" data-label="Reduced EMI" id="reducedEmi"></div>
                 <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">4. Applicant Details</div><div class="accordion-body"><div class="form-grid">
                 <div><label>Age</label><input type="number" class="pdf-data" data-label="Age"></div>
                 <div><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
-                <div><label>Co-App?</label><select class="pdf-data" data-label="Co-App" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><label>Co-App Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
-                <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
-                <div id="houseBox" class="hidden-field" style="display:none; grid-column: span 3; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-                    <div><label>Pincode</label><input type="number" class="pdf-data" data-label="Pincode" id="pincodeInput" oninput="checkPincode()"></div>
-                    <div><label>City</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField" readonly></div>
-                    <div><label>State</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField" readonly></div>
-                </div>
+                <div><label>Co-Applicant?</label><select class="pdf-data" data-label="Co-App" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><label>Co-App Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
+                <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="houseBox" class="hidden-field"><label>Pincode</label><input type="number" class="pdf-data" data-label="Pincode" onblur="fetchLocation()"></div>
+                <div><label>Location (City)</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField" readonly></div>
+                <div><label>State</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField" readonly></div>
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">5. Requirement</div><div class="accordion-body"><div class="form-grid">
-                <div><label>Req Amount (L)</label><input type="number" class="pdf-data" data-label="Req Amount"></div>
+                <div><label>Req Amount (Lakhs)</label><input type="number" class="pdf-data" data-label="Req Amount"></div>
                 <div><label>Purpose</label><input type="text" class="pdf-data" data-label="Purpose"></div>
             </div></div></div>
 
@@ -117,7 +112,7 @@
     <div id="fullReportModal"><div class="report-paper"><button class="no-print" onclick="document.getElementById('fullReportModal').style.display='none'">Close</button><button class="no-print" onclick="window.print()">Print</button><div class="report-header"><h3>PROVISIONAL OFFER LETTER</h3></div><div id="pdfAppDetails" class="details-grid"></div><br><h3>ELIGIBILITY</h3><table class="report-table"><thead><tr><th>Bank</th><th>Prog</th><th>Amt</th><th>Tenure</th><th>ROI</th></tr></thead><tbody id="pdfEligibleTable"></tbody></table><br><h3>REJECTIONS</h3><table class="report-table"><thead><tr><th>Bank</th><th>Reason</th></tr></thead><tbody id="pdfRejectTable"></tbody></table></div></div>
 
     <script>
-        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        // --- FIREBASE CONFIG (PASTE HERE) ---
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -137,7 +132,7 @@
 
         if(db) db.collection('policies').get().then(snap => document.getElementById('policyCount').innerText = snap.size);
 
-        // GLOBALS for PDF
+        // GLOBAL VARS FOR PDF
         window.latestResults = { eligible: [], declined: [] };
         window.latestData = {};
 
@@ -155,7 +150,7 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
-        async function checkPincode() {
+        async function fetchLocation() {
             const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
                 try {
@@ -187,15 +182,15 @@
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
-            // --- CRITICAL MATH FIX: 120 -> 1.2Cr ---
+            // --- MATH: 120 -> 1.2Cr ---
             const turn = (parseFloat(data['Turnover']) || 0) * 100000;
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
-            const redEmi = parseFloat(data['Reduced EMI']) || 0;
             
+            // --- UPDATED LOGIC: Removed RedEmi variable ---
             const monthlyProfit = (turn / 12) * margin;
-            const obligations = Math.max(0, emi - redEmi);
+            const obligations = Math.max(0, emi); // Plain EMI deduction
             const netIncome = Math.max(0, monthlyProfit - obligations);
 
             let policies = [];
@@ -222,6 +217,8 @@
                     let dscrAmt = calculatePV(r, n, netIncome);
                     let abbAmt = calculatePV(r, n, abb);
                     let finalAmt = Math.max(dscrAmt, abbAmt);
+                    let programUsed = dscrAmt > abbAmt ? "DSCR/Income" : "ABB";
+
                     let policyMax = (p.loanMax || 50) * 100000;
                     let policyMin = (p.loanMin || 1) * 100000;
                     finalAmt = Math.min(finalAmt, policyMax);
@@ -240,7 +237,7 @@
             const status = eligible.length > 0 ? "Eligible" : "Declined";
             document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
             
-            // SAVE TO PDF VARS
+            // SAVE GLOBALS FOR PDF
             window.latestResults = results; window.latestData = data;
             
             if(db) db.collection("applications").add({date:new Date().toLocaleDateString(), customer:data['Business Name'], dsaName:user.name, dsaUsername:user.user, status:status, data:data, results:results});
@@ -249,7 +246,14 @@
         }
 
         function generateFullPDF() {
-            const res = window.latestResults, data = window.latestData;
+            // FIX: Ensure data exists before printing
+            const res = window.latestResults;
+            const data = window.latestData;
+            
+            if (!res || !data.hasOwnProperty('Business Name')) { 
+                alert("Please check eligibility first to generate report."); return; 
+            }
+
             document.getElementById('pdfCustomerName').innerText = data['Business Name'] || "Customer";
             document.getElementById('pdfAppDetails').innerHTML = Object.entries(data).map(([k,v])=>`<div class="detail-item"><strong>${k}:</strong> ${v}</div>`).join('');
             
