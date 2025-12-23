@@ -19,7 +19,7 @@
         
         /* SIDEBAR */
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 20px; display: flex; flex-direction: column; }
-        .nav-item { padding: 12px 15px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .nav-item { padding: 12px 15px; margin-bottom: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover, .nav-item.active { background-color: #3949ab; border-left: 4px solid #ffeb3b; }
         
         /* MAIN CONTENT */
@@ -41,7 +41,7 @@
         /* MODALS */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 0; width: 900px; border-radius: 8px; height: 90vh; display: flex; flex-direction: column; }
-        .modal-header { padding: 15px; background: #1a237e; color: white; display: flex; justify-content: space-between; }
+        .modal-header { padding: 15px; background: #1a237e; color: white; display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 15px; border-top: 1px solid #ddd; text-align: right; }
         
@@ -51,7 +51,10 @@
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
         .hidden-field { display:none; background:#fafafa; padding:10px; border:1px dashed #ccc; margin-top:10px; }
         .dynamic-row { display: flex; gap: 10px; margin-bottom: 5px; }
-        .section { display: none; } .section.active { display: block; }
+        .section { display: none; animation: fadeIn 0.3s; } 
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
         input, select { width: 100%; padding: 8px; border: 1px solid #ccc; box-sizing: border-box; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
     </style>
@@ -72,6 +75,7 @@
     <div class="nav-item active" onclick="showSection('policies')">📜 Policy Library</div>
     <div class="nav-item" onclick="showSection('users')">👥 Manage Users</div>
     <div class="nav-item" onclick="showSection('apps')">📂 All Applications</div>
+    <div class="nav-item" onclick="showSection('settings')">⚙️ Settings</div>
     <div class="nav-item" style="margin-top:auto; background:#c62828;" onclick="logout()">🚪 Logout</div>
 </div>
 
@@ -96,7 +100,8 @@
                         <th>ROI %</th>
                         <th>GST Req?</th>
                         <th>ITR Req?</th>
-                        <th>Actions</th> </tr>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -143,6 +148,16 @@
                 <thead><tr><th>Date</th><th>Customer</th><th>DSA</th><th>Status</th><th>Amount</th></tr></thead>
                 <tbody></tbody>
             </table>
+        </div>
+    </div>
+
+    <div id="settings" class="section">
+        <h2>Admin Settings</h2>
+        <div style="background:white; padding:30px; border-radius:8px; max-width:400px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <label>Change Admin Password</label>
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">This password is used to access this dashboard.</p>
+            <input type="text" id="newAdminPass" placeholder="Enter New Password">
+            <button class="btn btn-add" style="width:100%; margin-top:15px;" onclick="updateAdminPass()">Update Password</button>
         </div>
     </div>
 </div>
@@ -194,7 +209,7 @@
 </div>
 
 <script>
-    // --- 1. SESSION CHECK (Fixes Refresh Logout Issue) ---
+    // --- 1. SESSION CHECK ---
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
         document.getElementById('loginOverlay').style.display = 'none';
     }
@@ -230,25 +245,21 @@
     function loadAllData() {
         if(!db) return;
         
-        // Load Policies
         db.collection("policies").onSnapshot(snap => { 
             policies = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
             renderTables(); 
         });
         
-        // Load Users (Fix for "Manage Users data not showing")
         db.collection("dsa_users").onSnapshot(snap => { 
             users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
             renderTables(); 
         });
         
-        // Load Requests
         db.collection("dsa_requests").onSnapshot(snap => { 
             requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
             renderTables(); 
         });
         
-        // Load Apps
         db.collection("applications").onSnapshot(snap => { 
             apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
             renderTables(); 
@@ -256,7 +267,6 @@
     }
 
     function renderTables() {
-        // Render Policies with Actions
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
         policies.forEach(p => {
             pT.innerHTML += `<tr>
@@ -266,7 +276,6 @@
             </tr>`;
         });
         
-        // Render Users (Fix for missing users)
         const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
         if(users.length === 0) uT.innerHTML = "<tr><td colspan='6'>No Active Users Found</td></tr>";
         users.forEach(u => {
@@ -276,11 +285,9 @@
             </tr>`;
         });
         
-        // Render Requests
         const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
         requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
         
-        // Render Apps
         const aT = document.querySelector('#appTable tbody'); aT.innerHTML='';
         apps.forEach(a => aT.innerHTML += `<tr><td>${a.date}</td><td>${a.customer}</td><td>${a.dsaName||'-'}</td><td>${a.status}</td><td>${a.data['Req Amount']||'-'} L</td></tr>`);
     }
@@ -339,6 +346,7 @@
     // --- LOGIN LOGIC ---
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong Password"); };
+    window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Success"); } };
     window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
 
     loadAllData();
