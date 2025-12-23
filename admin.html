@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* MAIN STYLES */
+        /* STYLES */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; overflow: hidden; }
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a237e; z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
         .login-box { background: white; padding: 40px; border-radius: 8px; width: 350px; text-align: center; }
@@ -132,12 +132,11 @@
                 <div class="sec-title">SECTION C - APPLICANT & PROPERTY</div>
                 <div class="sec-content">
                     <div class="form-row"><div><label>Min Age</label><input type="number" id="ageMin"></div><div><label>Max Age</label><input type="number" id="ageMax"></div></div>
-                    
                     <div class="form-row"><div><label>Co-Applicant Req?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
                     <div id="coBox" class="hidden-field"><input type="number" id="coAgeMin" placeholder="Min Age"><input type="number" id="coAgeMax" placeholder="Max Age" style="margin-top:5px;"></div></div>
                     
-                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseGeoDiv',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
-                    <div id="houseGeoDiv" class="hidden-field"><label>House Geo</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div></div>
+                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseGeoBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+                    <div id="houseGeoBox" class="hidden-field"><label>House Geo Scope</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div></div>
                 </div>
 
                 <div class="sec-title">SECTION D - CREDIT LIMITS</div>
@@ -156,7 +155,7 @@
                 <div class="sec-content">
                     <div id="condContainer"></div>
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
-                    <div style="margin-top:15px;"><label>Internal Remarks</label><textarea id="remarks" rows="3" style="width:100%" placeholder="Enter internal notes..."></textarea></div>
+                    <div style="margin-top:15px;"><label>Remarks / Internal Notes</label><textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter policy remarks..."></textarea></div>
                 </div>
 
             </form>
@@ -181,7 +180,7 @@
 </div>
 
 <script>
-    // 1. FIREBASE
+    // 1. FIREBASE CONFIG
     const firebaseConfig = {
         apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
         authDomain: "credir-engine-new.firebaseapp.com",
@@ -208,8 +207,11 @@
 
     function loadAllData() {
         if(!db) return;
-        // Fix 2: Robust table loading
-        db.collection("policies").onSnapshot(snap => { policies = snap.docs.map(d => ({id: doc.id, ...doc.data()})); renderTables(); });
+        // Fix 2: Robust Table Loading
+        db.collection("policies").onSnapshot(snap => { 
+            policies = snap.docs.map(d => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
         db.collection("dsa_users").onSnapshot(snap => { users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("dsa_requests").onSnapshot(snap => { requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("applications").onSnapshot(snap => { apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
@@ -217,10 +219,14 @@
 
     function renderTables() {
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
-        policies.forEach(p => {
-            pT.innerHTML += `<tr><td>${p.bankName||'-'}</td><td>${p.prodType||'-'}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td>
-            <td><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`;
-        });
+        if (policies.length === 0) {
+            pT.innerHTML = "<tr><td colspan='7'>No Policies Found. Click 'Load Defaults'.</td></tr>";
+        } else {
+            policies.forEach(p => {
+                pT.innerHTML += `<tr><td>${p.bankName||'-'}</td><td>${p.prodType||'-'}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td>
+                <td><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`;
+            });
+        }
         
         const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
         users.forEach(u => uT.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td><button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button></td></tr>`);
@@ -277,27 +283,22 @@
         let p = policies.find(x => x.id === id); if(!p) return;
         document.getElementById('p_id').value = id;
         
-        // Basic Fields
         ['bankName','prodType','itrReq','gstReq','coAppReq','houseReq', 'houseGeo', 'remarks'].forEach(k => { let el = document.getElementById(k); if(el) el.value = p[k]||''; });
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => { let el = document.getElementById(k); if(el) el.value = p[k]||''; });
         
-        // Programs
         document.getElementById('progContainer').innerHTML='';
         if(p.programs) p.programs.forEach(pr=>addProg(pr.type, pr.val));
         
-        // Conditions
         document.getElementById('condContainer').innerHTML='';
         if(p.conditions) p.conditions.forEach(c=>addCond(c.name, c.val));
         
-        // Checkboxes
         document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
         
         toggleField('coBox', p.coAppReq==='Yes');
-        toggleField('houseGeoDiv', p.houseReq==='Yes'); // Fix 1 Logic
+        toggleField('houseGeoBox', p.houseReq==='Yes'); // Fix 1 Logic
         openModal('policy');
     };
 
-    // HELPERS
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
     window.openModal=(t)=>{
         if(t==='policy') { document.getElementById('policyForm').reset(); document.getElementById('p_id').value=''; document.getElementById('progContainer').innerHTML=''; document.getElementById('condContainer').innerHTML=''; }
@@ -307,11 +308,10 @@
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
     
-    // FIX 3: Added ITR to list
+    // FIX 3: ADD ITR
     window.addProg=(t='ABB',v='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
     window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Name" value="${n}"><input type="text" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
 
-    // AUTH
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong"); };
     window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Updated"); } };
