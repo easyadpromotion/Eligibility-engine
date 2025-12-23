@@ -9,32 +9,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
+        
+        /* SIDEBAR */
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
         .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
+        
+        /* MAIN CONTENT */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        
+        /* FORM ELEMENTS */
         .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
         .accordion { background: white; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
-        .accordion-header { padding: 18px 25px; font-weight: 600; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .accordion-header { padding: 18px 25px; font-weight: 600; cursor: pointer; border-bottom: 1px solid #f0f0f0; background: #fff; border-radius: 10px 10px 0 0; }
         .accordion-body { padding: 25px; display: none; } .accordion-body.open { display: block; }
+        
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .bank-options { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; }
-        .bank-opt { padding: 10px 20px; border: 1px solid #ddd; border-radius: 25px; cursor: pointer; background: #fff; }
+        
+        /* BANK BUTTONS (Increased Height) */
+        .bank-options { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; padding-bottom: 5px; }
+        .bank-opt { padding: 12px 24px; border: 1px solid #ddd; border-radius: 30px; cursor: pointer; font-weight: 600; background: #fff; transition: 0.2s; min-width: 50px; text-align: center; }
+        .bank-opt:hover { background: #f5f5f5; }
         .bank-opt.selected { background-color: #1a237e; color: white; border-color: #1a237e; }
+
         .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
+        
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; font-size: 16px; font-weight: bold; }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; font-weight: bold; }
         
-        .auto-filled { background-color: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; font-weight: bold; }
+        .auto-filled { background-color: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; font-weight: bold; cursor: not-allowed; }
 
-        /* PDF MODAL */
+        /* DASHBOARD TABLES */
+        .dash-table { width: 100%; border-collapse: collapse; }
+        .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        .dash-table th { background-color: #f8f9fa; color: #333; font-weight: bold; }
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .status-eligible { background: #e8f5e9; color: #2e7d32; }
+        .status-declined { background: #ffebee; color: #c62828; }
+
+        /* OFFER LETTER MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; overflow-y: auto; padding: 20px; }
         .report-paper { background: white; width: 900px; margin: 0 auto; padding: 40px; border-radius: 8px; }
         .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .report-table th, .report-table td { border: 1px solid #333; padding: 10px; text-align: center; }
-        .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        @media print { .no-print { display: none !important; } #fullReportModal { position: absolute; background: white; width: 100%; height: auto; top:0; left:0; } }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .detail-item { border-bottom: 1px dotted #ccc; padding-bottom: 5px; font-size: 13px; }
+        
+        @media print { .no-print { display: none !important; } #fullReportModal { position: absolute; background: white; width: 100%; height: auto; top:0; left:0; margin:0; } }
     </style>
 </head>
 <body>
@@ -65,7 +87,15 @@
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">2. Banking & Docs</div><div class="accordion-body"><div class="form-grid">
                 <div><label>ABB (Avg Balance)</label><input type="number" class="pdf-data" data-label="ABB"></div>
-                <div style="grid-column: span 2;"><label>Bank Stmts</label><div class="bank-options"><span class="bank-opt" onclick="this.classList.toggle('selected')">SA</span><span class="bank-opt" onclick="this.classList.toggle('selected')">CA</span><span class="bank-opt" onclick="this.classList.toggle('selected')">OD</span><span class="bank-opt" onclick="this.classList.toggle('selected')">CC</span></div></div>
+                <div style="grid-column: span 2;">
+                    <label>Bank Statements Available</label>
+                    <div class="bank-options">
+                        <span class="bank-opt" onclick="this.classList.toggle('selected')">SA</span>
+                        <span class="bank-opt" onclick="this.classList.toggle('selected')">CA</span>
+                        <span class="bank-opt" onclick="this.classList.toggle('selected')">OD</span>
+                        <span class="bank-opt" onclick="this.classList.toggle('selected')">CC</span>
+                    </div>
+                </div>
                 <div><label>GST Registered?</label><select class="pdf-data" data-label="GST Reg" onchange="toggleField('gstBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="gstBox" class="hidden-field"><label>GST Turnover</label><input type="number" class="pdf-data" data-label="GST Turnover"></div>
                 <div><label>ITR Filed?</label><select class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="itrBox" class="hidden-field"><label>ITR Income</label><input type="number" class="pdf-data" data-label="ITR Income"></div>
             </div></div></div>
@@ -83,9 +113,12 @@
                 <div><label>Age</label><input type="number" class="pdf-data" data-label="Age"></div>
                 <div><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
                 <div><label>Co-Applicant?</label><select class="pdf-data" data-label="Co-App" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><label>Co-App Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
-                <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="houseBox" class="hidden-field"><label>Pincode</label><input type="number" class="pdf-data" data-label="Pincode" onblur="fetchLocation()"></div>
-                <div><label>Location (City)</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField" readonly></div>
-                <div><label>State</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField" readonly></div>
+                <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+                <div id="houseBox" class="hidden-field" style="display:none; grid-column: span 3; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                    <div><label>Pincode (Type 6 Digits)</label><input type="number" class="pdf-data" data-label="Pincode" id="pincodeInput" oninput="checkPincode()"></div>
+                    <div><label>City (Auto)</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField" readonly></div>
+                    <div><label>State (Auto)</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField" readonly></div>
+                </div>
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">5. Requirement</div><div class="accordion-body"><div class="form-grid">
@@ -101,7 +134,7 @@
         <div id="dashView" style="display:none;">
             <h2>DSA Dashboard</h2>
             <div style="background:white;padding:20px;border-radius:10px;margin-bottom:20px;">
-                <h3>📂 History</h3><table style="width:100%" id="historyTable"><thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>View</th></tr></thead><tbody></tbody></table>
+                <h3>📂 History</h3><table class="dash-table" id="historyTable"><thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>View</th></tr></thead><tbody></tbody></table>
             </div>
             <div style="background:white;padding:20px;border-radius:10px;">
                 <h3>🔐 Change Password</h3><input type="password" id="new_pass" placeholder="New Password" style="width:100%;margin-bottom:10px;padding:10px;"><button class="submit-btn" style="margin-top:0;width:auto;" onclick="updateCredentials()">Update</button>
@@ -112,7 +145,9 @@
     <div id="fullReportModal"><div class="report-paper"><button class="no-print" onclick="document.getElementById('fullReportModal').style.display='none'">Close</button><button class="no-print" onclick="window.print()">Print</button><div class="report-header"><h3>PROVISIONAL OFFER LETTER</h3></div><div id="pdfAppDetails" class="details-grid"></div><br><h3>ELIGIBILITY</h3><table class="report-table"><thead><tr><th>Bank</th><th>Prog</th><th>Amt</th><th>Tenure</th><th>ROI</th></tr></thead><tbody id="pdfEligibleTable"></tbody></table><br><h3>REJECTIONS</h3><table class="report-table"><thead><tr><th>Bank</th><th>Reason</th></tr></thead><tbody id="pdfRejectTable"></tbody></table></div></div>
 
     <script>
-        // --- FIREBASE CONFIG (PASTE HERE) ---
+        // ---------------------------------------------------------
+        // 🚨 PASTE FIREBASE KEYS BELOW 🚨
+        // ---------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -122,6 +157,7 @@
             appId: "1:249073295308:web:e3db899190a4d2506d0769",
             measurementId: "G-YBXMM1J129"
         };
+        // ---------------------------------------------------------
 
         let db;
         try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.error(e); }
@@ -132,7 +168,7 @@
 
         if(db) db.collection('policies').get().then(snap => document.getElementById('policyCount').innerText = snap.size);
 
-        // GLOBAL VARS FOR PDF
+        // --- GLOBAL VARIABLES (FIX 1: Ensure PDF data is always available) ---
         window.latestResults = { eligible: [], declined: [] };
         window.latestData = {};
 
@@ -150,9 +186,11 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
-        async function fetchLocation() {
+        // --- PINCODE FETCH ---
+        async function checkPincode() {
             const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
+                document.getElementById('cityField').value = "Fetching...";
                 try {
                     const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
                     const data = await res.json();
@@ -160,11 +198,14 @@
                         const info = data[0].PostOffice[0];
                         document.getElementById('cityField').value = info.District;
                         document.getElementById('stateField').value = info.State;
+                    } else {
+                        document.getElementById('cityField').value = "Invalid Pin";
                     }
                 } catch(e) { console.log("Pin fetch failed"); }
             }
         }
 
+        // --- CALCULATION LOGIC ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -174,34 +215,35 @@
             let data = {};
             document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
             
-            let stmts = []; document.querySelectorAll('.bank-opt.selected').forEach(el => stmts.push(el.innerText));
-            data['Bank Statements'] = stmts.join(', ');
+            let bankStmts = [];
+            document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
+            data['Bank Statements'] = bankStmts.join(', ');
             data['DSA Name'] = user.name; data['DSA Username'] = user.user;
 
             const sectorVal = document.getElementById('sector').value.split(' ')[0];
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
-            // --- MATH: 120 -> 1.2Cr ---
+            // Math: 120 -> 1.2 Crores
             const turn = (parseFloat(data['Turnover']) || 0) * 100000;
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
             
-            // --- UPDATED LOGIC: Removed RedEmi variable ---
+            // Logic: Net Income = Profit - Obligations (Simple)
             const monthlyProfit = (turn / 12) * margin;
-            const obligations = Math.max(0, emi); // Plain EMI deduction
+            const obligations = Math.max(0, emi); 
             const netIncome = Math.max(0, monthlyProfit - obligations);
 
             let policies = [];
             if(db) { const snap = await db.collection("policies").get(); policies = snap.docs.map(d => d.data()); }
-            if(policies.length === 0) { alert("No Policies found. Contact Admin."); return; }
+            if(policies.length === 0) { alert("No Policies found."); return; }
 
             let eligible = [], declined = [];
 
             policies.forEach(p => {
                 let pass = true, reasons = [];
-                // 11-GATE CHECKS
+                // 11 GATE CHECKS
                 if (data['Vintage'] < (p.minVin||0)) { pass=false; reasons.push(`Vintage < ${p.minVin}`); }
                 if ((turn/100000) < (p.minTurn||0)) { pass=false; reasons.push(`Turnover < ${p.minTurn}L`); }
                 if (abb < (p.abbMin||0)) { pass=false; reasons.push(`ABB < ${p.abbMin}`); }
@@ -213,12 +255,9 @@
                 if (pass) {
                     const r = (p.roiMin / 100) / 12;
                     const n = p.tenMax || 36;
-                    
                     let dscrAmt = calculatePV(r, n, netIncome);
                     let abbAmt = calculatePV(r, n, abb);
                     let finalAmt = Math.max(dscrAmt, abbAmt);
-                    let programUsed = dscrAmt > abbAmt ? "DSCR/Income" : "ABB";
-
                     let policyMax = (p.loanMax || 50) * 100000;
                     let policyMin = (p.loanMin || 1) * 100000;
                     finalAmt = Math.min(finalAmt, policyMax);
@@ -226,7 +265,7 @@
                     if (finalAmt >= policyMin) {
                         eligible.push({ bank: p.bankName, prog: p.prodType, amt: (finalAmt / 100000).toFixed(2), ten: n, roi: `${p.roiMin}-${p.roiMax}%` });
                     } else {
-                        declined.push({ bank: p.bankName, reason: `Eligible Amount < ${p.loanMin}L` });
+                        declined.push({ bank: p.bankName, reason: `Eligible Amount (${(finalAmt/100000).toFixed(2)}L) < Bank Min (${p.loanMin}L)` });
                     }
                 } else {
                     declined.push({ bank: p.bankName, reason: reasons.join(", ") });
@@ -237,7 +276,7 @@
             const status = eligible.length > 0 ? "Eligible" : "Declined";
             document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
             
-            // SAVE GLOBALS FOR PDF
+            // SAVE TO GLOBALS
             window.latestResults = results; window.latestData = data;
             
             if(db) db.collection("applications").add({date:new Date().toLocaleDateString(), customer:data['Business Name'], dsaName:user.name, dsaUsername:user.user, status:status, data:data, results:results});
@@ -245,19 +284,18 @@
             document.getElementById('dlReportBtn').style.display='block';
         }
 
+        // --- PDF GENERATOR ---
         function generateFullPDF() {
-            // FIX: Ensure data exists before printing
             const res = window.latestResults;
             const data = window.latestData;
             
-            if (!res || !data.hasOwnProperty('Business Name')) { 
-                alert("Please check eligibility first to generate report."); return; 
-            }
+            // Check if data exists before showing
+            if (!data['Business Name']) { alert("Please run eligibility check first."); return; }
 
-            document.getElementById('pdfCustomerName').innerText = data['Business Name'] || "Customer";
+            document.getElementById('pdfCustomerName').innerText = data['Business Name'];
             document.getElementById('pdfAppDetails').innerHTML = Object.entries(data).map(([k,v])=>`<div class="detail-item"><strong>${k}:</strong> ${v}</div>`).join('');
             
-            document.getElementById('pdfEligibleTable').innerHTML = res.eligible.length ? res.eligible.map(i=>`<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`).join('') : "<tr><td colspan='5'>No Eligible Banks</td></tr>";
+            document.getElementById('pdfEligibleTable').innerHTML = res.eligible.length ? res.eligible.map(i=>`<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`).join('') : "<tr><td colspan='5'>No Eligible Banks Found</td></tr>";
             
             document.getElementById('pdfRejectTable').innerHTML = res.declined.length ? res.declined.map(i=>`<tr><td>${i.bank}</td><td>${i.reason}</td></tr>`).join('') : "<tr><td colspan='2'>No Rejections</td></tr>";
             
