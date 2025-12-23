@@ -8,15 +8,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* MAIN STYLES */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        
-        /* SIDEBAR */
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
         .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
-        
-        /* MAIN CONTENT */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         
         /* FORM ELEMENTS */
@@ -38,9 +35,10 @@
         .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; font-size: 16px; font-weight: bold; }
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; font-weight: bold; }
         
-        .auto-filled { background-color: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; font-weight: bold; cursor: not-allowed; }
+        /* Auto-filled field style */
+        .auto-filled { background-color: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; font-weight: bold; }
 
-        /* DASHBOARD TABLES */
+        /* DASHBOARD */
         .dash-table { width: 100%; border-collapse: collapse; }
         .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         .dash-table th { background-color: #f8f9fa; color: #333; font-weight: bold; }
@@ -56,12 +54,13 @@
         .report-table th, .report-table td { border: 1px solid #333; padding: 10px; text-align: center; }
         .report-table th { background: #f0f0f0; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; }
-        .detail-item { font-size: 13px; }
+        .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
         
         @media print { 
-            .no-print { display: none !important; } 
-            #fullReportModal { position: absolute; background: white; width: 100%; height: 100%; top:0; left:0; margin:0; padding:0; } 
-            .report-paper { width: 100%; box-shadow: none; }
+            body > * { display: none !important; }
+            #fullReportModal { display: block !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 0; background: white; z-index: 9999; } 
+            .report-paper { box-shadow: none; width: 100%; max-width: 100%; padding: 20px; margin: 0; }
+            .no-print { display: none !important; }
         }
     </style>
 </head>
@@ -122,8 +121,8 @@
                 <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
                 <div id="houseBox" class="hidden-field" style="display:none; grid-column: span 3; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
                     <div><label>Pincode (Type 6 Digits)</label><input type="number" class="pdf-data" data-label="Pincode" id="pincodeInput" oninput="checkPincode()"></div>
-                    <div><label>City (Auto)</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField" readonly></div>
-                    <div><label>State (Auto)</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField" readonly></div>
+                    <div><label>City</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField"></div>
+                    <div><label>State</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField"></div>
                 </div>
             </div></div></div>
 
@@ -151,7 +150,7 @@
     <div id="fullReportModal"><div class="report-paper"><button class="no-print" onclick="document.getElementById('fullReportModal').style.display='none'">Close</button><button class="no-print" onclick="window.print()">Print</button><div class="report-header"><h3>PROVISIONAL OFFER LETTER</h3></div><div id="pdfAppDetails" class="details-grid"></div><br><h3>ELIGIBILITY</h3><table class="report-table"><thead><tr><th>Bank</th><th>Prog</th><th>Amt</th><th>Tenure</th><th>ROI</th></tr></thead><tbody id="pdfEligibleTable"></tbody></table><br><h3>REJECTIONS</h3><table class="report-table"><thead><tr><th>Bank</th><th>Reason</th></tr></thead><tbody id="pdfRejectTable"></tbody></table></div></div>
 
     <script>
-        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -190,9 +189,11 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
+        // --- PINCODE FETCH ---
         async function checkPincode() {
             const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
+                document.getElementById('cityField').value = "Fetching...";
                 try {
                     const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
                     const data = await res.json();
@@ -200,8 +201,10 @@
                         const info = data[0].PostOffice[0];
                         document.getElementById('cityField').value = info.District;
                         document.getElementById('stateField').value = info.State;
+                    } else {
+                        document.getElementById('cityField').value = "Invalid";
                     }
-                } catch(e) { console.log("Pin error"); }
+                } catch(e) { console.log("Pin error"); document.getElementById('cityField').value = "Error"; }
             }
         }
 
@@ -222,6 +225,7 @@
             const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
             const margin = margins[sectorVal] || 0.07;
 
+            // --- MATH: 120 -> 1.2 Crores ---
             const turn = (parseFloat(data['Turnover']) || 0) * 100000;
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
@@ -280,14 +284,17 @@
             document.getElementById('dlReportBtn').style.display='block';
         }
 
-        // --- FIXED PDF GENERATOR ---
+        // --- PDF GENERATOR (FIXED) ---
         function generateFullPDF() {
             const res = window.latestResults;
             const data = window.latestData;
             
-            if (!data['Business Name']) { alert("Data not loaded. Please click 'View' or 'Check Eligibility'."); return; }
+            // Safety check
+            if (!data || Object.keys(data).length === 0) { 
+                alert("Data not loaded. Please run Check Eligibility first."); return; 
+            }
 
-            document.getElementById('pdfCustomerName').innerText = data['Business Name'];
+            document.getElementById('pdfCustomerName').innerText = data['Business Name'] || "Customer";
             document.getElementById('pdfAppDetails').innerHTML = Object.entries(data).map(([k,v])=>`<div class="detail-item"><strong>${k}:</strong> ${v}</div>`).join('');
             
             document.getElementById('pdfEligibleTable').innerHTML = res.eligible.length ? res.eligible.map(i=>`<tr><td>${i.bank}</td><td>${i.prog}</td><td>${i.amt} L</td><td>${i.ten}</td><td>${i.roi}</td></tr>`).join('') : "<tr><td colspan='5'>No Eligible Banks Found</td></tr>";
@@ -297,14 +304,13 @@
             document.getElementById('fullReportModal').style.display='block';
         }
 
-        // --- FIXED DASHBOARD VIEW LOGIC ---
+        // --- DASHBOARD VIEW (FIXED) ---
         async function loadHistory() {
             const t = document.querySelector('#historyTable tbody'); t.innerHTML="<tr><td colspan='4'>Loading...</td></tr>";
-            window.historyData = []; // Clear array
+            window.historyData = [];
             if(db) {
                 const snap = await db.collection("applications").where("dsaUsername", "==", user.user).get();
                 t.innerHTML = "";
-                // Use snap.docs for index reliability
                 snap.docs.forEach((doc, index) => {
                     const v = doc.data();
                     window.historyData.push(v);
@@ -313,7 +319,6 @@
             }
         }
 
-        // --- VIEW ACTION ---
         window.viewHistory = (index) => {
             const item = window.historyData[index];
             if(item) {
