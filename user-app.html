@@ -8,465 +8,198 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* MAIN LAYOUT */
-        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
-
-        /* NAVIGATION */
-        .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
-        .nav-item:hover { background-color: #3949ab; }
-        .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
-
-        /* FORMS */
-        .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
-        .accordion { background: white; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
-        .accordion-header { padding: 18px 25px; font-weight: 600; cursor: pointer; border-bottom: 1px solid #f0f0f0; background: #fff; border-radius: 10px 10px 0 0; }
-        .accordion-body { padding: 25px; display: none; } .accordion-body.open { display: block; }
+        /* CLEAN MINIMAL STYLES */
+        body{margin:0;font-family:'Roboto',sans-serif;background:#f0f2f5;display:flex;height:100vh}
+        .side{width:260px;background:#1a237e;color:#fff;padding:25px;display:flex;flex-direction:column}
+        .nav{padding:12px;margin-bottom:10px;cursor:pointer;border-radius:6px;transition:0.2s}
+        .nav:hover{background:#3949ab} .nav.active{background:#3949ab;border-left:4px solid #ffeb3b;font-weight:bold}
+        .main{flex:1;padding:30px;overflow-y:auto}
         
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .auto-filled { background-color: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; font-weight: bold; }
+        /* CARDS & FORMS */
+        .card{background:#fff;border-radius:8px;padding:20px;margin-bottom:20px;border:1px solid #ddd;box-shadow:0 2px 5px rgba(0,0,0,0.05)}
+        .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+        input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box}
+        .b-opts{display:flex;gap:10px} .b-opt{padding:8px 16px;border:1px solid #ccc;border-radius:20px;cursor:pointer;background:#fff}
+        .b-opt.selected{background:#1a237e;color:#fff;border-color:#1a237e}
+        
+        .btn{width:100%;padding:15px;border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;color:#fff;margin-top:15px}
+        .btn-g{background:#2e7d32} .btn-b{background:#0288d1;display:none}
+        .hide{display:none} .auto{background:#e8f5e9;color:#2e7d32;font-weight:bold}
 
-        /* BANK OPTIONS */
-        .bank-options { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; padding-bottom: 5px; }
-        .bank-opt { padding: 12px 24px; border: 1px solid #ddd; border-radius: 30px; cursor: pointer; font-weight: 600; background: #fff; transition: 0.2s; min-width: 50px; text-align: center; }
-        .bank-opt:hover { background: #f5f5f5; }
-        .bank-opt.selected { background-color: #1a237e; color: white; border-color: #1a237e; }
+        /* PDF MODAL - FIXED FOR MULTI-PAGE */
+        #pdf{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9000;overflow-y:auto}
+        .paper{background:#fff;width:210mm;min-height:297mm;margin:30px auto;padding:40px;position:relative;font-family:'Times New Roman',serif}
+        .p-head{text-align:center;border-bottom:2px solid #000;padding-bottom:15px;margin-bottom:20px}
+        .p-title{font-size:24px;font-weight:bold;color:#1a237e}
+        .p-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+        .p-tbl th,.p-tbl td{border:1px solid #000;padding:8px;text-align:center}
+        .p-tbl th{background:#eee}
+        .p-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:20px;border:1px solid #ccc;padding:15px}
+        .p-row{display:flex;justify-content:space-between;border-bottom:1px dotted #ccc;padding:4px 0}
 
-        /* BUTTONS */
-        .submit-btn { width: 100%; padding: 16px; background-color: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-view { background: #1a237e; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; }
-
-        /* DASHBOARD TABLE */
-        .dash-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-        .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        .dash-table th { background-color: #f8f9fa; color: #333; font-weight: bold; }
-        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .status-eligible { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
-        .status-declined { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-
-        /* PDF MODAL */
-        #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .report-paper { background: white; width: 850px; margin: 0 auto; padding: 40px; border-radius: 8px; font-family: Arial, sans-serif; min-height: 80vh; position: relative; }
-        .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
-        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #333; font-size: 12px; }
-        .report-table th, .report-table td { border: 1px solid #333; padding: 8px; text-align: center; }
-        .report-table th { background: #f0f0f0; }
-        .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; background: #fafafa; }
-        .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
-        .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
-
-        @media print { 
-            .no-print { display: none !important; } 
-            #fullReportModal { position: absolute; background: white; width: 100%; height: 100%; top:0; left:0; margin:0; padding:0; z-index: 9999; } 
-            .report-paper { width: 100%; max-width: 100%; box-shadow: none; margin: 0; }
-            body > *:not(#fullReportModal) { display: none; }
+        /* CRITICAL PRINT FIX */
+        @media print{
+            body>*{display:none} #pdf{display:block!important;position:absolute;top:0;left:0;width:100%;height:auto;overflow:visible;background:#fff;z-index:9999}
+            .paper{width:100%;max-width:100%;margin:0;padding:20px;box-shadow:none;min-height:auto}
+            .no-print{display:none} table{page-break-inside:auto} tr{page-break-inside:avoid;page-break-after:auto}
         }
     </style>
 </head>
 <body>
-
-    <div class="sidebar">
-        <h2 style="margin-bottom: 40px;">🚀 DSA Portal</h2>
-        <div class="nav-item active" id="nav-app" onclick="switchView('appView')">📄 New Application</div>
-        <div class="nav-item" id="nav-dash" onclick="switchView('dashView')">📊 Dashboard</div>
-        <div class="nav-item" style="margin-top:auto; background:#d32f2f;" onclick="logoutUser()">🚪 Logout</div>
+    <div class="side">
+        <h2 style="margin-bottom:30px">🚀 DSA Portal</h2>
+        <div class="nav active" id="n-app" onclick="view('app')">📄 New Application</div>
+        <div class="nav" id="n-dash" onclick="view('dash')">📊 Dashboard</div>
+        <div class="nav" style="margin-top:auto;background:#c62828" onclick="logout()">🚪 Logout</div>
     </div>
 
-    <div class="main-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 id="welcomeMsg">Welcome</h2>
-            <div style="color:#1a237e; font-weight:bold;">Shield: <span id="policyCount">Loading...</span> Active</div>
+    <div class="main">
+        <div id="v-app">
+            <div class="card"><h3>1. Business</h3><div class="grid">
+                <input class="d" data-l="Business Name" placeholder="Business Name">
+                <input type="number" class="d" data-l="Contact" placeholder="Contact">
+                <input type="number" class="d" data-l="Vintage" placeholder="Vintage (Yrs)">
+                <input type="number" class="d" data-l="Turnover" placeholder="Turnover (Lakhs)">
+                <select class="d" data-l="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select>
+                <select class="d" data-l="Sector" id="sec"><option>Trading</option><option>Manufacturing</option><option>Service</option></select>
+                <select class="d" data-l="Premises"><option>Owned</option><option>Rented</option></select>
+            </div></div>
+
+            <div class="card"><h3>2. Financials</h3><div class="grid">
+                <input type="number" class="d" data-l="ABB" placeholder="Avg Bank Bal">
+                <input type="number" class="d" data-l="Monthly EMI" placeholder="Monthly EMI">
+                <div style="grid-column:span 2"><div class="b-opts"><span class="b-opt" onclick="this.classList.toggle('selected')">SA</span><span class="b-opt" onclick="this.classList.toggle('selected')">CA</span><span class="b-opt" onclick="this.classList.toggle('selected')">OD</span><span class="b-opt" onclick="this.classList.toggle('selected')">CC</span></div></div>
+                <select class="d" data-l="GST Reg"><option value="No">GST: No</option><option value="Yes">GST: Yes</option></select>
+                <select class="d" data-l="ITR Filed"><option value="No">ITR: No</option><option value="Yes">ITR: Yes</option></select>
+            </div></div>
+
+            <div class="card"><h3>3. Credit & App</h3><div class="grid">
+                <input type="number" class="d" data-l="CIBIL" placeholder="CIBIL">
+                <input type="number" class="d" data-l="Age" placeholder="Age">
+                <select class="d" data-l="Co-App"><option value="No">Co-App: No</option><option value="Yes">Co-App: Yes</option></select>
+                <select class="d" data-l="Own House"><option value="No">House: No</option><option value="Yes">House: Yes</option></select>
+                <input type="number" class="d" data-l="Req Amount" placeholder="Req Amount (Lakhs)">
+                <input class="d" data-l="Purpose" placeholder="Purpose">
+                <input type="number" class="d" data-l="Pincode" placeholder="Pincode" oninput="pin(this.value)">
+                <input class="d auto" data-l="City" id="city" readonly><input class="d auto" data-l="State" id="state" readonly>
+            </div></div>
+
+            <button class="btn btn-g" onclick="check()">⚡ Check Eligibility</button>
+            <button class="btn btn-b" id="pdfBtn" onclick="printPDF()">📄 Download Offer Letter</button>
+            <div id="res" style="margin-top:15px;font-weight:bold;font-size:18px"></div>
         </div>
 
-        <div id="appView">
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">1. Business Details</div><div class="accordion-body open"><div class="form-grid">
-                <div><label>Name</label><input type="text" class="pdf-data" data-label="Business Name" id="bizName"></div>
-                <div><label>Contact</label><input type="number" class="pdf-data" data-label="Contact"></div>
-                <div><label>Vintage (Yrs)</label><input type="number" class="pdf-data" data-label="Vintage"></div>
-                <div><label>Turnover (Lakhs)</label><input type="number" class="pdf-data" data-label="Turnover" placeholder="e.g. 120"></div>
-                <div><label>Entity</label><select class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
-                <div><label>Sector</label><select class="pdf-data" data-label="Sector" id="sector"><option value="Trading">Trading (7%)</option><option value="Manufacturing">Manufacturing (9%)</option><option value="Service">Service (11%)</option></select></div>
-                <div><label>Premises</label><select class="pdf-data" data-label="Premises"><option>Owned</option><option>Rented</option></select></div>
-            </div></div></div>
-
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">2. Banking & Docs</div><div class="accordion-body"><div class="form-grid">
-                <div><label>ABB (Avg Balance)</label><input type="number" class="pdf-data" data-label="ABB"></div>
-                <div style="grid-column: span 2;">
-                    <label>Bank Statements Available</label>
-                    <div class="bank-options">
-                        <span class="bank-opt" onclick="this.classList.toggle('selected')">SA</span>
-                        <span class="bank-opt" onclick="this.classList.toggle('selected')">CA</span>
-                        <span class="bank-opt" onclick="this.classList.toggle('selected')">OD</span>
-                        <span class="bank-opt" onclick="this.classList.toggle('selected')">CC</span>
-                    </div>
-                </div>
-                <div><label>GST Registered?</label><select class="pdf-data" data-label="GST Reg" onchange="toggleField('gstBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="gstBox" class="hidden-field"><label>GST Turnover</label><input type="number" class="pdf-data" data-label="GST Turnover"></div>
-                <div><label>ITR Filed?</label><select class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="itrBox" class="hidden-field"><label>ITR Income</label><input type="number" class="pdf-data" data-label="ITR Income"></div>
-            </div></div></div>
-
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">3. Credit Profile</div><div class="accordion-body"><div class="form-grid">
-                <div><label>CIBIL Score</label><input type="number" class="pdf-data" data-label="CIBIL"></div>
-                <div><label>Active Loans</label><input type="number" class="pdf-data" data-label="Active Loans"></div>
-                <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
-                <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
-                <div><label>Loans (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
-                <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
-            </div></div></div>
-
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">4. Applicant Details</div><div class="accordion-body"><div class="form-grid">
-                <div><label>Age</label><input type="number" class="pdf-data" data-label="Age"></div>
-                <div><label>Gender</label><select class="pdf-data" data-label="Gender"><option>Male</option><option>Female</option></select></div>
-                <div><label>Co-Applicant?</label><select class="pdf-data" data-label="Co-App" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="coBox" class="hidden-field"><label>Co-App Age</label><input type="number" class="pdf-data" data-label="Co-App Age"></div>
-                <div><label>House?</label><select class="pdf-data" data-label="Own House" onchange="toggleField('houseBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
-                
-                <div id="houseBox" class="hidden-field" style="display:none; grid-column: span 3; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-                    <div><label>Pincode (Type 6 Digits)</label><input type="number" class="pdf-data" data-label="Pincode" id="pincodeInput" oninput="checkPincode()"></div>
-                    <div><label>City</label><input type="text" class="pdf-data auto-filled" data-label="City" id="cityField"></div>
-                    <div><label>State</label><input type="text" class="pdf-data auto-filled" data-label="State" id="stateField"></div>
-                </div>
-            </div></div></div>
-
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">5. Requirement</div><div class="accordion-body"><div class="form-grid">
-                <div><label>Req Amount (Lakhs)</label><input type="number" class="pdf-data" data-label="Req Amount"></div>
-                <div><label>Purpose</label><input type="text" class="pdf-data" data-label="Purpose"></div>
-            </div></div></div>
-
-            <button class="submit-btn" onclick="runEligibilityEngine()">⚡ Check Eligibility</button>
-            <button class="report-btn" id="dlReportBtn" onclick="generateFullPDF()">📄 Download Offer Letter</button>
-            <div id="resultsArea" style="margin-top:20px;"></div>
-        </div>
-
-        <div id="dashView" style="display:none;">
-            <h2>DSA Dashboard</h2>
-            <div style="background:white;padding:20px;border-radius:10px;margin-bottom:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <h3>📂 Application History</h3>
-                <table class="dash-table" id="historyTable"><thead><tr><th>Date</th><th>Customer</th><th>Status</th><th>View</th></tr></thead><tbody></tbody></table>
-            </div>
-            <div style="background:white;padding:20px;border-radius:10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <h3>🔐 Change Password</h3><input type="password" id="new_pass" placeholder="New Password" style="width:100%;margin-bottom:10px;padding:10px;"><button class="submit-btn" style="margin-top:0;width:auto;" onclick="updateCredentials()">Update</button>
-            </div>
+        <div id="v-dash" class="hide">
+            <div class="card"><h3>History</h3><table style="width:100%;border-collapse:collapse" id="hist"></table></div>
         </div>
     </div>
 
-    <div id="fullReportModal"><div class="report-paper">
-        <div class="no-print" style="text-align:right; margin-bottom:15px;">
-            <button onclick="document.getElementById('fullReportModal').style.display='none'" style="padding:8px 16px; cursor:pointer;">Close</button>
-            <button onclick="window.print()" style="padding:8px 16px; background:#0288d1; color:white; border:none; cursor:pointer; margin-left:10px;">Print / Save PDF</button>
+    <div id="pdf"><div class="paper">
+        <div class="no-print" style="text-align:right">
+            <button onclick="document.getElementById('pdf').style.display='none'">Close</button>
+            <button onclick="window.print()" style="background:#1a237e;color:white;border:none;padding:5px 10px;margin-left:10px">Print</button>
         </div>
-        <div class="report-header">
-            <h2>PROVISIONAL OFFER LETTER</h2>
-            <h3>Customer: <span id="pdfCustomerName"></span></h3>
-        </div>
-        <div class="report-section-title" style="font-weight:bold; margin-bottom:10px;">APPLICATION DETAILS</div>
-        <div id="pdfAppDetails" class="details-grid"></div>
-        <br>
-        <div class="report-section-title" style="font-weight:bold; margin-bottom:10px;">ELIGIBILITY SUMMARY</div>
-        <table class="report-table">
-            <thead><tr><th>BANK</th><th>PROGRAM</th><th>LOAN AMOUNT</th><th>TENURE</th><th>ROI</th></tr></thead>
-            <tbody id="pdfEligibleTable"></tbody>
-        </table>
-        <br>
-        <div class="report-section-title" style="font-weight:bold; margin-bottom:10px;">DECLINED BANKS</div>
-        <table class="report-table">
-            <thead><tr><th>BANK</th><th>REASON</th></tr></thead>
-            <tbody id="pdfRejectTable"></tbody>
-        </table>
+        <div class="p-head"><div class="p-title">PROVISIONAL OFFER LETTER</div><div id="pDate"></div></div>
+        <div style="font-weight:bold;background:#eee;padding:5px;margin-bottom:10px">APPLICATION DETAILS</div>
+        <div id="pDet" class="p-grid"></div>
+        <div style="font-weight:bold;background:#eee;padding:5px;margin-bottom:10px">ELIGIBILITY</div>
+        <table class="p-tbl"><thead><tr><th>Bank</th><th>Program</th><th>Amount</th><th>Tenure</th><th>ROI</th></tr></thead><tbody id="pElig"></tbody></table>
+        <br><div style="font-weight:bold;background:#eee;padding:5px;margin-bottom:10px">DECLINED</div>
+        <table class="p-tbl"><thead><tr><th>Bank</th><th>Reason</th></tr></thead><tbody id="pRej"></tbody></table>
     </div></div>
 
-    <script>
-        // --- 1. FIREBASE CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
-            authDomain: "credir-engine-new.firebaseapp.com",
-            projectId: "credir-engine-new",
-            storageBucket: "credir-engine-new.firebasestorage.app",
-            messagingSenderId: "249073295308",
-            appId: "1:249073295308:web:e3db899190a4d2506d0769",
-            measurementId: "G-YBXMM1J129"
-        };
+<script>
+    const cfg={apiKey:"AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",projectId:"credir-engine-new",appId:"1:249073295308:web:e3db899190a4d2506d0769"};
+    try{firebase.initializeApp(cfg);var db=firebase.firestore()}catch(e){}
+    
+    let user=JSON.parse(sessionStorage.getItem('active_dsa_user'));
+    if(!user) window.location.href="index.html";
 
-        let db;
-        try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.error("FB Error:",e); }
+    let gData={}, gRes={};
 
-        // --- 2. AUTH & INIT ---
-        const user = JSON.parse(sessionStorage.getItem('active_dsa_user'));
-        if(!user) window.location.href = "index.html";
-        document.getElementById('welcomeMsg').innerText = `Welcome, ${user.name}`;
+    function view(v){
+        document.querySelectorAll('.nav').forEach(e=>e.classList.remove('active'));
+        document.getElementById('n-'+v).classList.add('active');
+        document.getElementById('v-app').style.display=v=='app'?'block':'none';
+        document.getElementById('v-dash').style.display=v=='dash'?'block':'none';
+        if(v=='dash') loadH();
+    }
+    function logout(){sessionStorage.clear();location.reload()}
+    async function pin(p){if(p.length==6){try{let r=await fetch(`https://api.postalpincode.in/pincode/${p}`);let d=await r.json();if(d[0].Status=='Success'){document.getElementById('city').value=d[0].PostOffice[0].District;document.getElementById('state').value=d[0].PostOffice[0].State;}}catch(e){}}}
 
-        if(db) db.collection('policies').get().then(snap => document.getElementById('policyCount').innerText = snap.size);
+    async function check(){
+        gData={}; document.querySelectorAll('.d').forEach(e=>gData[e.getAttribute('data-l')]=e.value);
+        let stmts=[]; document.querySelectorAll('.b-opt.selected').forEach(e=>stmts.push(e.innerText));
+        gData['Bank Statements']=stmts.join(', ');
 
-        // --- 3. GLOBAL VARS FOR PDF ---
-        window.historyData = [];
-        window.latestResults = { eligible: [], declined: [] };
-        window.latestData = {};
+        let turn=parseFloat(gData['Turnover']||0)*100000;
+        let emi=parseFloat(gData['Monthly EMI']||0);
+        let mar=document.getElementById('sec').value=='Trading'?0.07:0.10;
+        let net=(turn/12*mar)-emi;
 
-        function switchView(v){
-            document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
-            if(v==='appView') document.getElementById('nav-app').classList.add('active');
-            if(v==='dashView') document.getElementById('nav-dash').classList.add('active');
+        let pols=[]; if(db){let s=await db.collection('policies').get(); pols=s.docs.map(d=>d.data());}
+        let elig=[], decl=[];
+
+        pols.forEach(p=>{
+            let pass=true, r=[];
+            if(parseFloat(gData['Vintage'])<p.minVin) { pass=false; r.push(`Vintage<${p.minVin}`); }
+            if((turn/100000)<p.minTurn) { pass=false; r.push(`Turnover<${p.minTurn}L`); }
             
-            document.getElementById('appView').style.display = v==='appView'?'block':'none';
-            document.getElementById('dashView').style.display = v==='dashView'?'block':'none';
-            
-            if(v==='dashView') loadHistory();
-        }
+            if(pass){
+                let amt=Math.min((p.loanMax||50)*100000, net*(p.tenMax||36));
+                amt=Math.max(amt, (p.loanMin||1)*100000);
+                elig.push({b:p.bankName, p:p.prodType, a:(amt/100000).toFixed(2), t:p.tenMax, r:p.roiMin});
+            } else decl.push({b:p.bankName, r:r.join(', ')});
+        });
+
+        gRes={elig, decl};
+        let txt = elig.length ? `<span style="color:green">Eligible (${elig.length} Banks)</span>` : `<span style="color:red">Declined</span>`;
+        document.getElementById('res').innerHTML=txt;
+        document.getElementById('pdfBtn').style.display='block';
         
-        function toggle(el){ el.nextElementSibling.classList.toggle('open'); }
-        function toggleField(id,s){ 
-            const el = document.getElementById(id);
-            if(id === 'houseBox' && s) el.style.display = 'grid'; 
-            else el.style.display=s?'block':'none'; 
+        if(db) db.collection('applications').add({date:new Date().toLocaleDateString(), customer:gData['Business Name'], status:elig.length?'Eligible':'Declined', dsaUsername:user.user, data:gData, results:gRes});
+    }
+
+    function printPDF(){
+        if(!gData['Business Name']) return alert("No Data");
+        document.getElementById('pDate').innerText="Date: "+new Date().toLocaleDateString();
+        
+        // FORMAT DATA FOR PDF
+        let h=""; 
+        for(let k in gData){
+            let v = gData[k];
+            if(k.includes('Turnover')||k.includes('Amount')) v = `₹ ${v} Lakhs`; // Fixed: Added ₹ and Lakhs
+            if(k.includes('EMI')||k.includes('ABB')) v = `₹ ${parseFloat(v).toLocaleString('en-IN')}`; // Fixed: Added Commas
+            if(v && k!=='DSA Username') h+=`<div class="p-row"><span>${k}</span><b>${v}</b></div>`;
         }
-        function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
+        document.getElementById('pDet').innerHTML=h;
 
-        // --- 4. PINCODE AUTO-FILL ---
-        async function checkPincode() {
-            const pin = document.getElementById('pincodeInput').value;
-            if(pin.length === 6) {
-                const cF = document.getElementById('cityField');
-                const sF = document.getElementById('stateField');
-                cF.value = "Fetching..."; sF.value = "...";
-                
-                try {
-                    const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
-                    const data = await res.json();
-                    if(data[0].Status === "Success") {
-                        const info = data[0].PostOffice[0];
-                        cF.value = info.District;
-                        sF.value = info.State;
-                    } else {
-                        cF.value = "Not Found"; sF.value = "";
-                        // Allow manual entry if not found
-                        cF.removeAttribute('readonly'); sF.removeAttribute('readonly');
-                        cF.classList.remove('auto-filled'); sF.classList.remove('auto-filled');
-                    }
-                } catch(e) { 
-                    cF.value = ""; sF.value = "";
-                    cF.removeAttribute('readonly'); sF.removeAttribute('readonly');
-                }
-            }
-        }
+        // TABLES
+        let et=""; 
+        if(gRes.elig.length) gRes.elig.forEach(x=>et+=`<tr><td>${x.b}</td><td>${x.p}</td><td>₹ ${x.a} Lakhs</td><td>${x.t} m</td><td>${x.r}%</td></tr>`);
+        else et="<tr><td colspan='5'>No Eligible Banks</td></tr>";
+        document.getElementById('pElig').innerHTML=et;
 
-        // --- 5. CALCULATION ENGINE ---
-        function calculatePV(rate, nper, pmt) {
-            if (rate === 0) return pmt * nper;
-            return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
-        }
+        let rt="";
+        if(gRes.decl.length) gRes.decl.forEach(x=>rt+=`<tr><td>${x.b}</td><td>${x.r}</td></tr>`);
+        else rt="<tr><td colspan='2'>No Rejections</td></tr>";
+        document.getElementById('pRej').innerHTML=rt;
 
-        async function runEligibilityEngine() {
-            let data = {};
-            document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
-            
-            // Clean Turnover Input (remove commas)
-            let rawTurn = data['Turnover'] || "0";
-            rawTurn = rawTurn.replace(/,/g, '');
-            const turn = parseFloat(rawTurn) * 100000; // Convert Lakhs to Absolute
+        document.getElementById('pdf').style.display='block';
+    }
 
-            let bankStmts = [];
-            document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
-            data['Bank Statements'] = bankStmts.join(', ');
-            data['DSA Name'] = user.name; 
-            data['DSA Username'] = user.user;
-
-            const sectorVal = document.getElementById('sector').value.split(' ')[0];
-            const margins = { "Trading": 0.07, "Manufacturing": 0.09, "Service": 0.11 };
-            const margin = margins[sectorVal] || 0.07;
-
-            const abb = parseFloat(data['ABB']) || 0;
-            const cibil = parseFloat(data['CIBIL']) || 0;
-            const emi = parseFloat(data['Monthly EMI']) || 0;
-            
-            const monthlyProfit = (turn / 12) * margin;
-            const obligations = Math.max(0, emi); 
-            const netIncome = Math.max(0, monthlyProfit - obligations);
-
-            let policies = [];
-            if(db) { const snap = await db.collection("policies").get(); policies = snap.docs.map(d => d.data()); }
-            
-            let eligible = [], declined = [];
-
-            if(policies.length === 0) {
-                alert("No Policies loaded. Please ask Admin to 'Load Defaults'.");
-                return;
-            }
-
-            policies.forEach(p => {
-                let pass = true, reasons = [];
-                // GATE CHECKS
-                if (parseFloat(data['Vintage']) < (p.minVin||0)) { pass=false; reasons.push(`Vintage < ${p.minVin}`); }
-                if ((turn/100000) < (p.minTurn||0)) { pass=false; reasons.push(`Turnover < ${p.minTurn}L`); }
-                if (abb < (p.abbMin||0)) { pass=false; reasons.push(`ABB < ${p.abbMin}`); }
-                if (p.gstReq==='Yes' && data['GST Reg']!=='Yes') { pass=false; reasons.push("GST Required"); }
-                if (p.itrReq==='Yes' && data['ITR Filed']!=='Yes') { pass=false; reasons.push("ITR Required"); }
-                if (cibil < (p.minCibil||0)) { pass=false; reasons.push(`CIBIL < ${p.minCibil}`); }
-                if (parseFloat(data['Age']) < (p.ageMin||18)) { pass=false; reasons.push(`Age < ${p.ageMin}`); }
-
-                if (pass) {
-                    const r = (p.roiMin / 100) / 12;
-                    const n = p.tenMax || 36;
-                    
-                    let dscrAmt = calculatePV(r, n, netIncome);
-                    let abbAmt = calculatePV(r, n, abb);
-                    let finalAmt = Math.max(dscrAmt, abbAmt);
-                    let policyMax = (p.loanMax || 50) * 100000;
-                    let policyMin = (p.loanMin || 1) * 100000;
-                    
-                    finalAmt = Math.min(finalAmt, policyMax);
-
-                    if (finalAmt >= policyMin) {
-                        eligible.push({ bank: p.bankName, prog: p.prodType, amt: (finalAmt / 100000).toFixed(2), ten: n, roi: `${p.roiMin}-${p.roiMax}%` });
-                    } else {
-                        declined.push({ bank: p.bankName, reason: `Eligible Amount (${(finalAmt/100000).toFixed(2)}L) < Bank Min (${p.loanMin}L)` });
-                    }
-                } else {
-                    declined.push({ bank: p.bankName, reason: reasons.join(", ") });
-                }
+    async function loadH(){
+        let t=document.getElementById('hist'); t.innerHTML="Loading...";
+        if(db){
+            let s=await db.collection('applications').where('dsaUsername','==',user.user).orderBy('date','desc').get();
+            t.innerHTML=`<tr style="background:#eee;text-align:left"><th>Date</th><th>Customer</th><th>Status</th><th>Action</th></tr>`;
+            s.forEach(d=>{
+                let v=d.data();
+                t.insertAdjacentHTML('beforeend', `<tr><td>${v.date}</td><td>${v.customer}</td><td>${v.status}</td><td><button onclick='loadS(${JSON.stringify(v)})'>View</button></td></tr>`);
             });
-
-            const results = {eligible, declined};
-            const status = eligible.length > 0 ? "Eligible" : "Declined";
-            document.getElementById('resultsArea').innerHTML = `<h3 style="color:${status==='Eligible'?'green':'red'}">${status} (${eligible.length} Banks)</h3>`;
-            
-            // SAVE GLOBALS FOR PDF
-            window.latestResults = results; 
-            window.latestData = data;
-            
-            if(db) db.collection("applications").add({
-                date: new Date().toLocaleDateString(), 
-                customer: data['Business Name'], 
-                dsaName: user.name, 
-                dsaUsername: user.user, 
-                status: status, 
-                data: data, 
-                results: results
-            });
-            
-            document.getElementById('dlReportBtn').style.display='block';
         }
-
-        // --- 6. PDF GENERATOR (FAIL-SAFE) ---
-        function generateFullPDF() {
-            // Retrieve data
-            const res = window.latestResults;
-            const data = window.latestData;
-            
-            // Check if data is available
-            if (!data || Object.keys(data).length === 0) {
-                // If clicked from empty state, check input fields as fallback
-                const nameInput = document.getElementById('bizName').value;
-                if(nameInput) {
-                    alert("Please click 'Check Eligibility' first to calculate results.");
-                } else {
-                    alert("No data found. Please Run Eligibility or Select from Dashboard.");
-                }
-                return;
-            }
-
-            document.getElementById('pdfCustomerName').innerText = data['Business Name'] || "Valued Customer";
-            
-            // Build Details Grid
-            let detailsHtml = "";
-            for(const [key, val] of Object.entries(data)) {
-                if(val && key !== 'DSA Username') {
-                    detailsHtml += `<div class="detail-item"><strong>${key}:</strong> ${val}</div>`;
-                }
-            }
-            document.getElementById('pdfAppDetails').innerHTML = detailsHtml;
-            
-            // Build Eligible Table
-            const eTable = document.getElementById('pdfEligibleTable');
-            if (res && res.eligible && res.eligible.length > 0) {
-                eTable.innerHTML = res.eligible.map(i => 
-                    `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹${i.amt} Lakhs</td><td>${i.ten} m</td><td>${i.roi}</td></tr>`
-                ).join('');
-            } else {
-                eTable.innerHTML = `<tr><td colspan='5' style="padding:20px;">No Eligible Banks Found based on current criteria.</td></tr>`;
-            }
-            
-            // Build Reject Table
-            const rTable = document.getElementById('pdfRejectTable');
-            if (res && res.declined && res.declined.length > 0) {
-                rTable.innerHTML = res.declined.map(i => 
-                    `<tr><td>${i.bank}</td><td>${i.reason}</td></tr>`
-                ).join('');
-            } else {
-                rTable.innerHTML = `<tr><td colspan='2'>No Rejections</td></tr>`;
-            }
-            
-            document.getElementById('fullReportModal').style.display='block';
-        }
-
-        // --- 7. DASHBOARD VIEW ---
-        async function loadHistory() {
-            const t = document.querySelector('#historyTable tbody'); 
-            t.innerHTML="<tr><td colspan='4'>Loading history...</td></tr>";
-            
-            window.historyData = []; // Reset local cache
-            
-            if(db) {
-                try {
-                    const snap = await db.collection("applications")
-                                         .where("dsaUsername", "==", user.user)
-                                         .orderBy("date", "desc") // Optional sorting
-                                         .get();
-                                         
-                    if(snap.empty) {
-                        t.innerHTML = "<tr><td colspan='4'>No applications found.</td></tr>";
-                        return;
-                    }
-
-                    t.innerHTML = "";
-                    snap.docs.forEach((doc, index) => {
-                        const v = doc.data();
-                        window.historyData.push(v); // Push to global array
-                        t.innerHTML += `<tr>
-                            <td>${v.date}</td>
-                            <td>${v.customer}</td>
-                            <td><span class="status-badge ${v.status==='Eligible'?'status-eligible':'status-declined'}">${v.status}</span></td>
-                            <td><button class="btn-view" onclick="viewHistory(${index})">View</button></td>
-                        </tr>`;
-                    });
-                } catch(e) {
-                    console.log("History Load Error:", e);
-                    // Fallback for indexing error if composite index missing
-                    const snap = await db.collection("applications").where("dsaUsername", "==", user.user).get();
-                    t.innerHTML = "";
-                    snap.docs.forEach((doc, index) => {
-                        const v = doc.data();
-                        window.historyData.push(v);
-                        t.innerHTML += `<tr>
-                            <td>${v.date}</td>
-                            <td>${v.customer}</td>
-                            <td><span class="status-badge ${v.status==='Eligible'?'status-eligible':'status-declined'}">${v.status}</span></td>
-                            <td><button class="btn-view" onclick="viewHistory(${index})">View</button></td>
-                        </tr>`;
-                    });
-                }
-            }
-        }
-
-        // Function called by View button
-        window.viewHistory = (index) => {
-            const item = window.historyData[index];
-            if(item) {
-                window.latestData = item.data;
-                window.latestResults = item.results;
-                generateFullPDF(); // Trigger PDF modal immediately
-            } else {
-                alert("Error loading application data.");
-            }
-        };
-
-        async function updateCredentials() {
-            const p = document.getElementById('new_pass').value;
-            if(!p) return alert("Enter password");
-            if(db) {
-                const snap = await db.collection("dsa_users").where("user", "==", user.user).get();
-                if(!snap.empty) { snap.docs[0].ref.update({ pass: p }); alert("Updated!"); logoutUser(); }
-            }
-        }
-    </script>
+    }
+    function loadS(v){ gData=v.data; gRes=v.results; printPDF(); }
+</script>
 </body>
 </html>
