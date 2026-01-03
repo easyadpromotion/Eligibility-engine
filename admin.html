@@ -143,25 +143,53 @@
 
 <div id="policyModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header"><h3 id="policyModalTitle">Bank New Policy</h3><span style="cursor:pointer; font-size:20px;" onclick="closeModal('policy')">✖</span></div>
+        <div class="modal-header">
+            <h3 id="policyModalTitle">Bank New Policy</h3>
+            <span style="cursor:pointer; font-size:20px;" onclick="closeModal('policy')">✖</span>
+        </div>
+
         <div class="modal-body">
             <form id="policyForm">
                 <input type="hidden" id="p_id">
                 
                 <div class="sec-title">SECTION A - BASIC DETAILS</div>
                 <div class="sec-content">
-                    <div class="form-row"><div><label>Bank Name</label><input id="bankName"></div><div><label>Product Type</label><select id="prodType"><option>STBL</option><option>HTBL</option><option>OD</option><option>TERM</option><option>NBFC</option><option>UBL</option></select></div></div>
-                    <div class="form-row"><div><label>Loan Min (L)</label><input type="number" id="loanMin"></div><div><label>Loan Max (L)</label><input type="number" id="loanMax"></div></div>
-                    <div class="form-row"><div><label>Tenure Min (M)</label><input type="number" id="tenMin"></div><div><label>Tenure Max (M)</label><input type="number" id="tenMax"></div></div>
-                    <div class="form-row"><div><label>ROI Min (%)</label><input type="number" step="0.1" id="roiMin"></div><div><label>ROI Max (%)</label><input type="number" step="0.1" id="roiMax"></div></div>
-                    <div class="form-row"><div><label>PF Min (%)</label><input type="number" step="0.1" id="pfMin"></div><div><label>PF Max (%)</label><input type="number" step="0.1" id="pfMax"></div></div>
+                    <div class="form-row">
+                        <div><label>Bank Name</label><input id="bankName"></div>
+                        <div><label>Product Type</label><select id="prodType"><option>STBL</option><option>HTBL</option><option>OD</option><option>TERM</option><option>NBFC</option><option>UBL</option></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Loan Min (L)</label><input type="number" id="loanMin"></div>
+                        <div><label>Loan Max (L)</label><input type="number" id="loanMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Tenure Min (M)</label><input type="number" id="tenMin"></div>
+                        <div><label>Tenure Max (M)</label><input type="number" id="tenMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>ROI Min (%)</label><input type="number" step="0.1" id="roiMin"></div>
+                        <div><label>ROI Max (%)</label><input type="number" step="0.1" id="roiMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>PF Min (%)</label><input type="number" step="0.1" id="pfMin"></div>
+                        <div><label>PF Max (%)</label><input type="number" step="0.1" id="pfMax"></div>
+                    </div>
                 </div>
 
                 <div class="sec-title">SECTION B - FINANCIAL GATES</div>
                 <div class="sec-content">
-                    <div class="form-row"><div><label>Min Vintage (Yrs)</label><input type="number" id="minVin"></div><div><label>Min Turnover (L)</label><input type="number" id="minTurn"></div></div>
-                    <div class="form-row"><div><label>Min ABB (Amt)</label><input type="number" id="abbMin"></div><div><label>Min CIBIL</label><input type="number" id="minCibil"></div></div>
-                    <div class="form-row"><div><label>ITR Required?</label><select id="itrReq"><option>No</option><option>Yes</option></select></div><div><label>GST Required?</label><select id="gstReq"><option>No</option><option>Yes</option></select></div></div>
+                    <div class="form-row">
+                        <div><label>Min Vintage (Yrs)</label><input type="number" id="minVin"></div>
+                        <div><label>Min Turnover (L)</label><input type="number" id="minTurn"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Min ABB (Amt)</label><input type="number" id="abbMin"></div>
+                        <div><label>Min CIBIL</label><input type="number" id="minCibil"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>ITR Required?</label><select id="itrReq"><option>No</option><option>Yes</option></select></div>
+                        <div><label>GST Required?</label><select id="gstReq"><option>No</option><option>Yes</option></select></div>
+                    </div>
                     <label>Accepted Bank Statements:</label>
                     <div style="display:flex; gap:10px; margin-top:5px;">
                         <label><input type="checkbox" class="bank-chk" value="SA"> SA</label>
@@ -173,17 +201,30 @@
 
                 <div class="sec-title">SECTION C - APPLICANT & PROPERTY</div>
                 <div class="sec-content">
-                    <div class="form-row"><div><label>Min Age</label><input type="number" id="ageMin"></div><div><label>Max Age</label><input type="number" id="ageMax"></div></div>
-                    <div class="form-row"><div><label>Co-Applicant Req?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
-                    <div id="coBox" class="hidden-field"><input type="number" id="coAgeMin" placeholder="Min Age"><input type="number" id="coAgeMax" placeholder="Max Age" style="margin-top:5px;"></div></div>
-                    <div class="form-row"><div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseGeoBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
-                    <div id="houseGeoBox" class="hidden-field"><label>House Geo Scope</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div></div>
+                    <div class="form-row">
+                        <div><label>Min Age</label><input type="number" id="ageMin"></div>
+                        <div><label>Max Age</label><input type="number" id="ageMax"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Co-Applicant Req?</label><select id="coAppReq" onchange="toggleField('coBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div id="coBox" class="hidden-field"><input type="number" id="coAgeMin" placeholder="Min Age"><input type="number" id="coAgeMax" placeholder="Max Age" style="margin-top:5px;"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Own House Req?</label><select id="houseReq" onchange="toggleField('houseGeoBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div>
+                        <div id="houseGeoBox" class="hidden-field"><label>House Geo Scope</label><select id="houseGeo"><option>Local</option><option>Same State</option><option>Pan India</option></select></div>
+                    </div>
                 </div>
 
                 <div class="sec-title">SECTION D - CREDIT LIMITS</div>
                 <div class="sec-content">
-                    <div class="form-row"><div><label>Max Unsecured Loans</label><input type="number" id="maxUnsec"></div><div><label>Max Active Loans</label><input type="number" id="maxActive"></div></div>
-                    <div class="form-row"><div><label>Max Enquiries (3m)</label><input type="number" id="maxEnq"></div><div><label>Loans Taken (6m)</label><input type="number" id="loans6m"></div></div>
+                    <div class="form-row">
+                        <div><label>Max Unsecured Loans</label><input type="number" id="maxUnsec"></div>
+                        <div><label>Max Active Loans</label><input type="number" id="maxActive"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Max Enquiries (3m)</label><input type="number" id="maxEnq"></div>
+                        <div><label>Loans Taken (6m)</label><input type="number" id="loans6m"></div>
+                    </div>
                 </div>
 
                 <div class="sec-title">SECTION E - PROGRAMS</div>
@@ -192,48 +233,31 @@
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
                 </div>
 
-               <div class="sec-title">SECTION F - GEOGRAPHY, CONDITIONS & REMARKS</div>
-<div class="sec-content">
-    <div class="form-row">
-        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
-        <div>
-            <label>Pincode Based?</label>
-            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
-                <option>No</option>
-                <option>Yes</option>
-            </select>
-        </div>
-    </div>
-
-    <div id="pinOptionBox" class="hidden-field">
-        <label>Pincode Scope</label>
-        <select id="pinScope" onchange="toggleField('pinListBox', this.value === 'Specific List')">
-            <option>Pan India</option>
-            <option>Specific List</option>
-        </select>
-
-        <div id="pinListBox" style="display:none; margin-top:10px;">
-            <label>Paste Allowed Pincodes (Comma Separated or from Excel)</label>
-            <textarea id="pinList" rows="5" placeholder="Example: 500001, 500002, 500003..." style="width:100%; border:1px solid #ccc; background:#fff;"></textarea>
-            <small style="color:#666;">* You can copy-paste a column from Excel directly here.</small>
-        </div>
-    </div>
-
-    <div id="condContainer" style="margin-top:15px;"></div>
-    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
-
-    <div style="margin-top:15px;">
-        <label>Internal Remarks</label>
-        <textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea>
-    </div>
-</div>
+                <div class="sec-title">SECTION F - GEOGRAPHY, CONDITIONS & REMARKS</div>
+                <div class="sec-content">
+                    <div class="form-row">
+                        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
+                        <div>
+                            <label>Pincode Based?</label>
+                            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
+                                <option>No</option>
+                                <option>Yes</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <div id="pinOptionBox" class="hidden-field">
                         <label>Pincode Scope</label>
-                        <select id="pinScope">
+                        <select id="pinScope" onchange="toggleField('pinListBox', this.value === 'Specific List')">
                             <option>Pan India</option>
                             <option>Specific List</option>
                         </select>
+
+                        <div id="pinListBox" style="display:none; margin-top:10px;">
+                            <label>Paste Allowed Pincodes (Comma Separated or from Excel)</label>
+                            <textarea id="pinList" rows="5" placeholder="Example: 500001, 500002, 500003..." style="width:100%; border:1px solid #ccc; background:#fff;"></textarea>
+                            <small style="color:#666;">* You can copy-paste a column from Excel directly here.</small>
+                        </div>
                     </div>
 
                     <div id="condContainer" style="margin-top:15px;"></div>
@@ -246,10 +270,13 @@
                 </div>
             </form>
         </div>
-        <div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">Save Policy</button></div>
+
+        <div class="modal-footer">
+            <button class="btn btn-del" onclick="closeModal('policy')">Cancel</button>
+            <button class="btn btn-add" onclick="savePolicy()">Save Policy</button>
+        </div>
     </div>
 </div>
-
 <div id="userModal" class="modal">
     <div class="modal-content" style="width:500px;height:auto;">
         <div class="modal-header"><h3>User Editor</h3><span onclick="closeModal('user')">✖</span></div>
@@ -612,5 +639,6 @@ toggleField('pinListBox', p.pinScope === 'Specific List');
 </script>
 </body>
 </html>
+
 
 
