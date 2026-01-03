@@ -312,69 +312,79 @@
         }
 
         // 2. The Check Function (Triggered by onkeyup)
-        function checkBusPincodeStatus() {
-            const pinInput = document.getElementById('bPincode').value;
-            const statusField = document.getElementById('bPinStatus');
+        // --- UPDATED PINCODE CHECKER WITH AUTO-RELOAD ---
+
+function checkBusPincodeStatus() {
+    const pinInput = document.getElementById('bPincode').value;
+    const statusField = document.getElementById('bPinStatus');
+    
+    // 1. Reset if incomplete
+    if (pinInput.length !== 6) {
+        statusField.value = "Enter 6 digits...";
+        statusField.style.backgroundColor = "#fff";
+        statusField.style.color = "#333";
+        statusField.style.border = "1px solid #ccc";
+        return;
+    }
+
+    // 2. Safety Check: Are policies loaded?
+    if (!window.allPolicies || window.allPolicies.length === 0) {
+        statusField.value = "Loading Data...";
+        statusField.style.backgroundColor = "#fff3cd"; // Yellow warning
+        
+        // Force reload policies immediately
+        if(db) {
+            db.collection('policies').get().then(snap => {
+                window.allPolicies = [];
+                snap.forEach(doc => window.allPolicies.push(doc.data()));
+                console.log("Policies reloaded:", window.allPolicies.length);
+                
+                // Re-run the check automatically after 1 second
+                setTimeout(checkBusPincodeStatus, 500); 
+            });
+        }
+        return; 
+    }
+
+    // 3. Perform the Check
+    let isListed = false;
+    let matchedBank = "";
+
+    for (let policy of window.allPolicies) {
+        // Scenario A: Pan India (Automatically Listed)
+        if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
+            isListed = true;
+            matchedBank = "Pan India"; 
+            break; 
+        }
+
+        // Scenario B: Specific List
+        if (policy.pinScope === 'Specific List' && policy.pinList) {
+            // Check if our typed pincode exists in their list
+            // Clean the list (trim spaces) just in case
+            let cleanList = policy.pinList.split(',').map(p => p.trim());
             
-            // A. Reset if empty or incomplete
-            if (pinInput.length !== 6) {
-                statusField.value = "Waiting...";
-                statusField.style.backgroundColor = "#fff";
-                statusField.style.color = "#333";
-                return;
-            }
-
-            let isListed = false;
-
-            // B. Check against All Policies
-            if (window.allPolicies.length === 0) {
-                statusField.value = "Loading...";
-                return; 
-            }
-
-            for (let policy of window.allPolicies) {
-                // Scenario 1: Bank accepts Pan India (So it's automatically Listed)
-                if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
-                    isListed = true;
-                    break; 
-                }
-
-                // Scenario 2: Bank has a Specific List
-                if (policy.pinScope === 'Specific List' && policy.pinList) {
-                    // Check if our typed pincode exists in their list
-                    if (policy.pinList.includes(pinInput)) {
-                        isListed = true;
-                        break;
-                    }
-                }
-            }
-
-            // C. Show Result
-            if (isListed) {
-                statusField.value = "Listed";
-                statusField.style.backgroundColor = "#d4edda"; // Green
-                statusField.style.color = "#155724";
-                statusField.style.border = "1px solid #c3e6cb";
-            } else {
-                statusField.value = "Not Listed";
-                statusField.style.backgroundColor = "#f8d7da"; // Red
-                statusField.style.color = "#721c24";
-                statusField.style.border = "1px solid #f5c6cb";
+            if (cleanList.includes(pinInput)) {
+                isListed = true;
+                matchedBank = "Listed";
+                break;
             }
         }
-            const monthlyProfit = (turn / 12) * margin;
-            const obligations = Math.max(0, emi); 
-            const netIncome = Math.max(0, monthlyProfit - obligations);
+    }
 
-            let policies = [];
-            if(db) { const snap = await db.collection("policies").get(); policies = snap.docs.map(d => d.data()); }
-            
-            let eligible = [], declined = [];
-
-            if(policies.length === 0) {
-                alert("No Policies loaded. Please ask Admin to 'Load Defaults'.");
-                return;
-            }
+    // 4. Update UI
+    if (isListed) {
+        statusField.value = "Listed"; // Or use `Listed`
+        statusField.style.backgroundColor = "#d4edda"; // Green
+        statusField.style.color = "#155724";
+        statusField.style.border = "2px solid #28a745";
+    } else {
+        statusField.value = "Not Listed";
+        statusField.style.backgroundColor = "#f8d7da"; // Red
+        statusField.style.color = "#721c24";
+        statusField.style.border = "2px solid #dc3545";
+    }
+}
 
             policies.forEach(p => {
                 let pass = true, reasons = [];
@@ -547,5 +557,6 @@
     </script>
 </body>
 </html>
+
 
 
