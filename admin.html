@@ -192,18 +192,41 @@
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
                 </div>
 
-                <div class="sec-title">SECTION F - GEOGRAPHY, CONDITIONS & REMARKS</div>
-                <div class="sec-content">
-                    <div class="form-row">
-                        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
-                        <div>
-                            <label>Pincode Based?</label>
-                            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
-                                <option>No</option>
-                                <option>Yes</option>
-                            </select>
-                        </div>
-                    </div>
+               <div class="sec-title">SECTION F - GEOGRAPHY, CONDITIONS & REMARKS</div>
+<div class="sec-content">
+    <div class="form-row">
+        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
+        <div>
+            <label>Pincode Based?</label>
+            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
+                <option>No</option>
+                <option>Yes</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="pinOptionBox" class="hidden-field">
+        <label>Pincode Scope</label>
+        <select id="pinScope" onchange="toggleField('pinListBox', this.value === 'Specific List')">
+            <option>Pan India</option>
+            <option>Specific List</option>
+        </select>
+
+        <div id="pinListBox" style="display:none; margin-top:10px;">
+            <label>Paste Allowed Pincodes (Comma Separated or from Excel)</label>
+            <textarea id="pinList" rows="5" placeholder="Example: 500001, 500002, 500003..." style="width:100%; border:1px solid #ccc; background:#fff;"></textarea>
+            <small style="color:#666;">* You can copy-paste a column from Excel directly here.</small>
+        </div>
+    </div>
+
+    <div id="condContainer" style="margin-top:15px;"></div>
+    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
+
+    <div style="margin-top:15px;">
+        <label>Internal Remarks</label>
+        <textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea>
+    </div>
+</div>
 
                     <div id="pinOptionBox" class="hidden-field">
                         <label>Pincode Scope</label>
@@ -433,8 +456,9 @@
             bankingTypes: bTypes, programs: progs, conditions: conds, 
             remarks: document.getElementById('remarks').value,
             geoLimit: document.getElementById('geoLimit').value,
-            pinBased: document.getElementById('pinBased').value,
-            pinScope: document.getElementById('pinScope').value
+    pinBased: document.getElementById('pinBased').value,
+    pinScope: document.getElementById('pinScope').value,
+    pinList: document.getElementById('pinList').value,
         };
         
         let idx = document.getElementById('p_id').value;
@@ -455,9 +479,11 @@
         setVal('geoLimit', p.geoLimit);
         setVal('pinBased', p.pinBased);
         setVal('pinScope', p.pinScope);
+        setVal('pinList', p.pinList);
 
-        // Trigger the hidden box visibility
-        toggleField('pinOptionBox', p.pinBased === 'Yes');
+// Logic to show/hide boxes based on saved data
+toggleField('pinOptionBox', p.pinBased === 'Yes');
+toggleField('pinListBox', p.pinScope === 'Specific List');
         
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
         
@@ -586,4 +612,5 @@
 </script>
 </body>
 </html>
+
 
