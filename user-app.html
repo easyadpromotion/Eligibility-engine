@@ -246,8 +246,86 @@
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
         // --- 4. PINCODE AUTO-FILL ---
-        async function checkPincode() {
-            const pin = document.getElementById('pincodeInput').value;
+        async function checkPincode()
+              {
+
+                  // PASTE THIS AT LINE 225 (Between checkPincode and calculatePV)
+
+        // --- NEW: BUSINESS PINCODE CHECKER ---
+        
+        // 1. Load Policies Globally (Auto-Run on Page Load)
+        window.allPolicies = [];
+        if(db) {
+            db.collection('policies').get().then(snap => {
+                snap.forEach(doc => window.allPolicies.push(doc.data()));
+                console.log("Global policies loaded:", window.allPolicies.length);
+            }).catch(e => console.error("Error loading policies:", e));
+        }
+
+        // 2. The Check Function
+        function checkBusPincodeStatus() {
+            const pinInput = document.getElementById('bPincode').value;
+            const statusField = document.getElementById('bPinStatus');
+            
+            // Reset if incomplete
+            if (pinInput.length !== 6) {
+                statusField.value = "Enter 6 digits...";
+                statusField.style.backgroundColor = "#fff";
+                statusField.style.color = "#333";
+                statusField.style.border = "1px solid #ccc";
+                return;
+            }
+
+            // Safety Check: Are policies loaded?
+            if (!window.allPolicies || window.allPolicies.length === 0) {
+                statusField.value = "Loading Data...";
+                statusField.style.backgroundColor = "#fff3cd";
+                
+                // Force reload
+                if(db) {
+                    db.collection('policies').get().then(snap => {
+                        window.allPolicies = [];
+                        snap.forEach(doc => window.allPolicies.push(doc.data()));
+                        setTimeout(checkBusPincodeStatus, 500); 
+                    });
+                }
+                return; 
+            }
+
+            // Perform Check
+            let isListed = false;
+
+            for (let policy of window.allPolicies) {
+                // A: Pan India
+                if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
+                    isListed = true;
+                    break; 
+                }
+
+                // B: Specific List
+                if (policy.pinScope === 'Specific List' && policy.pinList) {
+                    let cleanList = policy.pinList.split(',').map(p => p.trim());
+                    if (cleanList.includes(pinInput)) {
+                        isListed = true;
+                        break;
+                    }
+                }
+            }
+
+            // Update UI
+            if (isListed) {
+                statusField.value = "Listed";
+                statusField.style.backgroundColor = "#d4edda";
+                statusField.style.color = "#155724";
+                statusField.style.border = "2px solid #28a745";
+            } else {
+                statusField.value = "Not Listed";
+                statusField.style.backgroundColor = "#f8d7da";
+                statusField.style.color = "#721c24";
+                statusField.style.border = "2px solid #dc3545";
+            }
+        }
+                  const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
                 const cF = document.getElementById('cityField');
                 const sF = document.getElementById('stateField');
@@ -302,89 +380,7 @@
             const emi = parseFloat(data['Monthly EMI']) || 0;
             // --- NEW: BUSINESS PINCODE CHECKER ---
         
-        // 1. Load Policies Globally for Quick Checking
-        window.allPolicies = [];
-        if(db) {
-            db.collection('policies').get().then(snap => {
-                snap.forEach(doc => window.allPolicies.push(doc.data()));
-                console.log("Global policies loaded:", window.allPolicies.length);
-            });
-        }
-
-        // 2. The Check Function (Triggered by onkeyup)
-        // --- UPDATED PINCODE CHECKER WITH AUTO-RELOAD ---
-
-function checkBusPincodeStatus() {
-    const pinInput = document.getElementById('bPincode').value;
-    const statusField = document.getElementById('bPinStatus');
-    
-    // 1. Reset if incomplete
-    if (pinInput.length !== 6) {
-        statusField.value = "Enter 6 digits...";
-        statusField.style.backgroundColor = "#fff";
-        statusField.style.color = "#333";
-        statusField.style.border = "1px solid #ccc";
-        return;
-    }
-
-    // 2. Safety Check: Are policies loaded?
-    if (!window.allPolicies || window.allPolicies.length === 0) {
-        statusField.value = "Loading Data...";
-        statusField.style.backgroundColor = "#fff3cd"; // Yellow warning
-        
-        // Force reload policies immediately
-        if(db) {
-            db.collection('policies').get().then(snap => {
-                window.allPolicies = [];
-                snap.forEach(doc => window.allPolicies.push(doc.data()));
-                console.log("Policies reloaded:", window.allPolicies.length);
-                
-                // Re-run the check automatically after 1 second
-                setTimeout(checkBusPincodeStatus, 500); 
-            });
-        }
-        return; 
-    }
-
-    // 3. Perform the Check
-    let isListed = false;
-    let matchedBank = "";
-
-    for (let policy of window.allPolicies) {
-        // Scenario A: Pan India (Automatically Listed)
-        if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
-            isListed = true;
-            matchedBank = "Pan India"; 
-            break; 
-        }
-
-        // Scenario B: Specific List
-        if (policy.pinScope === 'Specific List' && policy.pinList) {
-            // Check if our typed pincode exists in their list
-            // Clean the list (trim spaces) just in case
-            let cleanList = policy.pinList.split(',').map(p => p.trim());
-            
-            if (cleanList.includes(pinInput)) {
-                isListed = true;
-                matchedBank = "Listed";
-                break;
-            }
-        }
-    }
-
-    // 4. Update UI
-    if (isListed) {
-        statusField.value = "Listed"; // Or use `Listed`
-        statusField.style.backgroundColor = "#d4edda"; // Green
-        statusField.style.color = "#155724";
-        statusField.style.border = "2px solid #28a745";
-    } else {
-        statusField.value = "Not Listed";
-        statusField.style.backgroundColor = "#f8d7da"; // Red
-        statusField.style.color = "#721c24";
-        statusField.style.border = "2px solid #dc3545";
-    }
-}
+ 
 
             policies.forEach(p => {
                 let pass = true, reasons = [];
@@ -557,6 +553,7 @@ function checkBusPincodeStatus() {
     </script>
 </body>
 </html>
+
 
 
 
