@@ -110,14 +110,19 @@
                 <div><label>ITR Filed?</label><select class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="itrBox" class="hidden-field"><label>ITR Income</label><input type="number" class="pdf-data" data-label="ITR Income"></div>
             </div></div></div>
 
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">3. Credit Profile</div><div class="accordion-body"><div class="form-grid">
-                <div><label>CIBIL Score</label><input type="number" class="pdf-data" data-label="CIBIL"></div>
-                <div><label>Active Loans</label><input type="number" class="pdf-data" data-label="Active Loans"></div>
-                <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
-                <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
-                <div><label>Loans (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
-                <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
-            </div></div></div>
+            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">3. Credit Profile</div><<div class="accordion-body">
+    <div class="form-grid">
+        <div><label>CIBIL Score</label><input type="number" class="pdf-data" data-label="CIBIL"></div>
+        <div><label>Active Loans</label><input type="number" class="pdf-data" data-label="Active Loans"></div>
+        <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
+        <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
+        <div><label>Loans Taken (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
+        <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
+        
+        <div><label>Loans Closing (6m)</label><input type="number" class="pdf-data" data-label="Loans Closing (6m)"></div>
+        <div><label>Closing Loan EMI</label><input type="number" class="pdf-data" data-label="Closing Loan EMI"></div>
+    </div>
+</div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">4. Applicant Details</div><div class="accordion-body"><div class="form-grid">
                 <div><label>Age</label><input type="number" class="pdf-data" data-label="Age"></div>
@@ -467,3 +472,4 @@
     </script>
 </body>
 </html>
+
