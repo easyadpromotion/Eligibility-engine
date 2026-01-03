@@ -93,6 +93,20 @@
                 <div><label>Entity</label><select class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
                 <div><label>Sector</label><select class="pdf-data" data-label="Sector" id="sector"><option value="Trading">Trading (7%)</option><option value="Manufacturing">Manufacturing (9%)</option><option value="Service">Service (11%)</option></select></div>
                 <div><label>Premises</label><select class="pdf-data" data-label="Premises"><option>Owned</option><option>Rented</option></select></div>
+                <div class="row" style="margin-top: 15px;">
+    <div class="col">
+        <label>Business Pincode</label>
+        <input type="number" id="bPincode" onkeyup="checkBusPincodeStatus()" placeholder="6 Digits">
+    </div>
+    
+    <div class="col">
+        <label>Eligibility Status</label>
+        <input type="text" id="bPinStatus" readonly style="font-weight:bold; text-align:center;">
+    </div>
+    
+    <div class="col"></div>
+    <div class="col"></div>
+</div>
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">2. Banking & Docs</div><div class="accordion-body"><div class="form-grid">
@@ -286,7 +300,68 @@
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
+            // --- NEW: BUSINESS PINCODE CHECKER ---
+        
+        // 1. Load Policies Globally for Quick Checking
+        window.allPolicies = [];
+        if(db) {
+            db.collection('policies').get().then(snap => {
+                snap.forEach(doc => window.allPolicies.push(doc.data()));
+                console.log("Global policies loaded:", window.allPolicies.length);
+            });
+        }
+
+        // 2. The Check Function (Triggered by onkeyup)
+        function checkBusPincodeStatus() {
+            const pinInput = document.getElementById('bPincode').value;
+            const statusField = document.getElementById('bPinStatus');
             
+            // A. Reset if empty or incomplete
+            if (pinInput.length !== 6) {
+                statusField.value = "Waiting...";
+                statusField.style.backgroundColor = "#fff";
+                statusField.style.color = "#333";
+                return;
+            }
+
+            let isListed = false;
+
+            // B. Check against All Policies
+            if (window.allPolicies.length === 0) {
+                statusField.value = "Loading...";
+                return; 
+            }
+
+            for (let policy of window.allPolicies) {
+                // Scenario 1: Bank accepts Pan India (So it's automatically Listed)
+                if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
+                    isListed = true;
+                    break; 
+                }
+
+                // Scenario 2: Bank has a Specific List
+                if (policy.pinScope === 'Specific List' && policy.pinList) {
+                    // Check if our typed pincode exists in their list
+                    if (policy.pinList.includes(pinInput)) {
+                        isListed = true;
+                        break;
+                    }
+                }
+            }
+
+            // C. Show Result
+            if (isListed) {
+                statusField.value = "Listed";
+                statusField.style.backgroundColor = "#d4edda"; // Green
+                statusField.style.color = "#155724";
+                statusField.style.border = "1px solid #c3e6cb";
+            } else {
+                statusField.value = "Not Listed";
+                statusField.style.backgroundColor = "#f8d7da"; // Red
+                statusField.style.color = "#721c24";
+                statusField.style.border = "1px solid #f5c6cb";
+            }
+        }
             const monthlyProfit = (turn / 12) * margin;
             const obligations = Math.max(0, emi); 
             const netIncome = Math.max(0, monthlyProfit - obligations);
@@ -472,4 +547,5 @@
     </script>
 </body>
 </html>
+
 
