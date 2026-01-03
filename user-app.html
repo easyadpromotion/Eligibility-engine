@@ -46,7 +46,7 @@
         .status-eligible { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
         .status-declined { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
 
-        /* PDF MODAL (FIXED FOR MULTI-PAGE PRINTING) */
+        /* PDF MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .report-paper { background: white; width: 850px; margin: 0 auto; padding: 40px; border-radius: 8px; font-family: Arial, sans-serif; min-height: 80vh; position: relative; }
         .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
@@ -57,14 +57,12 @@
         .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
         .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
 
-        /* CRITICAL PRINT FIXES */
+        /* PRINT FIXES */
         @media print { 
             .no-print { display: none !important; } 
-            /* Allow height to grow automatically and overflow to visible so it spans pages */
             #fullReportModal { position: absolute; background: white; width: 100%; height: auto; overflow: visible; top:0; left:0; margin:0; padding:0; z-index: 9999; } 
             .report-paper { width: 100%; max-width: 100%; box-shadow: none; margin: 0; padding: 20px; min-height: auto; }
             body > *:not(#fullReportModal) { display: none; }
-            /* Prevent table rows from breaking awkwardly */
             tr { page-break-inside: avoid; }
         }
     </style>
@@ -93,20 +91,18 @@
                 <div><label>Entity</label><select class="pdf-data" data-label="Entity"><option>Proprietorship</option><option>Partnership</option><option>Pvt Ltd</option></select></div>
                 <div><label>Sector</label><select class="pdf-data" data-label="Sector" id="sector"><option value="Trading">Trading (7%)</option><option value="Manufacturing">Manufacturing (9%)</option><option value="Service">Service (11%)</option></select></div>
                 <div><label>Premises</label><select class="pdf-data" data-label="Premises"><option>Owned</option><option>Rented</option></select></div>
-                <div class="row" style="margin-top: 15px;">
-    <div class="col">
-        <label>Business Pincode</label>
-        <input type="number" id="bPincode" onkeyup="checkBusPincodeStatus()" placeholder="6 Digits">
-    </div>
-    
-    <div class="col">
-        <label>Eligibility Status</label>
-        <input type="text" id="bPinStatus" readonly style="font-weight:bold; text-align:center;">
-    </div>
-    
-    <div class="col"></div>
-    <div class="col"></div>
-</div>
+                
+                <div style="grid-column: span 4; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 25px; margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 6px;">
+                    <div>
+                        <label>Business Pincode</label>
+                        <input type="number" id="bPincode" onkeyup="checkBusPincodeStatus()" placeholder="6 Digits">
+                    </div>
+                    <div>
+                        <label>Eligibility Status</label>
+                        <input type="text" id="bPinStatus" readonly style="font-weight:bold; text-align:center;">
+                    </div>
+                </div>
+
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">2. Banking & Docs</div><div class="accordion-body"><div class="form-grid">
@@ -124,19 +120,18 @@
                 <div><label>ITR Filed?</label><select class="pdf-data" data-label="ITR Filed" onchange="toggleField('itrBox',this.value==='Yes')"><option>No</option><option>Yes</option></select></div><div id="itrBox" class="hidden-field"><label>ITR Income</label><input type="number" class="pdf-data" data-label="ITR Income"></div>
             </div></div></div>
 
-            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">3. Credit Profile</div><<div class="accordion-body">
-    <div class="form-grid">
-        <div><label>CIBIL Score</label><input type="number" class="pdf-data" data-label="CIBIL"></div>
-        <div><label>Active Loans</label><input type="number" class="pdf-data" data-label="Active Loans"></div>
-        <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
-        <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
-        <div><label>Loans Taken (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
-        <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
-        
-        <div><label>Loans Closing (6m)</label><input type="number" class="pdf-data" data-label="Loans Closing (6m)"></div>
-        <div><label>Closing Loan EMI</label><input type="number" class="pdf-data" data-label="Closing Loan EMI"></div>
-    </div>
-</div>
+            <div class="accordion"><div class="accordion-header" onclick="toggle(this)">3. Credit Profile</div><div class="accordion-body">
+                <div class="form-grid">
+                    <div><label>CIBIL Score</label><input type="number" class="pdf-data" data-label="CIBIL"></div>
+                    <div><label>Active Loans</label><input type="number" class="pdf-data" data-label="Active Loans"></div>
+                    <div><label>Monthly EMI</label><input type="number" class="pdf-data" data-label="Monthly EMI" id="monthlyEmi"></div>
+                    <div><label>Unsec Loans</label><input type="number" class="pdf-data" data-label="Unsec Loans"></div>
+                    <div><label>Loans Taken (6m)</label><input type="number" class="pdf-data" data-label="Loans (6m)"></div>
+                    <div><label>Enquiries (3m)</label><input type="number" class="pdf-data" data-label="Enquiries"></div>
+                    <div><label>Loans Closing (6m)</label><input type="number" class="pdf-data" data-label="Loans Closing (6m)"></div>
+                    <div><label>Closing Loan EMI</label><input type="number" class="pdf-data" data-label="Closing Loan EMI"></div>
+                </div>
+            </div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">4. Applicant Details</div><div class="accordion-body"><div class="form-grid">
                 <div><label>Age</label><input type="number" class="pdf-data" data-label="Age"></div>
@@ -221,10 +216,11 @@
 
         if(db) db.collection('policies').get().then(snap => document.getElementById('policyCount').innerText = snap.size);
 
-        // --- 3. GLOBAL VARS FOR PDF ---
+        // --- 3. GLOBAL VARS ---
         window.historyData = [];
         window.latestResults = { eligible: [], declined: [] };
         window.latestData = {};
+        window.allPolicies = []; // Init global policies array
 
         function switchView(v){
             document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
@@ -245,87 +241,18 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
-        // --- 4. PINCODE AUTO-FILL ---
-        async function checkPincode()
-              {
-
-                  // PASTE THIS AT LINE 225 (Between checkPincode and calculatePV)
-
-        // --- NEW: BUSINESS PINCODE CHECKER ---
-        
-        // 1. Load Policies Globally (Auto-Run on Page Load)
-        window.allPolicies = [];
+        // --- 4. LOAD POLICIES GLOBALLY (FOR BUS PINCODE CHECK) ---
         if(db) {
             db.collection('policies').get().then(snap => {
+                window.allPolicies = [];
                 snap.forEach(doc => window.allPolicies.push(doc.data()));
                 console.log("Global policies loaded:", window.allPolicies.length);
             }).catch(e => console.error("Error loading policies:", e));
         }
 
-        // 2. The Check Function
-        function checkBusPincodeStatus() {
-            const pinInput = document.getElementById('bPincode').value;
-            const statusField = document.getElementById('bPinStatus');
-            
-            // Reset if incomplete
-            if (pinInput.length !== 6) {
-                statusField.value = "Enter 6 digits...";
-                statusField.style.backgroundColor = "#fff";
-                statusField.style.color = "#333";
-                statusField.style.border = "1px solid #ccc";
-                return;
-            }
-
-            // Safety Check: Are policies loaded?
-            if (!window.allPolicies || window.allPolicies.length === 0) {
-                statusField.value = "Loading Data...";
-                statusField.style.backgroundColor = "#fff3cd";
-                
-                // Force reload
-                if(db) {
-                    db.collection('policies').get().then(snap => {
-                        window.allPolicies = [];
-                        snap.forEach(doc => window.allPolicies.push(doc.data()));
-                        setTimeout(checkBusPincodeStatus, 500); 
-                    });
-                }
-                return; 
-            }
-
-            // Perform Check
-            let isListed = false;
-
-            for (let policy of window.allPolicies) {
-                // A: Pan India
-                if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
-                    isListed = true;
-                    break; 
-                }
-
-                // B: Specific List
-                if (policy.pinScope === 'Specific List' && policy.pinList) {
-                    let cleanList = policy.pinList.split(',').map(p => p.trim());
-                    if (cleanList.includes(pinInput)) {
-                        isListed = true;
-                        break;
-                    }
-                }
-            }
-
-            // Update UI
-            if (isListed) {
-                statusField.value = "Listed";
-                statusField.style.backgroundColor = "#d4edda";
-                statusField.style.color = "#155724";
-                statusField.style.border = "2px solid #28a745";
-            } else {
-                statusField.value = "Not Listed";
-                statusField.style.backgroundColor = "#f8d7da";
-                statusField.style.color = "#721c24";
-                statusField.style.border = "2px solid #dc3545";
-            }
-        }
-                  const pin = document.getElementById('pincodeInput').value;
+        // --- 5. RESIDENTIAL PINCODE AUTO-FILL ---
+        async function checkPincode() {
+            const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
                 const cF = document.getElementById('cityField');
                 const sF = document.getElementById('stateField');
@@ -350,7 +277,67 @@
             }
         }
 
-        // --- 5. CALCULATION ENGINE ---
+        // --- 6. BUSINESS PINCODE CHECKER ---
+        function checkBusPincodeStatus() {
+            const pinInput = document.getElementById('bPincode').value;
+            const statusField = document.getElementById('bPinStatus');
+            
+            if (pinInput.length !== 6) {
+                statusField.value = "Enter 6 digits...";
+                statusField.style.backgroundColor = "#fff";
+                statusField.style.color = "#333";
+                statusField.style.border = "1px solid #ccc";
+                return;
+            }
+
+            // Safety Check: Are policies loaded?
+            if (!window.allPolicies || window.allPolicies.length === 0) {
+                statusField.value = "Loading Data...";
+                statusField.style.backgroundColor = "#fff3cd";
+                
+                // Force reload if empty
+                if(db) {
+                    db.collection('policies').get().then(snap => {
+                        window.allPolicies = [];
+                        snap.forEach(doc => window.allPolicies.push(doc.data()));
+                        setTimeout(checkBusPincodeStatus, 500); 
+                    });
+                }
+                return; 
+            }
+
+            let isListed = false;
+
+            for (let policy of window.allPolicies) {
+                // A: Pan India
+                if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
+                    isListed = true;
+                    break; 
+                }
+                // B: Specific List
+                if (policy.pinScope === 'Specific List' && policy.pinList) {
+                    let cleanList = policy.pinList.split(',').map(p => p.trim());
+                    if (cleanList.includes(pinInput)) {
+                        isListed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isListed) {
+                statusField.value = "Listed";
+                statusField.style.backgroundColor = "#d4edda";
+                statusField.style.color = "#155724";
+                statusField.style.border = "2px solid #28a745";
+            } else {
+                statusField.value = "Not Listed";
+                statusField.style.backgroundColor = "#f8d7da";
+                statusField.style.color = "#721c24";
+                statusField.style.border = "2px solid #dc3545";
+            }
+        }
+
+        // --- 7. CALCULATION ENGINE ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -360,10 +347,10 @@
             let data = {};
             document.querySelectorAll('.pdf-data').forEach(el => data[el.getAttribute('data-label')] = el.value);
             
-            // Clean Turnover Input (remove commas)
+            // Clean Turnover Input
             let rawTurn = data['Turnover'] || "0";
             rawTurn = rawTurn.replace(/,/g, '');
-            const turn = parseFloat(rawTurn) * 100000; // Convert Lakhs to Absolute
+            const turn = parseFloat(rawTurn) * 100000; 
 
             let bankStmts = [];
             document.querySelectorAll('.bank-opt.selected').forEach(el => bankStmts.push(el.innerText));
@@ -378,9 +365,24 @@
             const abb = parseFloat(data['ABB']) || 0;
             const cibil = parseFloat(data['CIBIL']) || 0;
             const emi = parseFloat(data['Monthly EMI']) || 0;
-            // --- NEW: BUSINESS PINCODE CHECKER ---
-        
- 
+            
+            const monthlyProfit = (turn / 12) * margin;
+            const obligations = Math.max(0, emi); 
+            const netIncome = Math.max(0, monthlyProfit - obligations);
+
+            // Use global policies
+            let policies = window.allPolicies || [];
+            if(policies.length === 0 && db) { 
+                const snap = await db.collection("policies").get(); 
+                policies = snap.docs.map(d => d.data()); 
+            }
+            
+            let eligible = [], declined = [];
+
+            if(policies.length === 0) {
+                alert("No Policies loaded. Please ask Admin to 'Load Defaults'.");
+                return;
+            }
 
             policies.forEach(p => {
                 let pass = true, reasons = [];
@@ -392,6 +394,16 @@
                 if (cibil < (p.minCibil||0)) { pass=false; reasons.push(`CIBIL < ${p.minCibil}`); }
                 if (parseFloat(data['Age']) < (p.ageMin||18)) { pass=false; reasons.push(`Age < ${p.ageMin}`); }
 
+                // Engine Pincode Check (Strict)
+                if (p.pinScope === 'Specific List' && p.pinList) {
+                    const bPin = document.getElementById('bPincode').value;
+                    let cleanList = p.pinList.split(',').map(x => x.trim());
+                    if(bPin && !cleanList.includes(bPin)) {
+                        pass = false;
+                        reasons.push(`Pincode ${bPin} not eligible`);
+                    }
+                }
+
                 if (pass) {
                     const r = (p.roiMin / 100) / 12;
                     const n = p.tenMax || 36;
@@ -400,17 +412,9 @@
                     let abbAmt = calculatePV(r, n, abb);
                     let finalAmt = Math.max(dscrAmt, abbAmt);
                     
-                    // --- NEW LOGIC: PROGRAM SPECIFIC MIN/MAX ---
-                    // Try to find if a specific program limit applies (simplified logic: check if 'programs' array exists)
-                    // For now, we take the general policy min/max, but if Admin added programs, we could refine this.
                     let policyMax = (p.loanMax || 50) * 100000;
                     let policyMin = (p.loanMin || 1) * 100000;
                     
-                    // (Optional: If you want to check specific program limits from Section E, you'd iterate p.programs here)
-                    if(p.programs && Array.isArray(p.programs)) {
-                         // Example: Find if current 'program' matches. Since we don't select program in User App yet, we default to policy limits.
-                    }
-
                     finalAmt = Math.min(finalAmt, policyMax);
 
                     if (finalAmt >= policyMin) {
@@ -443,7 +447,7 @@
             document.getElementById('dlReportBtn').style.display='block';
         }
 
-        // --- 6. PDF GENERATOR (FIXED FORMATTING) ---
+        // --- 8. PDF GENERATOR ---
         function generateFullPDF() {
             const res = window.latestResults;
             const data = window.latestData;
@@ -462,14 +466,11 @@
             for(const [key, val] of Object.entries(data)) {
                 if(val && key !== 'DSA Username' && key !== 'DSA Name') {
                     let displayVal = val;
-                    // --- FORMATTING FIXES ---
                     if(key.includes("Turnover") || key.includes("Req Amount")) {
                         displayVal = `₹ ${val} Lakhs`;
                     } else if(key.includes("EMI") || key.includes("ABB") || key.includes("Income")) {
-                        // Add commas for currency
                         displayVal = `₹ ${parseFloat(val).toLocaleString('en-IN')}`;
                     }
-                    
                     detailsHtml += `<div class="detail-item"><strong>${key}:</strong> ${displayVal}</div>`;
                 }
             }
@@ -496,7 +497,7 @@
             document.getElementById('fullReportModal').style.display='block';
         }
 
-        // --- 7. DASHBOARD VIEW ---
+        // --- 9. DASHBOARD VIEW ---
         async function loadHistory() {
             const t = document.querySelector('#historyTable tbody'); 
             t.innerHTML="<tr><td colspan='4'>Loading history...</td></tr>";
@@ -553,7 +554,3 @@
     </script>
 </body>
 </html>
-
-
-
-
