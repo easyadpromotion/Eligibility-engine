@@ -268,6 +268,39 @@
 
     let policies=[], users=[], requests=[], apps=[];
 
+   // --- 1. DATE HELPER FUNCTIONS ---
+    // Fixes the mixed date formats (DD/MM vs MM/DD)
+    function parseDate(dateStr) {
+        if (!dateStr) return new Date(0); 
+        if (typeof dateStr !== 'string') return new Date(dateStr);
+
+        let parts = dateStr.split(/[/-]/); // Split by / or -
+        if (parts.length === 3) {
+            let p1 = parseInt(parts[0]); // Day or Month?
+            let p2 = parseInt(parts[1]);
+            let p3 = parseInt(parts[2]); // Year
+
+            // If first part > 12, it is Day (DD/MM/YYYY)
+            if (p1 > 12) return new Date(p3, p2 - 1, p1);
+            
+            // If first part is Year (YYYY-MM-DD)
+            if (p1 > 2000) return new Date(p1, p2 - 1, p3);
+            
+            // If ambiguous (e.g. 12/05/2025), default JS handling
+        }
+        return new Date(dateStr);
+    }
+
+    // Standardizes display to DD/MM/YYYY
+    function formatDisplayDate(dateObj) {
+        if (!dateObj || isNaN(dateObj.getTime())) return '-';
+        let d = dateObj.getDate().toString().padStart(2, '0');
+        let m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+        let y = dateObj.getFullYear();
+        return `${d}/${m}/${y}`;
+    }
+
+    // --- 2. UPDATED LOAD DATA (With Sorting) ---
     function loadAllData() {
         if(!db) return;
         
@@ -279,10 +312,24 @@
         
         db.collection("dsa_users").onSnapshot(snap => { users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
         db.collection("dsa_requests").onSnapshot(snap => { requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
-        db.collection("applications").onSnapshot(snap => { apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
+        
+        db.collection("applications").onSnapshot(snap => { 
+            apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            
+            // SORT: Newest Date First
+            apps.sort((a, b) => {
+                let dateA = parseDate(a.date || a.data?.date);
+                let dateB = parseDate(b.date || b.data?.date);
+                return dateB - dateA; 
+            });
+
+            renderTables(); 
+        });
     }
 
+    // --- 3. UPDATED RENDER TABLES (With Date Formatting) ---
     function renderTables() {
+        // Policy Table
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
         if (policies.length === 0) {
             pT.innerHTML = "<tr><td colspan='7'>No Policies Found. Click 'Load Defaults'.</td></tr>";
@@ -293,21 +340,26 @@
             });
         }
         
+        // User Table
         const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
         users.forEach(u => uT.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td><button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button></td></tr>`);
         
+        // Request Table
         const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
         requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
         
-        // --- UPDATED APP TABLE RENDER ---
+        // Application Table (Fixed Dates & Columns)
         const aT = document.querySelector('#appTable tbody'); 
         aT.innerHTML = '';
         apps.forEach(a => {
             let d = a.data || {}; 
+            let dateObj = parseDate(a.date || d.date);
+            let displayDate = formatDisplayDate(dateObj);
+
             aT.innerHTML += `
                 <tr>
-                    <td>${a.date || '-'}</td>
-                    <td>${a.customer || '-'}</td>
+                    <td>${displayDate}</td>
+                    <td>${a.customer || d.customer || '-'}</td>
                     <td>${a.mobile || d.mobile || '-'}</td>
                     <td>${d.vintage || '-'}</td>
                     <td>${d.turnover || '-'}</td>
@@ -334,11 +386,10 @@
                     <td>${d.pincode || '-'}</td>
                     <td>${d.reqAmount || '-'}</td>
                     <td>${d.purpose || '-'}</td>
-                    <td>${a.dsaName || '-'}</td>
+                    <td>${a.dsaName || d.dsaName || '-'}</td>
                 </tr>`;
         });
     }
-
     // ACTIONS
     window.uploadDefaultPolicies = () => { if(confirm("Load Defaults?")) { defaultPolicies.forEach(p => db.collection("policies").add(p)); } };
     window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { db.collection("dsa_users").add({...r, status:"Active"}); db.collection("dsa_requests").doc(id).delete(); } };
@@ -535,3 +586,4 @@
 </script>
 </body>
 </html>
+
