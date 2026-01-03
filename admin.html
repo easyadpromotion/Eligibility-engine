@@ -89,51 +89,51 @@
     </div>
     
     <div id="apps" class="section">
-    <div style="display:flex; justify-content:space-between;">
-        <h2>📂 Applications</h2>
-        <button class="btn btn-add" style="background:#008CBA;" onclick="exportToExcel()">⬇ Excel</button>
+        <div style="display:flex; justify-content:space-between;">
+            <h2>📂 Applications</h2>
+            <button class="btn btn-add" style="background:#008CBA;" onclick="exportToExcel()">⬇ Excel</button>
+        </div>
+        
+        <div class="table-container" style="max-height: 75vh;">
+            <table id="appTable" style="min-width: 3500px;"> 
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Customer Name</th>
+                        <th>Contact Number</th>
+                        <th>Vintage</th>
+                        <th>Turnover</th>
+                        <th>Entity type</th>
+                        <th>Sector</th>
+                        <th>Business Premises</th>
+                        <th>ABB</th>
+                        <th>Bank Statement type</th>
+                        <th>GST Reg</th>
+                        <th>ITR Filed</th>
+                        <th>Cibil</th>
+                        <th>Active Loans</th>
+                        <th>Monthly EMI</th>
+                        <th>Unsecured Loans</th>
+                        <th>Loans Taken (6Months)</th>
+                        <th>Loans Closing(Next 6Months)</th>
+                        <th>Reduced EMI(Next 6 Months)</th>
+                        <th>Enquiries(3 Months)</th>
+                        <th>Applicant Age</th>
+                        <th>Gender</th>
+                        <th>Co-Applicant?</th>
+                        <th>Co-Applicant Age</th>
+                        <th>Own House?</th>
+                        <th>Own House Pincode</th>
+                        <th>Required Loan Amount(lakhs)</th>
+                        <th>Purpose</th>
+                        <th>DSA Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
     </div>
-    
-    <div class="table-container" style="max-height: 75vh;">
-        <table id="appTable" style="min-width: 3500px;"> 
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Customer Name</th>
-                    <th>Contact Number</th>
-                    <th>Vintage</th>
-                    <th>Turnover</th>
-                    <th>Entity type</th>
-                    <th>Sector</th>
-                    <th>Business Premises</th>
-                    <th>ABB</th>
-                    <th>Bank Statement type</th>
-                    <th>GST Reg</th>
-                    <th>ITR Filed</th>
-                    <th>Cibil</th>
-                    <th>Active Loans</th>
-                    <th>Monthly EMI</th>
-                    <th>Unsecured Loans</th>
-                    <th>Loans Taken (6Months)</th>
-                    <th>Loans Closing(Next 6Months)</th>
-                    <th>Reduced EMI(Next 6 Months)</th>
-                    <th>Enquiries(3 Months)</th>
-                    <th>Applicant Age</th>
-                    <th>Gender</th>
-                    <th>Co-Applicant?</th>
-                    <th>Co-Applicant Age</th>
-                    <th>Own House?</th>
-                    <th>Own House Pincode</th>
-                    <th>Required Loan Amount(lakhs)</th>
-                    <th>Purpose</th>
-                    <th>DSA Name</th>
-                </tr>
-            </thead>
-            <tbody>
-                </tbody>
-        </table>
-    </div>
-</div>
 
     <div id="settings" class="section">
         <h2>Settings</h2>
@@ -193,34 +193,34 @@
                 </div>
 
                 <div class="sec-title">SECTION F - GEOGRAPHY, CONDITIONS & REMARKS</div>
-<div class="sec-content">
-    <div class="form-row">
-        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
-        <div>
-            <label>Pincode Based?</label>
-            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
-                <option>No</option>
-                <option>Yes</option>
-            </select>
-        </div>
-    </div>
+                <div class="sec-content">
+                    <div class="form-row">
+                        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
+                        <div>
+                            <label>Pincode Based?</label>
+                            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
+                                <option>No</option>
+                                <option>Yes</option>
+                            </select>
+                        </div>
+                    </div>
 
-    <div id="pinOptionBox" class="hidden-field">
-        <label>Pincode Scope</label>
-        <select id="pinScope">
-            <option>Pan India</option>
-            <option>Specific List</option>
-        </select>
-    </div>
+                    <div id="pinOptionBox" class="hidden-field">
+                        <label>Pincode Scope</label>
+                        <select id="pinScope">
+                            <option>Pan India</option>
+                            <option>Specific List</option>
+                        </select>
+                    </div>
 
-    <div id="condContainer" style="margin-top:15px;"></div>
-    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
+                    <div id="condContainer" style="margin-top:15px;"></div>
+                    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
 
-    <div style="margin-top:15px;">
-        <label>Internal Remarks</label>
-        <textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea>
-    </div>
-</div>
+                    <div style="margin-top:15px;">
+                        <label>Internal Remarks</label>
+                        <textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea>
+                    </div>
+                </div>
             </form>
         </div>
         <div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">Save Policy</button></div>
@@ -299,8 +299,44 @@
         const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
         requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
         
-        const aT = document.querySelector('#appTable tbody'); aT.innerHTML='';
-        apps.forEach(a => aT.innerHTML += `<tr><td>${a.date}</td><td>${a.customer}</td><td>${a.dsaName||'-'}</td><td>${a.status}</td><td>${a.data['Req Amount']||'-'} L</td></tr>`);
+        // --- UPDATED APP TABLE RENDER ---
+        const aT = document.querySelector('#appTable tbody'); 
+        aT.innerHTML = '';
+        apps.forEach(a => {
+            let d = a.data || {}; 
+            aT.innerHTML += `
+                <tr>
+                    <td>${a.date || '-'}</td>
+                    <td>${a.customer || '-'}</td>
+                    <td>${a.mobile || d.mobile || '-'}</td>
+                    <td>${d.vintage || '-'}</td>
+                    <td>${d.turnover || '-'}</td>
+                    <td>${d.entityType || '-'}</td>
+                    <td>${d.sector || '-'}</td>
+                    <td>${d.busPremises || '-'}</td>
+                    <td>${d.abb || '-'}</td>
+                    <td>${d.bankStmtType || '-'}</td>
+                    <td>${d.gstReg || '-'}</td>
+                    <td>${d.itrFiled || '-'}</td>
+                    <td>${d.cibil || '-'}</td>
+                    <td>${d.activeLoans || '-'}</td>
+                    <td>${d.monthlyEmi || '-'}</td>
+                    <td>${d.unsecLoans || '-'}</td>
+                    <td>${d.loansTaken6m || '-'}</td>
+                    <td>${d.loansClosing6m || '-'}</td>
+                    <td>${d.reducedEmi6m || '-'}</td>
+                    <td>${d.enquiries3m || '-'}</td>
+                    <td>${d.age || '-'}</td>
+                    <td>${d.gender || '-'}</td>
+                    <td>${d.coApp || '-'}</td>
+                    <td>${d.coAppAge || '-'}</td>
+                    <td>${d.ownHouse || '-'}</td>
+                    <td>${d.pincode || '-'}</td>
+                    <td>${d.reqAmount || '-'}</td>
+                    <td>${d.purpose || '-'}</td>
+                    <td>${a.dsaName || '-'}</td>
+                </tr>`;
+        });
     }
 
     // ACTIONS
@@ -343,10 +379,11 @@
             maxUnsec: +document.getElementById('maxUnsec').value, maxActive: +document.getElementById('maxActive').value, 
             maxEnq: +document.getElementById('maxEnq').value, loans6m: +document.getElementById('loans6m').value,
             
-            bankingTypes: bTypes, programs: progs, conditions: conds, remarks: document.getElementById('remarks').value, // <--- ADDED COMMA HERE
-geoLimit: document.getElementById('geoLimit').value,
-pinBased: document.getElementById('pinBased').value,
-pinScope: document.getElementById('pinScope').value,
+            bankingTypes: bTypes, programs: progs, conditions: conds, 
+            remarks: document.getElementById('remarks').value,
+            geoLimit: document.getElementById('geoLimit').value,
+            pinBased: document.getElementById('pinBased').value,
+            pinScope: document.getElementById('pinScope').value
         };
         
         let idx = document.getElementById('p_id').value;
@@ -365,11 +402,11 @@ pinScope: document.getElementById('pinScope').value,
         setVal('itrReq', p.itrReq); setVal('gstReq', p.gstReq); setVal('coAppReq', p.coAppReq); setVal('houseReq', p.houseReq); 
         setVal('houseGeo', p.houseGeo); setVal('remarks', p.remarks);
         setVal('geoLimit', p.geoLimit);
-setVal('pinBased', p.pinBased);
-setVal('pinScope', p.pinScope);
+        setVal('pinBased', p.pinBased);
+        setVal('pinScope', p.pinScope);
 
-// Trigger the hidden box visibility
-toggleField('pinOptionBox', p.pinBased === 'Yes');
+        // Trigger the hidden box visibility
+        toggleField('pinOptionBox', p.pinBased === 'Yes');
         
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
         
@@ -422,129 +459,79 @@ toggleField('pinOptionBox', p.pinBased === 'Yes');
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong"); };
     window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Updated"); } };
     window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
-   window.exportToExcel = () => {
-    // 1. Define Headers
-    let headers = [
-        "Date", "Customer Name", "Contact Number", "Vintage", "Turnover", 
-        "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", 
-        "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", 
-        "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", 
-        "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", 
-        "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", 
-        "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"
-    ];
-
-    // 2. Start CSV Content
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += headers.join(",") + "\n";
-
-    // 3. Loop through Data
-    apps.forEach(a => {
-        let d = a.data || {};
-        let row = [
-            a.date,
-            a.customer,
-            a.mobile || d.mobile,
-            d.vintage,
-            d.turnover,
-            d.entityType,
-            d.sector,
-            d.busPremises,
-            d.abb,
-            d.bankStmtType,
-            d.gstReg,
-            d.itrFiled,
-            d.cibil,
-            d.activeLoans,
-            d.monthlyEmi,
-            d.unsecLoans,
-            d.loansTaken6m,
-            d.loansClosing6m,
-            d.reducedEmi6m,
-            d.enquiries3m,
-            d.age,
-            d.gender,
-            d.coApp,
-            d.coAppAge,
-            d.ownHouse,
-            d.pincode,
-            d.reqAmount,
-            d.purpose,
-            a.dsaName
+    
+    // --- UPDATED EXPORT TO EXCEL ---
+    window.exportToExcel = () => {
+        // 1. Define Headers
+        let headers = [
+            "Date", "Customer Name", "Contact Number", "Vintage", "Turnover", 
+            "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", 
+            "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", 
+            "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", 
+            "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", 
+            "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", 
+            "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"
         ];
 
-        // Clean data: replace undefined with empty string and remove commas inside text to avoid breaking CSV
-        let cleanRow = row.map(item => {
-            if (item === undefined || item === null) return "";
-            return `"${String(item).replace(/"/g, '""')}"`; // Wrap in quotes and escape existing quotes
+        // 2. Start CSV Content
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += headers.join(",") + "\n";
+
+        // 3. Loop through Data
+        apps.forEach(a => {
+            let d = a.data || {};
+            let row = [
+                a.date,
+                a.customer,
+                a.mobile || d.mobile,
+                d.vintage,
+                d.turnover,
+                d.entityType,
+                d.sector,
+                d.busPremises,
+                d.abb,
+                d.bankStmtType,
+                d.gstReg,
+                d.itrFiled,
+                d.cibil,
+                d.activeLoans,
+                d.monthlyEmi,
+                d.unsecLoans,
+                d.loansTaken6m,
+                d.loansClosing6m,
+                d.reducedEmi6m,
+                d.enquiries3m,
+                d.age,
+                d.gender,
+                d.coApp,
+                d.coAppAge,
+                d.ownHouse,
+                d.pincode,
+                d.reqAmount,
+                d.purpose,
+                a.dsaName
+            ];
+
+            // Clean data: replace undefined with empty string and remove commas inside text
+            let cleanRow = row.map(item => {
+                if (item === undefined || item === null) return "";
+                return `"${String(item).replace(/"/g, '""')}"`;
+            });
+
+            csvContent += cleanRow.join(",") + "\n";
         });
 
-        csvContent += cleanRow.join(",") + "\n";
-    });
+        // 4. Trigger Download
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Loan_Applications.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
-    // 4. Trigger Download
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Loan_Applications.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}; 
-    // INSIDE renderTables() function... replace the 'apps' part with this:
-
-const aT = document.querySelector('#appTable tbody'); 
-aT.innerHTML = '';
-
-apps.forEach(a => {
-    // Safety check: ensure 'data' object exists to prevent errors
-    let d = a.data || {}; 
-
-    aT.innerHTML += `
-        <tr>
-            <td>${a.date || '-'}</td>
-            <td>${a.customer || '-'}</td>
-            <td>${a.mobile || d.mobile || '-'}</td>
-            <td>${d.vintage || '-'}</td>
-            <td>${d.turnover || '-'}</td>
-            <td>${d.entityType || '-'}</td>
-            <td>${d.sector || '-'}</td>
-            <td>${d.busPremises || '-'}</td>
-            <td>${d.abb || '-'}</td>
-            <td>${d.bankStmtType || '-'}</td>
-            <td>${d.gstReg || '-'}</td>
-            <td>${d.itrFiled || '-'}</td>
-            <td>${d.cibil || '-'}</td>
-            <td>${d.activeLoans || '-'}</td>
-            <td>${d.monthlyEmi || '-'}</td>
-            <td>${d.unsecLoans || '-'}</td>
-            <td>${d.loansTaken6m || '-'}</td>
-            <td>${d.loansClosing6m || '-'}</td>
-            <td>${d.reducedEmi6m || '-'}</td>
-            <td>${d.enquiries3m || '-'}</td>
-            <td>${d.age || '-'}</td>
-            <td>${d.gender || '-'}</td>
-            <td>${d.coApp || '-'}</td>
-            <td>${d.coAppAge || '-'}</td>
-            <td>${d.ownHouse || '-'}</td>
-            <td>${d.pincode || '-'}</td>
-            <td>${d.reqAmount || '-'}</td>
-            <td>${d.purpose || '-'}</td>
-            <td>${a.dsaName || '-'}</td>
-        </tr>`;
-});
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "applications_data.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
     loadAllData();
 </script>
 </body>
 </html>
-
-
-
