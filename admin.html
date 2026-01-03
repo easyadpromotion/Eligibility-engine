@@ -150,13 +150,35 @@
                     <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addProg()">+ Add Program</button>
                 </div>
 
-                <div class="sec-title">SECTION F - CONDITIONS & REMARKS</div>
-                <div class="sec-content">
-                    <div id="condContainer"></div>
-                    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
-                    <div style="margin-top:15px;"><label>Internal Remarks</label><textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea></div>
-                </div>
+                <div class="sec-title">SECTION F - GEOGRAPHY, CONDITIONS & REMARKS</div>
+<div class="sec-content">
+    <div class="form-row">
+        <div><label>Geo Limit (in km's)</label><input type="number" id="geoLimit"></div>
+        <div>
+            <label>Pincode Based?</label>
+            <select id="pinBased" onchange="toggleField('pinOptionBox',this.value==='Yes')">
+                <option>No</option>
+                <option>Yes</option>
+            </select>
+        </div>
+    </div>
 
+    <div id="pinOptionBox" class="hidden-field">
+        <label>Pincode Scope</label>
+        <select id="pinScope">
+            <option>Pan India</option>
+            <option>Specific List</option>
+        </select>
+    </div>
+
+    <div id="condContainer" style="margin-top:15px;"></div>
+    <button type="button" class="btn btn-add" style="margin-top:10px;" onclick="addCond()">+ Add Condition</button>
+
+    <div style="margin-top:15px;">
+        <label>Internal Remarks</label>
+        <textarea id="remarks" rows="3" style="width:100%; border:1px solid #ccc;" placeholder="Enter internal notes..."></textarea>
+    </div>
+</div>
             </form>
         </div>
         <div class="modal-footer"><button class="btn btn-del" onclick="closeModal('policy')">Cancel</button><button class="btn btn-add" onclick="savePolicy()">Save Policy</button></div>
@@ -280,6 +302,9 @@
             maxEnq: +document.getElementById('maxEnq').value, loans6m: +document.getElementById('loans6m').value,
             
             bankingTypes: bTypes, programs: progs, conditions: conds, remarks: document.getElementById('remarks').value
+            geoLimit: document.getElementById('geoLimit').value,
+pinBased: document.getElementById('pinBased').value,
+pinScope: document.getElementById('pinScope').value,
         };
         
         let idx = document.getElementById('p_id').value;
@@ -297,6 +322,12 @@
         setVal('bankName', p.bankName); setVal('prodType', p.prodType); 
         setVal('itrReq', p.itrReq); setVal('gstReq', p.gstReq); setVal('coAppReq', p.coAppReq); setVal('houseReq', p.houseReq); 
         setVal('houseGeo', p.houseGeo); setVal('remarks', p.remarks);
+        setVal('geoLimit', p.geoLimit);
+setVal('pinBased', p.pinBased);
+setVal('pinScope', p.pinScope);
+
+// Trigger the hidden box visibility
+toggleField('pinOptionBox', p.pinBased === 'Yes');
         
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
         
@@ -354,3 +385,4 @@
 </script>
 </body>
 </html>
+
