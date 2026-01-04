@@ -279,6 +279,7 @@
 
         // --- 6. BUSINESS PINCODE CHECKER ---
   // --- UPDATED: BUSINESS PINCODE CHECKER (SHOWS COUNT & BANK NAMES) ---
+       // --- UPDATED: ROBUST PINCODE CHECKER (Excel & Multi-Bank Support) ---
         function checkBusPincodeStatus() {
             const pinInput = document.getElementById('bPincode').value;
             const statusField = document.getElementById('bPinStatus');
@@ -289,7 +290,7 @@
                 statusField.style.backgroundColor = "#fff";
                 statusField.style.color = "#333";
                 statusField.style.border = "1px solid #ccc";
-                statusField.title = ""; // Clear tooltip
+                statusField.title = ""; 
                 return;
             }
 
@@ -298,7 +299,6 @@
                 statusField.value = "Loading Data...";
                 statusField.style.backgroundColor = "#fff3cd";
                 
-                // Force reload if empty
                 if(db) {
                     db.collection('policies').get().then(snap => {
                         window.allPolicies = [];
@@ -309,20 +309,23 @@
                 return; 
             }
 
-            // 3. Perform Check on ALL Policies (Don't stop at first match)
+            // 3. Perform Check on ALL Policies
             let eligibleBanks = [];
 
             for (let policy of window.allPolicies) {
                 let isMatch = false;
 
-                // Scenario A: Pan India or No Check (Automatically Eligible)
+                // Scenario A: Pan India (Automatically Eligible)
                 if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
                     isMatch = true;
                 }
-                // Scenario B: Specific List
+                // Scenario B: Specific List (Robust Excel Handling)
                 else if (policy.pinScope === 'Specific List' && policy.pinList) {
-                    // Clean the list (split by comma and remove spaces)
-                    let cleanList = policy.pinList.split(',').map(p => p.trim());
+                    // Replace new lines and spaces with commas, then split
+                    // This handles Excel copy-pastes perfectly
+                    let rawList = policy.pinList.replace(/[\n\r\s]+/g, ','); 
+                    let cleanList = rawList.split(',').map(p => p.trim());
+                    
                     if (cleanList.includes(pinInput)) {
                         isMatch = true;
                     }
@@ -335,13 +338,18 @@
 
             // 4. Update UI with Count and Names
             if (eligibleBanks.length > 0) {
-                // Show count of banks
-                statusField.value = `Listed (${eligibleBanks.length} Banks)`;
+                // If 1 or 2 banks, show names directly. If more, show count + tooltip.
+                if (eligibleBanks.length <= 2) {
+                    statusField.value = `Listed: ${eligibleBanks.join(', ')}`;
+                } else {
+                    statusField.value = `Listed (${eligibleBanks.length} Banks)`;
+                }
+                
                 statusField.style.backgroundColor = "#d4edda"; // Green
                 statusField.style.color = "#155724";
                 statusField.style.border = "2px solid #28a745";
                 
-                // TOOLTIP: Hover to see exactly which banks accepted it
+                // TOOLTIP: Hover to see full list
                 statusField.title = "Eligible Banks:\n" + eligibleBanks.join("\n");
             } else {
                 statusField.value = "Not Listed";
@@ -568,4 +576,5 @@
     </script>
 </body>
 </html>
+
 
