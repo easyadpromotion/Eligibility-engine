@@ -278,19 +278,22 @@
         }
 
         // --- 6. BUSINESS PINCODE CHECKER ---
+  // --- UPDATED: BUSINESS PINCODE CHECKER (SHOWS COUNT & BANK NAMES) ---
         function checkBusPincodeStatus() {
             const pinInput = document.getElementById('bPincode').value;
             const statusField = document.getElementById('bPinStatus');
             
+            // 1. Reset if incomplete
             if (pinInput.length !== 6) {
                 statusField.value = "Enter 6 digits...";
                 statusField.style.backgroundColor = "#fff";
                 statusField.style.color = "#333";
                 statusField.style.border = "1px solid #ccc";
+                statusField.title = ""; // Clear tooltip
                 return;
             }
 
-            // Safety Check: Are policies loaded?
+            // 2. Safety Check: Are policies loaded?
             if (!window.allPolicies || window.allPolicies.length === 0) {
                 statusField.value = "Loading Data...";
                 statusField.style.backgroundColor = "#fff3cd";
@@ -306,37 +309,48 @@
                 return; 
             }
 
-            let isListed = false;
+            // 3. Perform Check on ALL Policies (Don't stop at first match)
+            let eligibleBanks = [];
 
             for (let policy of window.allPolicies) {
-                // A: Pan India
+                let isMatch = false;
+
+                // Scenario A: Pan India or No Check (Automatically Eligible)
                 if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
-                    isListed = true;
-                    break; 
+                    isMatch = true;
                 }
-                // B: Specific List
-                if (policy.pinScope === 'Specific List' && policy.pinList) {
+                // Scenario B: Specific List
+                else if (policy.pinScope === 'Specific List' && policy.pinList) {
+                    // Clean the list (split by comma and remove spaces)
                     let cleanList = policy.pinList.split(',').map(p => p.trim());
                     if (cleanList.includes(pinInput)) {
-                        isListed = true;
-                        break;
+                        isMatch = true;
                     }
+                }
+
+                if (isMatch) {
+                    eligibleBanks.push(policy.bankName);
                 }
             }
 
-            if (isListed) {
-                statusField.value = "Listed";
-                statusField.style.backgroundColor = "#d4edda";
+            // 4. Update UI with Count and Names
+            if (eligibleBanks.length > 0) {
+                // Show count of banks
+                statusField.value = `Listed (${eligibleBanks.length} Banks)`;
+                statusField.style.backgroundColor = "#d4edda"; // Green
                 statusField.style.color = "#155724";
                 statusField.style.border = "2px solid #28a745";
+                
+                // TOOLTIP: Hover to see exactly which banks accepted it
+                statusField.title = "Eligible Banks:\n" + eligibleBanks.join("\n");
             } else {
                 statusField.value = "Not Listed";
-                statusField.style.backgroundColor = "#f8d7da";
+                statusField.style.backgroundColor = "#f8d7da"; // Red
                 statusField.style.color = "#721c24";
                 statusField.style.border = "2px solid #dc3545";
+                statusField.title = "No banks accept this pincode.";
             }
         }
-
         // --- 7. CALCULATION ENGINE ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
@@ -554,3 +568,4 @@
     </script>
 </body>
 </html>
+
