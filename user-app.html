@@ -280,6 +280,7 @@
         // --- 6. BUSINESS PINCODE CHECKER ---
   // --- UPDATED: BUSINESS PINCODE CHECKER (SHOWS COUNT & BANK NAMES) ---
        // --- UPDATED: ROBUST PINCODE CHECKER (Excel & Multi-Bank Support) ---
+       // --- UPDATED LOGIC: STRICT SPECIFIC LIST CHECK ---
         function checkBusPincodeStatus() {
             const pinInput = document.getElementById('bPincode').value;
             const statusField = document.getElementById('bPinStatus');
@@ -297,69 +298,62 @@
             // 2. Safety Check: Are policies loaded?
             if (!window.allPolicies || window.allPolicies.length === 0) {
                 statusField.value = "Loading Data...";
-                statusField.style.backgroundColor = "#fff3cd";
-                
-                if(db) {
-                    db.collection('policies').get().then(snap => {
-                        window.allPolicies = [];
-                        snap.forEach(doc => window.allPolicies.push(doc.data()));
-                        setTimeout(checkBusPincodeStatus, 500); 
-                    });
-                }
                 return; 
             }
 
-            // 3. Perform Check on ALL Policies
-            let eligibleBanks = [];
+            // 3. Perform Strict Check
+            let specificMatchBanks = [];
+            let totalSpecificBanks = 0;
 
             for (let policy of window.allPolicies) {
-                let isMatch = false;
-
-                // Scenario A: Pan India (Automatically Eligible)
-                if (policy.pinBased === 'No' || policy.pinScope === 'Pan India') {
-                    isMatch = true;
-                }
-                // Scenario B: Specific List (Robust Excel Handling)
-                else if (policy.pinScope === 'Specific List' && policy.pinList) {
-                    // Replace new lines and spaces with commas, then split
-                    // This handles Excel copy-pastes perfectly
-                    let rawList = policy.pinList.replace(/[\n\r\s]+/g, ','); 
-                    let cleanList = rawList.split(',').map(p => p.trim());
+                // We ONLY care about banks with a "Specific List"
+                if (policy.pinBased === 'Yes' && policy.pinScope === 'Specific List') {
+                    totalSpecificBanks++; // Count how many banks have restricted lists
                     
-                    if (cleanList.includes(pinInput)) {
-                        isMatch = true;
+                    // Robust List Cleaning (Handle Spaces, New Lines from Excel)
+                    if (policy.pinList) {
+                        // Replace new lines/tabs with comma, then split by comma
+                        let rawList = policy.pinList.replace(/[\n\r\t]/g, ',');
+                        let cleanList = rawList.split(',').map(p => p.trim());
+                        
+                        if (cleanList.includes(pinInput)) {
+                            specificMatchBanks.push(policy.bankName);
+                        }
                     }
-                }
-
-                if (isMatch) {
-                    eligibleBanks.push(policy.bankName);
                 }
             }
 
-            // 4. Update UI with Count and Names
-            if (eligibleBanks.length > 0) {
-                // If 1 or 2 banks, show names directly. If more, show count + tooltip.
-                if (eligibleBanks.length <= 2) {
-                    statusField.value = `Listed: ${eligibleBanks.join(', ')}`;
+            // 4. Update UI based on Specific List Matches
+            if (specificMatchBanks.length > 0) {
+                // Found in at least one restricted list
+                if (specificMatchBanks.length <= 2) {
+                    statusField.value = `Listed: ${specificMatchBanks.join(', ')}`;
                 } else {
-                    statusField.value = `Listed (${eligibleBanks.length} Banks)`;
+                    statusField.value = `Listed (${specificMatchBanks.length} Banks)`;
                 }
                 
                 statusField.style.backgroundColor = "#d4edda"; // Green
                 statusField.style.color = "#155724";
                 statusField.style.border = "2px solid #28a745";
+                statusField.title = "Available in:\n" + specificMatchBanks.join("\n");
                 
-                // TOOLTIP: Hover to see full list
-                statusField.title = "Eligible Banks:\n" + eligibleBanks.join("\n");
             } else {
-                statusField.value = "Not Listed";
-                statusField.style.backgroundColor = "#f8d7da"; // Red
-                statusField.style.color = "#721c24";
-                statusField.style.border = "2px solid #dc3545";
-                statusField.title = "No banks accept this pincode.";
+                // Not found in any specific list
+                // Check if there were any specific banks at all?
+                if (totalSpecificBanks === 0) {
+                    statusField.value = "No Restrictions"; // No banks have specific lists
+                    statusField.style.backgroundColor = "#fff";
+                    statusField.style.color = "#333";
+                    statusField.style.border = "1px solid #ccc";
+                } else {
+                    statusField.value = "Not Listed";
+                    statusField.style.backgroundColor = "#f8d7da"; // Red
+                    statusField.style.color = "#721c24";
+                    statusField.style.border = "2px solid #dc3545";
+                    statusField.title = "This pincode is not in the allowed list of any restricted bank.";
+                }
             }
-        }
-        // --- 7. CALCULATION ENGINE ---
+        }        // --- 7. CALCULATION ENGINE ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -576,5 +570,6 @@
     </script>
 </body>
 </html>
+
 
 
