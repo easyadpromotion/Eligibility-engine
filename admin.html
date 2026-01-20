@@ -406,9 +406,17 @@
         const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
         requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
         
-        // RENDER POLICIES
+        // RENDER POLICIES (RESTORED EDIT BUTTON)
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
-        policies.forEach(p => pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin}</td><td>${p.roiMin}-${p.roiMax}</td><td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`);
+        policies.forEach(p => {
+            pT.innerHTML += `<tr>
+                <td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin}</td><td>${p.roiMin}-${p.roiMax}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button>
+                    <button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button>
+                </td>
+            </tr>`;
+        });
 
         // RENDER APPLICATIONS (FIXED DATA MAPPING)
         const aT = document.querySelector('#appTable tbody'); 
@@ -416,36 +424,36 @@
         apps.forEach(a => {
             let d = a.data || {}; 
             let displayDate = formatDisplayDate(parseDate(a.date));
-            // MAPPING: Use Capitalized Keys from User App
+            // CHECK BOTH FORMATS (Title Case and lowercase)
             aT.innerHTML += `<tr>
                 <td>${displayDate}</td>
-                <td>${a.customer || d['Business Name'] || '-'}</td>
-                <td>${a.mobile || d['Contact'] || '-'}</td>
-                <td>${d['Vintage'] || '-'}</td>
-                <td>${d['Turnover'] || '-'}</td>
-                <td>${d['Entity'] || '-'}</td>
-                <td>${d['Sector'] || '-'}</td>
-                <td>${d['Premises'] || '-'}</td>
-                <td>${d['ABB'] || '-'}</td>
-                <td>${d['Bank Statements'] || '-'}</td>
-                <td>${d['GST Reg'] || '-'}</td>
-                <td>${d['ITR Filed'] || '-'}</td>
-                <td>${d['CIBIL'] || '-'}</td>
-                <td>${d['Active Loans'] || '-'}</td>
-                <td>${d['Monthly EMI'] || '-'}</td>
-                <td>${d['Unsec Loans'] || '-'}</td>
-                <td>${d['Loans (6m)'] || '-'}</td>
-                <td>${d['Loans Closing (6m)'] || '-'}</td>
-                <td>${d['Closing Loan EMI'] || '-'}</td>
-                <td>${d['Enquiries'] || '-'}</td>
-                <td>${d['Age'] || '-'}</td>
-                <td>${d['Gender'] || '-'}</td>
-                <td>${d['Co-App'] || '-'}</td>
-                <td>${d['Co-App Age'] || '-'}</td>
-                <td>${d['Own House'] || '-'}</td>
-                <td>${d['Pincode'] || '-'}</td>
-                <td>${d['Req Amount'] || '-'}</td>
-                <td>${d['Purpose'] || '-'}</td>
+                <td>${a.customer || d['Business Name'] || d['customer'] || '-'}</td>
+                <td>${a.mobile || d['Contact'] || d['mobile'] || '-'}</td>
+                <td>${d['Vintage'] || d['vintage'] || '-'}</td>
+                <td>${d['Turnover'] || d['turnover'] || '-'}</td>
+                <td>${d['Entity'] || d['entityType'] || '-'}</td>
+                <td>${d['Sector'] || d['sector'] || '-'}</td>
+                <td>${d['Premises'] || d['busPremises'] || '-'}</td>
+                <td>${d['ABB'] || d['abb'] || '-'}</td>
+                <td>${d['Bank Statements'] || d['bankStmtType'] || '-'}</td>
+                <td>${d['GST Reg'] || d['gstReg'] || '-'}</td>
+                <td>${d['ITR Filed'] || d['itrFiled'] || '-'}</td>
+                <td>${d['CIBIL'] || d['cibil'] || '-'}</td>
+                <td>${d['Active Loans'] || d['activeLoans'] || '-'}</td>
+                <td>${d['Monthly EMI'] || d['monthlyEmi'] || '-'}</td>
+                <td>${d['Unsec Loans'] || d['unsecLoans'] || '-'}</td>
+                <td>${d['Loans (6m)'] || d['loansTaken6m'] || '-'}</td>
+                <td>${d['Loans Closing (6m)'] || d['loansClosing6m'] || '-'}</td>
+                <td>${d['Closing Loan EMI'] || d['reducedEmi6m'] || '-'}</td>
+                <td>${d['Enquiries'] || d['enquiries3m'] || '-'}</td>
+                <td>${d['Age'] || d['age'] || '-'}</td>
+                <td>${d['Gender'] || d['gender'] || '-'}</td>
+                <td>${d['Co-App'] || d['coApp'] || '-'}</td>
+                <td>${d['Co-App Age'] || d['coAppAge'] || '-'}</td>
+                <td>${d['Own House'] || d['ownHouse'] || '-'}</td>
+                <td>${d['Pincode'] || d['pincode'] || '-'}</td>
+                <td>${d['Req Amount'] || d['reqAmount'] || '-'}</td>
+                <td>${d['Purpose'] || d['purpose'] || '-'}</td>
                 <td>${a.dsaName || d['DSA Name'] || '-'}</td>
             </tr>`;
         });
@@ -453,6 +461,79 @@
 
     // --- 6. ACTIONS ---
     
+    // SAVE POLICY (HANDLES BOTH ADD & EDIT)
+    window.savePolicy = () => {
+        let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
+        let progs = []; 
+        document.querySelectorAll('#progContainer .dynamic-row').forEach(r => {
+            let sel = r.querySelector('select').value;
+            let inps = r.querySelectorAll('input');
+            progs.push({type: sel, val: inps[0].value, min: inps[1].value, max: inps[2].value});
+        });
+        let conds = []; document.querySelectorAll('#condContainer .dynamic-row').forEach(r => { let i = r.querySelectorAll('input'); if(i[0].value) conds.push({name:i[0].value, val:i[1].value}); });
+
+        const p = {
+            bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
+            loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
+            tenMin: +document.getElementById('tenMin').value, tenMax: +document.getElementById('tenMax').value,
+            roiMin: +document.getElementById('roiMin').value, roiMax: +document.getElementById('roiMax').value,
+            pfMin: +document.getElementById('pfMin').value, pfMax: +document.getElementById('pfMax').value,
+            minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value, 
+            abbMin: +document.getElementById('abbMin').value, minCibil: +document.getElementById('minCibil').value,
+            itrReq: document.getElementById('itrReq').value, gstReq: document.getElementById('gstReq').value,
+            ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
+            coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
+            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value,
+            maxUnsec: +document.getElementById('maxUnsec').value, maxActive: +document.getElementById('maxActive').value, 
+            maxEnq: +document.getElementById('maxEnq').value, loans6m: +document.getElementById('loans6m').value,
+            bankingTypes: bTypes, programs: progs, conditions: conds, 
+            remarks: document.getElementById('remarks').value,
+            geoLimit: document.getElementById('geoLimit').value,
+            pinBased: document.getElementById('pinBased').value,
+            pinScope: document.getElementById('pinScope').value,
+            pinList: document.getElementById('pinList').value,
+        };
+        
+        let idx = document.getElementById('p_id').value;
+        if(idx) db.collection("policies").doc(idx).update(p).then(() => closeModal('policy')); 
+        else db.collection("policies").add(p).then(() => closeModal('policy'));
+    };
+
+    // EDIT POLICY FUNCTION (RESTORED)
+    window.editPolicy = (id) => {
+        let p = policies.find(x => x.id === id); if(!p) return;
+        document.getElementById('p_id').value = id;
+        document.getElementById('policyModalTitle').innerText = "Edit Policy";
+        
+        const setVal = (k, v) => { let el=document.getElementById(k); if(el) el.value = v || ''; };
+
+        setVal('bankName', p.bankName); setVal('prodType', p.prodType); 
+        setVal('itrReq', p.itrReq); setVal('gstReq', p.gstReq); setVal('coAppReq', p.coAppReq); setVal('houseReq', p.houseReq); 
+        setVal('houseGeo', p.houseGeo); setVal('remarks', p.remarks);
+        setVal('geoLimit', p.geoLimit); setVal('pinBased', p.pinBased); setVal('pinScope', p.pinScope); setVal('pinList', p.pinList);
+
+        toggleField('pinOptionBox', p.pinBased === 'Yes');
+        toggleField('pinListBox', p.pinScope === 'Specific List');
+        
+        ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
+        
+        document.getElementById('progContainer').innerHTML='';
+        if(p.programs && Array.isArray(p.programs)) {
+            p.programs.forEach(pr => addProg(pr.type, pr.val, pr.min, pr.max));
+        }
+        
+        document.getElementById('condContainer').innerHTML='';
+        if(p.conditions && Array.isArray(p.conditions)) {
+            p.conditions.forEach(c => addCond(c.name, c.val));
+        }
+        
+        document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
+        toggleField('coBox', p.coAppReq==='Yes');
+        toggleField('houseGeoBox', p.houseReq==='Yes');
+        
+        document.getElementById('policyModal').style.display='flex';
+    };
+
     // EXPORT TO EXCEL (FIXED MAPPING & ADDED)
     window.exportToExcel = () => {
         let headers = ["Date", "Customer Name", "Contact Number", "Vintage", "Turnover", "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"];
@@ -465,33 +546,33 @@
             // MAPPING: Use Capitalized Keys
             let row = [
                 csvDate, 
-                a.customer || d['Business Name'], 
-                a.mobile || d['Contact'], 
-                d['Vintage'], 
-                d['Turnover'], 
-                d['Entity'], 
-                d['Sector'], 
-                d['Premises'], 
-                d['ABB'], 
-                d['Bank Statements'], 
-                d['GST Reg'], 
-                d['ITR Filed'], 
-                d['CIBIL'], 
-                d['Active Loans'], 
-                d['Monthly EMI'], 
-                d['Unsec Loans'], 
-                d['Loans (6m)'], 
-                d['Loans Closing (6m)'], 
-                d['Closing Loan EMI'], 
-                d['Enquiries'], 
-                d['Age'], 
-                d['Gender'], 
-                d['Co-App'], 
-                d['Co-App Age'], 
-                d['Own House'], 
-                d['Pincode'], 
-                d['Req Amount'], 
-                d['Purpose'], 
+                a.customer || d['Business Name'] || d['customer'], 
+                a.mobile || d['Contact'] || d['mobile'], 
+                d['Vintage'] || d['vintage'], 
+                d['Turnover'] || d['turnover'], 
+                d['Entity'] || d['entityType'], 
+                d['Sector'] || d['sector'], 
+                d['Premises'] || d['busPremises'], 
+                d['ABB'] || d['abb'], 
+                d['Bank Statements'] || d['bankStmtType'], 
+                d['GST Reg'] || d['gstReg'], 
+                d['ITR Filed'] || d['itrFiled'], 
+                d['CIBIL'] || d['cibil'], 
+                d['Active Loans'] || d['activeLoans'], 
+                d['Monthly EMI'] || d['monthlyEmi'], 
+                d['Unsec Loans'] || d['unsecLoans'], 
+                d['Loans (6m)'] || d['loansTaken6m'], 
+                d['Loans Closing (6m)'] || d['loansClosing6m'], 
+                d['Closing Loan EMI'] || d['reducedEmi6m'], 
+                d['Enquiries'] || d['enquiries3m'], 
+                d['Age'] || d['age'], 
+                d['Gender'] || d['gender'], 
+                d['Co-App'] || d['coApp'], 
+                d['Co-App Age'] || d['coAppAge'], 
+                d['Own House'] || d['ownHouse'], 
+                d['Pincode'] || d['pincode'], 
+                d['Req Amount'] || d['reqAmount'], 
+                d['Purpose'] || d['purpose'], 
                 a.dsaName || d['DSA Name']
             ];
             
@@ -526,13 +607,29 @@
     // UI
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
     window.openModal=(t)=>{
-        if(t==='policy') { document.getElementById('policyForm').reset(); document.getElementById('policyModal').style.display='flex'; }
-        else { document.getElementById('userForm').reset(); document.getElementById('userModal').style.display='flex'; }
+        if(t==='policy') { 
+            document.getElementById('policyForm').reset(); 
+            document.getElementById('p_id').value=''; 
+            document.getElementById('policyModalTitle').innerText = "New Policy";
+            document.getElementById('progContainer').innerHTML=''; 
+            document.getElementById('condContainer').innerHTML=''; 
+        } else { document.getElementById('userForm').reset(); document.getElementById('userModal').style.display='flex'; }
+        document.getElementById(t+'Modal').style.display='flex';
     };
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
-    window.addProg=()=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option>ABB</option><option>GST</option></select><input placeholder="Value"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
-    window.addCond=()=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input placeholder="Name"><input placeholder="Value"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
+    
+    // ADD PROGRAM (With Min/Max)
+    window.addProg=(t='ABB',v='',min='',max='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`
+        <div class="dynamic-row" style="align-items:center;">
+            <select style="width:25%"><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select>
+            <input type="number" placeholder="Multiplier/Val" value="${v}" style="width:20%">
+            <input type="number" placeholder="Min Loan (L)" value="${min}" style="width:20%">
+            <input type="number" placeholder="Max Loan (L)" value="${max}" style="width:20%">
+            <button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button>
+        </div>`);
+        
+    window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input placeholder="Name" value="${n}"><input placeholder="Value" value="${v}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
     window.saveUser = () => { const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" }; db.collection("dsa_users").add(u).then(() => { alert("User Added!"); closeModal('user'); }); };
     
     // START
