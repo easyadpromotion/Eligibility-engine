@@ -339,13 +339,14 @@
         return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
     }
 
-    // --- 4. LOAD DATA ---
+    // --- 4. LOAD DATA (UPDATED: FIXED ID BUG) ---
     function loadAllData() {
         if(!db) return;
 
         // LOAD USERS (Real-time)
         db.collection("dsa_users").onSnapshot(snap => { 
-            users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            // FIX: Prioritize real document ID over any 'id' inside the data
+            users = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
             renderTables(); 
         }, err => {
             console.error("User Load Error:", err);
@@ -353,13 +354,13 @@
 
         // LOAD REQUESTS
         db.collection("dsa_requests").onSnapshot(snap => { 
-            requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            requests = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
             renderTables(); 
         });
 
         // LOAD APPS
         db.collection("applications").onSnapshot(snap => { 
-            apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            apps = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
             // Sort by Date (Newest First)
             apps.sort((a, b) => parseDate(b.date) - parseDate(a.date));
             renderTables(); 
@@ -445,22 +446,26 @@
                 alert("Status Updated Successfully!");
             })
             .catch((error) => {
-                // If you see "Missing or insufficient permissions", check Step 2 below!
                 alert("Update Failed: " + error.message);
                 console.error("Update Error", error);
             });
         }
     };
 
-    // APPROVE REQUEST
+    // APPROVE REQUEST (UPDATED: REMOVES OLD ID)
     window.approveReq = (id) => {
         const r = requests.find(x => x.id === id);
         if(r) {
-            db.collection("dsa_users").add({...r, status:"Active"})
+            // SEPARATE old request ID from the rest of the data
+            const { id: oldReqId, ...cleanData } = r;
+
+            // Save only the clean data (without the old ID)
+            db.collection("dsa_users").add({...cleanData, status:"Active"})
             .then(() => {
                 db.collection("dsa_requests").doc(id).delete();
-                alert("User Approved!");
-            });
+                alert("User Approved Successfully!");
+            })
+            .catch(e => alert("Error: " + e.message));
         }
     };
 
@@ -505,4 +510,3 @@
 </script>
 </body>
 </html>
-
