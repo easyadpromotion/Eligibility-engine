@@ -28,8 +28,8 @@
         .btn-add { background-color: #2e7d32; } 
         .btn-del { background-color: #c62828; } 
         .btn-edit { background-color: #ffa000; color: #333; } 
-        .btn-hold { background-color: #ff9800; color: white; } /* NEW STYLE FOR HOLD */
-        .btn-active { background-color: #4caf50; color: white; } /* NEW STYLE FOR ACTIVE */
+        .btn-hold { background-color: #ff9800; color: white; } 
+        .btn-active { background-color: #4caf50; color: white; } 
         .btn-reset { background-color: #ff9800; float: right; margin-right: 10px; }
 
         /* MODAL */
@@ -339,13 +339,12 @@
         return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
     }
 
-    // --- 4. LOAD DATA (UPDATED: FIXED ID BUG) ---
+    // --- 4. LOAD DATA ---
     function loadAllData() {
         if(!db) return;
 
         // LOAD USERS (Real-time)
         db.collection("dsa_users").onSnapshot(snap => { 
-            // FIX: Prioritize real document ID over any 'id' inside the data
             users = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
             renderTables(); 
         }, err => {
@@ -361,7 +360,6 @@
         // LOAD APPS
         db.collection("applications").onSnapshot(snap => { 
             apps = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
-            // Sort by Date (Newest First)
             apps.sort((a, b) => parseDate(b.date) - parseDate(a.date));
             renderTables(); 
         });
@@ -379,133 +377,120 @@
         // RENDER USERS
         const uT = document.querySelector('#userTable tbody'); 
         uT.innerHTML='';
-        
         users.forEach(u => {
             const status = u.status || 'Active';
             const statusColor = status === 'Hold' ? 'red' : 'green'; 
-            
-            // Hold/Active Button Logic
-            let actionBtn = '';
-            if(status === 'Active') {
-                actionBtn = `<button class="btn btn-hold" onclick="toggleUserStatus('${u.id}', 'Hold')">Hold</button>`;
-            } else {
-                actionBtn = `<button class="btn btn-active" onclick="toggleUserStatus('${u.id}', 'Active')">Active</button>`;
-            }
+            let actionBtn = status === 'Active' 
+                ? `<button class="btn btn-hold" onclick="toggleUserStatus('${u.id}', 'Hold')">Hold</button>`
+                : `<button class="btn btn-active" onclick="toggleUserStatus('${u.id}', 'Active')">Active</button>`;
 
-            uT.innerHTML += `
-                <tr>
-                    <td>${u.name || '-'}</td>
-                    <td>${u.mobile || '-'}</td>
-                    <td>${u.user || '-'}</td>
-                    <td>${u.pass || '-'}</td>
-                    <td style="color:${statusColor}; font-weight:bold;">${status}</td>
-                    <td>
-                        ${actionBtn}
-                        <button class="btn btn-del" onclick="delUser('${u.id}')">Del</button>
-                    </td>
-                </tr>`;
+            uT.innerHTML += `<tr>
+                <td>${u.name || '-'}</td><td>${u.mobile || '-'}</td><td>${u.user || '-'}</td><td>${u.pass || '-'}</td>
+                <td style="color:${statusColor}; font-weight:bold;">${status}</td>
+                <td>${actionBtn}<button class="btn btn-del" onclick="delUser('${u.id}')">Del</button></td>
+            </tr>`;
         });
 
         // RENDER REQUESTS
-        const rT = document.querySelector('#requestTable tbody'); 
-        rT.innerHTML='';
-        requests.forEach(r => {
-            rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`;
-        });
+        const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
+        requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
         
         // RENDER POLICIES
-        const pT = document.querySelector('#policyTable tbody'); 
-        pT.innerHTML='';
-        policies.forEach(p => {
-            pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin}</td><td>${p.roiMin}-${p.roiMax}</td>
-            <td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`;
+        const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
+        policies.forEach(p => pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin}</td><td>${p.roiMin}-${p.roiMax}</td><td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`);
+
+        // RENDER APPLICATIONS (ADDED THIS MISSING SECTION)
+        const aT = document.querySelector('#appTable tbody'); 
+        aT.innerHTML = '';
+        apps.forEach(a => {
+            let d = a.data || {}; 
+            let displayDate = formatDisplayDate(parseDate(a.date));
+            aT.innerHTML += `<tr>
+                <td>${displayDate}</td>
+                <td>${a.customer || d.customer || '-'}</td>
+                <td>${a.mobile || d.mobile || '-'}</td>
+                <td>${d.vintage || '-'}</td>
+                <td>${d.turnover || '-'}</td>
+                <td>${d.entityType || '-'}</td>
+                <td>${d.sector || '-'}</td>
+                <td>${d.busPremises || '-'}</td>
+                <td>${d.abb || '-'}</td>
+                <td>${d.bankStmtType || '-'}</td>
+                <td>${d.gstReg || '-'}</td>
+                <td>${d.itrFiled || '-'}</td>
+                <td>${d.cibil || '-'}</td>
+                <td>${d.activeLoans || '-'}</td>
+                <td>${d.monthlyEmi || '-'}</td>
+                <td>${d.unsecLoans || '-'}</td>
+                <td>${d.loansTaken6m || '-'}</td>
+                <td>${d.loansClosing6m || '-'}</td>
+                <td>${d.reducedEmi6m || '-'}</td>
+                <td>${d.enquiries3m || '-'}</td>
+                <td>${d.age || '-'}</td>
+                <td>${d.gender || '-'}</td>
+                <td>${d.coApp || '-'}</td>
+                <td>${d.coAppAge || '-'}</td>
+                <td>${d.ownHouse || '-'}</td>
+                <td>${d.pincode || '-'}</td>
+                <td>${d.reqAmount || '-'}</td>
+                <td>${d.purpose || '-'}</td>
+                <td>${a.dsaName || d.dsaName || '-'}</td>
+            </tr>`;
         });
     }
 
-    // --- 6. ACTIONS (WITH ERROR HANDLING) ---
+    // --- 6. ACTIONS ---
     
-    // FUNCTION TO DELETE USER
-    window.delUser = (id) => {
-        if(confirm("Permanently DELETE this user? This cannot be undone.")) {
-            db.collection("dsa_users").doc(id).delete()
-            .then(() => {
-                alert("User Deleted Successfully!");
-            })
-            .catch((error) => {
-                alert("Error Deleting: " + error.message);
-                console.error("Delete Error", error);
+    // EXPORT TO EXCEL (ADDED THIS MISSING FUNCTION)
+    window.exportToExcel = () => {
+        let headers = ["Date", "Customer Name", "Contact Number", "Vintage", "Turnover", "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"];
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+        
+        apps.forEach(a => {
+            let d = a.data || {};
+            let row = [a.date, a.customer, a.mobile || d.mobile, d.vintage, d.turnover, d.entityType, d.sector, d.busPremises, d.abb, d.bankStmtType, d.gstReg, d.itrFiled, d.cibil, d.activeLoans, d.monthlyEmi, d.unsecLoans, d.loansTaken6m, d.loansClosing6m, d.reducedEmi6m, d.enquiries3m, d.age, d.gender, d.coApp, d.coAppAge, d.ownHouse, d.pincode, d.reqAmount, d.purpose, a.dsaName];
+            
+            let cleanRow = row.map(item => {
+                if (item === undefined || item === null) return "";
+                return `"${String(item).replace(/"/g, '""')}"`;
             });
-        }
+            csvContent += cleanRow.join(",") + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Loan_Applications.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
-    // FUNCTION TO TOGGLE HOLD/ACTIVE
-    window.toggleUserStatus = (id, newStatus) => {
-        if(confirm(`Change status to ${newStatus}?`)) {
-            db.collection("dsa_users").doc(id).update({ status: newStatus })
-            .then(() => {
-                alert("Status Updated Successfully!");
-            })
-            .catch((error) => {
-                alert("Update Failed: " + error.message);
-                console.error("Update Error", error);
-            });
-        }
-    };
+    // USER ACTIONS
+    window.delUser = (id) => { if(confirm("Delete user?")) db.collection("dsa_users").doc(id).delete().catch(e => alert(e.message)); };
+    window.toggleUserStatus = (id, s) => { if(confirm(`Set status to ${s}?`)) db.collection("dsa_users").doc(id).update({ status: s }).catch(e => alert(e.message)); };
+    window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { const { id: x, ...data } = r; db.collection("dsa_users").add({...data, status:"Active"}).then(() => db.collection("dsa_requests").doc(id).delete()); } };
+    window.delDoc = (col, id) => { if(confirm("Delete item?")) db.collection(col).doc(id).delete().catch(e => alert(e.message)); };
 
-    // APPROVE REQUEST (UPDATED: REMOVES OLD ID)
-    window.approveReq = (id) => {
-        const r = requests.find(x => x.id === id);
-        if(r) {
-            // SEPARATE old request ID from the rest of the data
-            const { id: oldReqId, ...cleanData } = r;
-
-            // Save only the clean data (without the old ID)
-            db.collection("dsa_users").add({...cleanData, status:"Active"})
-            .then(() => {
-                db.collection("dsa_requests").doc(id).delete();
-                alert("User Approved Successfully!");
-            })
-            .catch(e => alert("Error: " + e.message));
-        }
-    };
-
-    // GENERIC DELETE (For Policies)
-    window.delDoc = (col, id) => { 
-        if(confirm("Delete this item?")) {
-            db.collection(col).doc(id).delete().catch(e => alert("Error: " + e.message)); 
-        }
-    };
-
-    // LOGIN & MISC
+    // MISC
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong Password"); };
     window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
     window.uploadDefaultPolicies = () => { if(confirm("Load Defaults?")) { const defaultPolicies = [{ bankName:"TATA STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, loanMin:3, loanMax:20, tenMax:36, roiMin:18, roiMax:24, abbMin:5000, itrReq:'Yes', gstReq:'Yes' }]; defaultPolicies.forEach(p => db.collection("policies").add(p)); } };
     
-    // MODAL LOGIC
+    // UI
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
     window.openModal=(t)=>{
         if(t==='policy') { document.getElementById('policyForm').reset(); document.getElementById('policyModal').style.display='flex'; }
         else { document.getElementById('userForm').reset(); document.getElementById('userModal').style.display='flex'; }
     };
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
-
-    // SAVE USER (Manual Add)
-    window.saveUser = () => {
-        const u = { 
-            name: document.getElementById('uName').value, 
-            mobile: document.getElementById('uMob').value, 
-            user: document.getElementById('uUser').value, 
-            pass: document.getElementById('uPass').value, 
-            status: "Active" 
-        };
-        db.collection("dsa_users").add(u).then(() => {
-            alert("User Added!");
-            closeModal('user');
-        });
-    };
-
-    // LOAD START
+    window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
+    window.addProg=()=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select><option>ABB</option><option>GST</option></select><input placeholder="Value"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
+    window.addCond=()=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input placeholder="Name"><input placeholder="Value"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
+    window.saveUser = () => { const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" }; db.collection("dsa_users").add(u).then(() => { alert("User Added!"); closeModal('user'); }); };
+    
+    // START
     loadAllData();
 </script>
 </body>
