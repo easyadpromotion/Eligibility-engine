@@ -10,8 +10,21 @@
     <style>
         /* MAIN LAYOUT */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        
+        /* UPDATED: Sidebar transitions for mobile */
+        .sidebar { 
+            width: 260px; 
+            background-color: #1a237e; 
+            color: white; 
+            padding: 25px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
+            z-index: 100; 
+            transition: 0.3s; /* Smooth slide */
+        }
+        
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; transition: 0.3s; }
 
         /* NAVIGATION */
         .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
@@ -57,6 +70,37 @@
         .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
         .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
 
+        /* --- NEW MOBILE STYLES (Fixes Blue Screen Issue) --- */
+        .menu-btn {
+            display: none; 
+            position: fixed; top: 15px; left: 15px;
+            background: #1a237e; color: white;
+            border: none; padding: 10px; border-radius: 5px;
+            font-size: 20px; z-index: 2000; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .menu-btn { display: block; }
+            .sidebar {
+                position: fixed; left: -280px; top: 0; height: 100%; width: 260px;
+            }
+            .sidebar.show { left: 0; }
+            .main-content { padding: 20px; padding-top: 70px; }
+            
+            /* Stack form inputs on mobile */
+            .form-grid { grid-template-columns: 1fr; }
+            .details-grid { grid-template-columns: 1fr; }
+            
+            /* Adjust table overflow */
+            .dash-table { display: block; overflow-x: auto; }
+            
+            /* Fix inner grids like pincode status */
+            div[style*="grid-template-columns: 1fr 1fr 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
         /* PRINT FIXES */
         @media print { 
             .no-print { display: none !important; } 
@@ -69,8 +113,10 @@
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2 style="margin-bottom: 40px;">🚀 DSA Portal</h2>
+    <button class="menu-btn" onclick="toggleMenu()">☰ Menu</button>
+
+    <div class="sidebar" id="sidebar">
+        <h2 style="margin-bottom: 40px; padding-left:10px;">🚀 DSA Portal</h2>
         <div class="nav-item active" id="nav-app" onclick="switchView('appView')">📄 New Application</div>
         <div class="nav-item" id="nav-dash" onclick="switchView('dashView')">📊 Dashboard</div>
         <div class="nav-item" style="margin-top:auto; background:#d32f2f;" onclick="logoutUser()">🚪 Logout</div>
@@ -222,6 +268,11 @@
         window.latestData = {};
         window.allPolicies = []; // Init global policies array
 
+        // NEW: Toggle Menu Logic
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
         function switchView(v){
             document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
             if(v==='appView') document.getElementById('nav-app').classList.add('active');
@@ -230,6 +281,11 @@
             document.getElementById('appView').style.display = v==='appView'?'block':'none';
             document.getElementById('dashView').style.display = v==='dashView'?'block':'none';
             
+            // Auto close menu on mobile
+            if(window.innerWidth < 768) {
+                toggleMenu();
+            }
+
             if(v==='dashView') loadHistory();
         }
         
@@ -278,14 +334,10 @@
         }
 
         // --- 6. BUSINESS PINCODE CHECKER ---
-  // --- UPDATED: BUSINESS PINCODE CHECKER (SHOWS COUNT & BANK NAMES) ---
-       // --- UPDATED: ROBUST PINCODE CHECKER (Excel & Multi-Bank Support) ---
-       // --- UPDATED LOGIC: STRICT SPECIFIC LIST CHECK ---
         function checkBusPincodeStatus() {
             const pinInput = document.getElementById('bPincode').value;
             const statusField = document.getElementById('bPinStatus');
             
-            // 1. Reset if incomplete
             if (pinInput.length !== 6) {
                 statusField.value = "Enter 6 digits...";
                 statusField.style.backgroundColor = "#fff";
@@ -295,24 +347,18 @@
                 return;
             }
 
-            // 2. Safety Check: Are policies loaded?
             if (!window.allPolicies || window.allPolicies.length === 0) {
                 statusField.value = "Loading Data...";
                 return; 
             }
 
-            // 3. Perform Strict Check
             let specificMatchBanks = [];
             let totalSpecificBanks = 0;
 
             for (let policy of window.allPolicies) {
-                // We ONLY care about banks with a "Specific List"
                 if (policy.pinBased === 'Yes' && policy.pinScope === 'Specific List') {
-                    totalSpecificBanks++; // Count how many banks have restricted lists
-                    
-                    // Robust List Cleaning (Handle Spaces, New Lines from Excel)
+                    totalSpecificBanks++; 
                     if (policy.pinList) {
-                        // Replace new lines/tabs with comma, then split by comma
                         let rawList = policy.pinList.replace(/[\n\r\t]/g, ',');
                         let cleanList = rawList.split(',').map(p => p.trim());
                         
@@ -323,37 +369,35 @@
                 }
             }
 
-            // 4. Update UI based on Specific List Matches
             if (specificMatchBanks.length > 0) {
-                // Found in at least one restricted list
                 if (specificMatchBanks.length <= 2) {
                     statusField.value = `Listed: ${specificMatchBanks.join(', ')}`;
                 } else {
                     statusField.value = `Listed (${specificMatchBanks.length} Banks)`;
                 }
                 
-                statusField.style.backgroundColor = "#d4edda"; // Green
+                statusField.style.backgroundColor = "#d4edda"; 
                 statusField.style.color = "#155724";
                 statusField.style.border = "2px solid #28a745";
                 statusField.title = "Available in:\n" + specificMatchBanks.join("\n");
                 
             } else {
-                // Not found in any specific list
-                // Check if there were any specific banks at all?
                 if (totalSpecificBanks === 0) {
-                    statusField.value = "No Restrictions"; // No banks have specific lists
+                    statusField.value = "No Restrictions"; 
                     statusField.style.backgroundColor = "#fff";
                     statusField.style.color = "#333";
                     statusField.style.border = "1px solid #ccc";
                 } else {
                     statusField.value = "Not Listed";
-                    statusField.style.backgroundColor = "#f8d7da"; // Red
+                    statusField.style.backgroundColor = "#f8d7da"; 
                     statusField.style.color = "#721c24";
                     statusField.style.border = "2px solid #dc3545";
                     statusField.title = "This pincode is not in the allowed list of any restricted bank.";
                 }
             }
-        }        // --- 7. CALCULATION ENGINE ---
+        }   
+
+        // --- 7. CALCULATION ENGINE ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -570,6 +614,3 @@
     </script>
 </body>
 </html>
-
-
-
