@@ -298,7 +298,6 @@
         <div class="modal-footer"><button class="btn btn-add" onclick="saveUser()">Save User</button></div>
     </div>
 </div>
-
 <script>
     // 1. FIREBASE CONFIG
     const firebaseConfig = {
@@ -312,87 +311,79 @@
     };
 
     let db;
-    try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.error("FB Error", e); }
+    try { 
+        firebase.initializeApp(firebaseConfig); 
+        db = firebase.firestore(); 
+        console.log("Firebase Connected");
+    } catch(e) { 
+        console.error("FB Error", e); 
+        alert("Database Connection Failed: " + e.message);
+    }
 
-    // 2. SESSION
-    if (sessionStorage.getItem('adminLoggedIn') === 'true') document.getElementById('loginOverlay').style.display = 'none';
+    // 2. SESSION CHECK
+    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+        document.getElementById('loginOverlay').style.display = 'none';
+    }
 
-    // 3. DEFAULTS
-    const defaultPolicies = [
-        { bankName:"TATA STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, loanMin:3, loanMax:20, tenMax:36, roiMin:18, roiMax:24, abbMin:5000, itrReq:'Yes', gstReq:'Yes' },
-        { bankName:"BAJAJ OD", prodType:"OD", minTurn:50, minVin:2, minCibil:720, loanMin:5, loanMax:25, tenMax:24, roiMin:14.5, roiMax:22, abbMin:20000, itrReq:'No', gstReq:'Yes' }
-    ];
-
+    // 3. VARIABLES
     let policies=[], users=[], requests=[], apps=[];
 
-   // --- 1. DATE HELPER FUNCTIONS ---
+    // --- HELPER: FORMAT DATE ---
     function parseDate(dateStr) {
-        if (!dateStr) return new Date(0); 
+        if (!dateStr) return new Date(0);
         if (typeof dateStr !== 'string') return new Date(dateStr);
-        let parts = dateStr.split(/[/-]/);
-        if (parts.length === 3) {
-            let p1 = parseInt(parts[0]);
-            let p2 = parseInt(parts[1]);
-            let p3 = parseInt(parts[2]);
-            if (p1 > 12) return new Date(p3, p2 - 1, p1);
-            if (p1 > 2000) return new Date(p1, p2 - 1, p3);
-        }
         return new Date(dateStr);
     }
-
     function formatDisplayDate(dateObj) {
         if (!dateObj || isNaN(dateObj.getTime())) return '-';
-        let d = dateObj.getDate().toString().padStart(2, '0');
-        let m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-        let y = dateObj.getFullYear();
-        return `${d}/${m}/${y}`;
+        return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
     }
 
-    // --- 2. UPDATED LOAD DATA ---
+    // --- 4. LOAD DATA ---
     function loadAllData() {
         if(!db) return;
-        
+
+        // LOAD USERS (Real-time)
+        db.collection("dsa_users").onSnapshot(snap => { 
+            users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        }, err => {
+            console.error("User Load Error:", err);
+        });
+
+        // LOAD REQUESTS
+        db.collection("dsa_requests").onSnapshot(snap => { 
+            requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            renderTables(); 
+        });
+
+        // LOAD APPS
+        db.collection("applications").onSnapshot(snap => { 
+            apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
+            // Sort by Date (Newest First)
+            apps.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+            renderTables(); 
+        });
+
+        // LOAD POLICIES
         db.collection("policies").onSnapshot(snap => { 
             policies = [];
             snap.forEach(doc => { policies.push({ id: doc.id, ...doc.data() }); });
             renderTables(); 
         });
-        
-        db.collection("dsa_users").onSnapshot(snap => { users = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
-        db.collection("dsa_requests").onSnapshot(snap => { requests = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); renderTables(); });
-        
-        db.collection("applications").onSnapshot(snap => { 
-            apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
-            apps.sort((a, b) => {
-                let dateA = parseDate(a.date || a.data?.date);
-                let dateB = parseDate(b.date || b.data?.date);
-                return dateB - dateA; 
-            });
-            renderTables(); 
-        });
     }
 
-    // --- 3. UPDATED RENDER TABLES ---
+    // --- 5. RENDER TABLES ---
     function renderTables() {
-        // Policy Table
-        const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
-        if (policies.length === 0) {
-            pT.innerHTML = "<tr><td colspan='7'>No Policies Found. Click 'Load Defaults'.</td></tr>";
-        } else {
-            policies.forEach(p => {
-                pT.innerHTML += `<tr><td>${p.bankName||'-'}</td><td>${p.prodType||'-'}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin||'-'}</td><td>${p.roiMin}-${p.roiMax}</td>
-                <td><button class="btn btn-edit" onclick="editPolicy('${p.id}')">Edit</button><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`;
-            });
-        }
+        // RENDER USERS
+        const uT = document.querySelector('#userTable tbody'); 
+        uT.innerHTML='';
         
-        // --- UPDATED USER TABLE (With Status & Toggle) ---
-        const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
         users.forEach(u => {
-            // Default status is 'Active' if not found
             const status = u.status || 'Active';
-            const statusColor = status === 'Hold' ? '#c62828' : '#2e7d32'; // Red if Hold, Green if Active
+            const statusColor = status === 'Hold' ? 'red' : 'green'; 
             
-            // Logic for Toggle Button (Opposite of current status)
+            // Hold/Active Button Logic
             let actionBtn = '';
             if(status === 'Active') {
                 actionBtn = `<button class="btn btn-hold" onclick="toggleUserStatus('${u.id}', 'Hold')">Hold</button>`;
@@ -402,230 +393,116 @@
 
             uT.innerHTML += `
                 <tr>
-                    <td>${u.name}</td>
-                    <td>${u.mobile}</td>
-                    <td>${u.user}</td>
-                    <td>${u.pass}</td>
+                    <td>${u.name || '-'}</td>
+                    <td>${u.mobile || '-'}</td>
+                    <td>${u.user || '-'}</td>
+                    <td>${u.pass || '-'}</td>
                     <td style="color:${statusColor}; font-weight:bold;">${status}</td>
                     <td>
                         ${actionBtn}
-                        <button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button>
+                        <button class="btn btn-del" onclick="delUser('${u.id}')">Del</button>
                     </td>
                 </tr>`;
         });
-        
-        // Request Table
-        const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
-        requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
-        
-        // Application Table
-        const aT = document.querySelector('#appTable tbody'); 
-        aT.innerHTML = '';
-        apps.forEach(a => {
-            let d = a.data || {}; 
-            let dateObj = parseDate(a.date || d.date);
-            let displayDate = formatDisplayDate(dateObj);
 
-            aT.innerHTML += `
-                <tr>
-                    <td>${displayDate}</td>
-                    <td>${a.customer || d.customer || '-'}</td>
-                    <td>${a.mobile || d.mobile || '-'}</td>
-                    <td>${d.vintage || '-'}</td>
-                    <td>${d.turnover || '-'}</td>
-                    <td>${d.entityType || '-'}</td>
-                    <td>${d.sector || '-'}</td>
-                    <td>${d.busPremises || '-'}</td>
-                    <td>${d.abb || '-'}</td>
-                    <td>${d.bankStmtType || '-'}</td>
-                    <td>${d.gstReg || '-'}</td>
-                    <td>${d.itrFiled || '-'}</td>
-                    <td>${d.cibil || '-'}</td>
-                    <td>${d.activeLoans || '-'}</td>
-                    <td>${d.monthlyEmi || '-'}</td>
-                    <td>${d.unsecLoans || '-'}</td>
-                    <td>${d.loansTaken6m || '-'}</td>
-                    <td>${d.loansClosing6m || '-'}</td>
-                    <td>${d.reducedEmi6m || '-'}</td>
-                    <td>${d.enquiries3m || '-'}</td>
-                    <td>${d.age || '-'}</td>
-                    <td>${d.gender || '-'}</td>
-                    <td>${d.coApp || '-'}</td>
-                    <td>${d.coAppAge || '-'}</td>
-                    <td>${d.ownHouse || '-'}</td>
-                    <td>${d.pincode || '-'}</td>
-                    <td>${d.reqAmount || '-'}</td>
-                    <td>${d.purpose || '-'}</td>
-                    <td>${a.dsaName || d.dsaName || '-'}</td>
-                </tr>`;
+        // RENDER REQUESTS
+        const rT = document.querySelector('#requestTable tbody'); 
+        rT.innerHTML='';
+        requests.forEach(r => {
+            rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`;
+        });
+        
+        // RENDER POLICIES
+        const pT = document.querySelector('#policyTable tbody'); 
+        pT.innerHTML='';
+        policies.forEach(p => {
+            pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin}</td><td>${p.roiMin}-${p.roiMax}</td>
+            <td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`;
         });
     }
-    // ACTIONS
-    window.uploadDefaultPolicies = () => { if(confirm("Load Defaults?")) { defaultPolicies.forEach(p => db.collection("policies").add(p)); } };
+
+    // --- 6. ACTIONS (WITH ERROR HANDLING) ---
     
-    // UPDATED: Approve now sets Status = Active
-    window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { db.collection("dsa_users").add({...r, status:"Active"}); db.collection("dsa_requests").doc(id).delete(); } };
-    
-    window.delDoc = (col, id) => { if(confirm("Permanently Delete User?")) db.collection(col).doc(id).delete(); };
-    
-    // NEW: Toggle Status Function
+    // FUNCTION TO DELETE USER
+    window.delUser = (id) => {
+        if(confirm("Permanently DELETE this user? This cannot be undone.")) {
+            db.collection("dsa_users").doc(id).delete()
+            .then(() => {
+                alert("User Deleted Successfully!");
+            })
+            .catch((error) => {
+                alert("Error Deleting: " + error.message);
+                console.error("Delete Error", error);
+            });
+        }
+    };
+
+    // FUNCTION TO TOGGLE HOLD/ACTIVE
     window.toggleUserStatus = (id, newStatus) => {
-        if(confirm(`Change user status to ${newStatus}?`)) {
-            db.collection("dsa_users").doc(id).update({ status: newStatus });
+        if(confirm(`Change status to ${newStatus}?`)) {
+            db.collection("dsa_users").doc(id).update({ status: newStatus })
+            .then(() => {
+                alert("Status Updated Successfully!");
+            })
+            .catch((error) => {
+                // If you see "Missing or insufficient permissions", check Step 2 below!
+                alert("Update Failed: " + error.message);
+                console.error("Update Error", error);
+            });
         }
     };
 
-    // UPDATED: Save User now sets Status = Active
-    window.saveUser = () => {
-        const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" };
-        db.collection("dsa_users").add(u); closeModal('user');
-    };
-
-    window.savePolicy = () => {
-        let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
-        let progs = []; 
-        document.querySelectorAll('#progContainer .dynamic-row').forEach(r => {
-            let sel = r.querySelector('select').value;
-            let inps = r.querySelectorAll('input');
-            progs.push({type: sel, val: inps[0].value, min: inps[1].value, max: inps[2].value});
-        });
-        let conds = []; document.querySelectorAll('#condContainer .dynamic-row').forEach(r => { let i = r.querySelectorAll('input'); if(i[0].value) conds.push({name:i[0].value, val:i[1].value}); });
-
-        const p = {
-            bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
-            loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
-            tenMin: +document.getElementById('tenMin').value, tenMax: +document.getElementById('tenMax').value,
-            roiMin: +document.getElementById('roiMin').value, roiMax: +document.getElementById('roiMax').value,
-            pfMin: +document.getElementById('pfMin').value, pfMax: +document.getElementById('pfMax').value,
-            
-            minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value, 
-            abbMin: +document.getElementById('abbMin').value, minCibil: +document.getElementById('minCibil').value,
-            itrReq: document.getElementById('itrReq').value, gstReq: document.getElementById('gstReq').value,
-            
-            ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
-            coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
-            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value,
-            
-            maxUnsec: +document.getElementById('maxUnsec').value, maxActive: +document.getElementById('maxActive').value, 
-            maxEnq: +document.getElementById('maxEnq').value, loans6m: +document.getElementById('loans6m').value,
-            
-            bankingTypes: bTypes, programs: progs, conditions: conds, 
-            remarks: document.getElementById('remarks').value,
-            geoLimit: document.getElementById('geoLimit').value,
-            pinBased: document.getElementById('pinBased').value,
-            pinScope: document.getElementById('pinScope').value,
-            pinList: document.getElementById('pinList').value,
-        };
-        
-        let idx = document.getElementById('p_id').value;
-        if(idx) db.collection("policies").doc(idx).update(p); else db.collection("policies").add(p);
-        closeModal('policy');
-    };
-
-    window.editPolicy = (id) => {
-        let p = policies.find(x => x.id === id); if(!p) return;
-        document.getElementById('p_id').value = id;
-        document.getElementById('policyModalTitle').innerText = "Edit Policy";
-        
-        const setVal = (k, v) => { let el=document.getElementById(k); if(el) el.value = v || ''; };
-
-        setVal('bankName', p.bankName); setVal('prodType', p.prodType); 
-        setVal('itrReq', p.itrReq); setVal('gstReq', p.gstReq); setVal('coAppReq', p.coAppReq); setVal('houseReq', p.houseReq); 
-        setVal('houseGeo', p.houseGeo); setVal('remarks', p.remarks);
-        setVal('geoLimit', p.geoLimit);
-        setVal('pinBased', p.pinBased);
-        setVal('pinScope', p.pinScope);
-        setVal('pinList', p.pinList);
-
-        toggleField('pinOptionBox', p.pinBased === 'Yes');
-        toggleField('pinListBox', p.pinScope === 'Specific List');
-        
-        ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
-        
-        document.getElementById('progContainer').innerHTML='';
-        if(p.programs && Array.isArray(p.programs)) {
-            p.programs.forEach(pr => addProg(pr.type, pr.val, pr.min, pr.max));
+    // APPROVE REQUEST
+    window.approveReq = (id) => {
+        const r = requests.find(x => x.id === id);
+        if(r) {
+            db.collection("dsa_users").add({...r, status:"Active"})
+            .then(() => {
+                db.collection("dsa_requests").doc(id).delete();
+                alert("User Approved!");
+            });
         }
-        
-        document.getElementById('condContainer').innerHTML='';
-        if(p.conditions && Array.isArray(p.conditions)) {
-            p.conditions.forEach(c => addCond(c.name, c.val));
-        }
-        
-        document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
-        
-        toggleField('coBox', p.coAppReq==='Yes');
-        toggleField('houseGeoBox', p.houseReq==='Yes');
-        
-        document.getElementById('policyModal').style.display='flex';
     };
 
+    // GENERIC DELETE (For Policies)
+    window.delDoc = (col, id) => { 
+        if(confirm("Delete this item?")) {
+            db.collection(col).doc(id).delete().catch(e => alert("Error: " + e.message)); 
+        }
+    };
+
+    // LOGIN & MISC
+    let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
+    window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong Password"); };
+    window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
+    window.uploadDefaultPolicies = () => { if(confirm("Load Defaults?")) { const defaultPolicies = [{ bankName:"TATA STBL", prodType:"STBL", minTurn:20, minVin:2, minCibil:700, loanMin:3, loanMax:20, tenMax:36, roiMin:18, roiMax:24, abbMin:5000, itrReq:'Yes', gstReq:'Yes' }]; defaultPolicies.forEach(p => db.collection("policies").add(p)); } };
+    
+    // MODAL LOGIC
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
     window.openModal=(t)=>{
-        if(t==='policy') { 
-            document.getElementById('policyForm').reset(); 
-            document.getElementById('p_id').value=''; 
-            document.getElementById('policyModalTitle').innerText = "New Policy";
-            document.getElementById('progContainer').innerHTML=''; 
-            document.getElementById('condContainer').innerHTML=''; 
-        } else { document.getElementById('userForm').reset(); document.getElementById('u_id').value=''; }
-        document.getElementById(t+'Modal').style.display='flex';
+        if(t==='policy') { document.getElementById('policyForm').reset(); document.getElementById('policyModal').style.display='flex'; }
+        else { document.getElementById('userForm').reset(); document.getElementById('userModal').style.display='flex'; }
     };
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
-    window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
-    
-    window.addProg=(t='ABB',v='',min='',max='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`
-        <div class="dynamic-row" style="align-items:center;">
-            <select style="width:25%"><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select>
-            <input type="number" placeholder="Multiplier/Val" value="${v}" style="width:20%">
-            <input type="number" placeholder="Min Loan (L)" value="${min}" style="width:20%">
-            <input type="number" placeholder="Max Loan (L)" value="${max}" style="width:20%">
-            <button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button>
-        </div>`);
-        
-    window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input type="text" placeholder="Name" value="${n}"><input type="text" placeholder="Value" value="${v}"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
 
-    let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
-    window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong"); };
-    window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Updated"); } };
-    window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
-    
-    window.exportToExcel = () => {
-        let headers = [
-            "Date", "Customer Name", "Contact Number", "Vintage", "Turnover", 
-            "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", 
-            "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", 
-            "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", 
-            "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", 
-            "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", 
-            "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"
-        ];
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += headers.join(",") + "\n";
-        apps.forEach(a => {
-            let d = a.data || {};
-            let row = [
-                a.date, a.customer, a.mobile || d.mobile, d.vintage, d.turnover, d.entityType, d.sector, d.busPremises,
-                d.abb, d.bankStmtType, d.gstReg, d.itrFiled, d.cibil, d.activeLoans, d.monthlyEmi, d.unsecLoans,
-                d.loansTaken6m, d.loansClosing6m, d.reducedEmi6m, d.enquiries3m, d.age, d.gender, d.coApp, d.coAppAge,
-                d.ownHouse, d.pincode, d.reqAmount, d.purpose, a.dsaName
-            ];
-            let cleanRow = row.map(item => {
-                if (item === undefined || item === null) return "";
-                return `"${String(item).replace(/"/g, '""')}"`;
-            });
-            csvContent += cleanRow.join(",") + "\n";
+    // SAVE USER (Manual Add)
+    window.saveUser = () => {
+        const u = { 
+            name: document.getElementById('uName').value, 
+            mobile: document.getElementById('uMob').value, 
+            user: document.getElementById('uUser').value, 
+            pass: document.getElementById('uPass').value, 
+            status: "Active" 
+        };
+        db.collection("dsa_users").add(u).then(() => {
+            alert("User Added!");
+            closeModal('user');
         });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "Loan_Applications.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     };
 
+    // LOAD START
     loadAllData();
 </script>
 </body>
 </html>
+
