@@ -328,18 +328,28 @@
     // 3. VARIABLES
     let policies=[], users=[], requests=[], apps=[];
 
-    // --- HELPER: FORMAT DATE ---
+    // --- HELPER: ROBUST DATE PARSING & FORMATTING ---
     function parseDate(dateStr) {
         if (!dateStr) return new Date(0);
-        if (typeof dateStr !== 'string') return new Date(dateStr);
+        // Handle "DD/MM/YYYY" format specifically (common in India/UK)
+        if (typeof dateStr === 'string' && dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            // If the first part is clearly day (e.g. >12), parse as DD/MM/YYYY
+            if (parseInt(parts[0]) > 12) {
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            // Fallback for MM/DD/YYYY or others
+            return new Date(dateStr);
+        }
         return new Date(dateStr);
     }
+
     function formatDisplayDate(dateObj) {
         if (!dateObj || isNaN(dateObj.getTime())) return '-';
-        return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
+        return `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
     }
 
-    // --- 4. LOAD DATA ---
+    // --- 4. LOAD DATA (FIXED ID BUG) ---
     function loadAllData() {
         if(!db) return;
 
@@ -357,9 +367,10 @@
             renderTables(); 
         });
 
-        // LOAD APPS
+        // LOAD APPS - SORTED BY DATE DESC
         db.collection("applications").onSnapshot(snap => { 
             apps = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
+            // Sort by Date Descending (Newest First)
             apps.sort((a, b) => parseDate(b.date) - parseDate(a.date));
             renderTables(); 
         });
@@ -399,56 +410,90 @@
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
         policies.forEach(p => pT.innerHTML += `<tr><td>${p.bankName}</td><td>${p.prodType}</td><td>${p.loanMin}-${p.loanMax}</td><td>${p.tenMax}</td><td>${p.abbMin}</td><td>${p.roiMin}-${p.roiMax}</td><td><button class="btn btn-del" onclick="delDoc('policies','${p.id}')">Del</button></td></tr>`);
 
-        // RENDER APPLICATIONS (ADDED THIS MISSING SECTION)
+        // RENDER APPLICATIONS (FIXED DATA MAPPING)
         const aT = document.querySelector('#appTable tbody'); 
         aT.innerHTML = '';
         apps.forEach(a => {
             let d = a.data || {}; 
             let displayDate = formatDisplayDate(parseDate(a.date));
+            // MAPPING: Use Capitalized Keys from User App
             aT.innerHTML += `<tr>
                 <td>${displayDate}</td>
-                <td>${a.customer || d.customer || '-'}</td>
-                <td>${a.mobile || d.mobile || '-'}</td>
-                <td>${d.vintage || '-'}</td>
-                <td>${d.turnover || '-'}</td>
-                <td>${d.entityType || '-'}</td>
-                <td>${d.sector || '-'}</td>
-                <td>${d.busPremises || '-'}</td>
-                <td>${d.abb || '-'}</td>
-                <td>${d.bankStmtType || '-'}</td>
-                <td>${d.gstReg || '-'}</td>
-                <td>${d.itrFiled || '-'}</td>
-                <td>${d.cibil || '-'}</td>
-                <td>${d.activeLoans || '-'}</td>
-                <td>${d.monthlyEmi || '-'}</td>
-                <td>${d.unsecLoans || '-'}</td>
-                <td>${d.loansTaken6m || '-'}</td>
-                <td>${d.loansClosing6m || '-'}</td>
-                <td>${d.reducedEmi6m || '-'}</td>
-                <td>${d.enquiries3m || '-'}</td>
-                <td>${d.age || '-'}</td>
-                <td>${d.gender || '-'}</td>
-                <td>${d.coApp || '-'}</td>
-                <td>${d.coAppAge || '-'}</td>
-                <td>${d.ownHouse || '-'}</td>
-                <td>${d.pincode || '-'}</td>
-                <td>${d.reqAmount || '-'}</td>
-                <td>${d.purpose || '-'}</td>
-                <td>${a.dsaName || d.dsaName || '-'}</td>
+                <td>${a.customer || d['Business Name'] || '-'}</td>
+                <td>${a.mobile || d['Contact'] || '-'}</td>
+                <td>${d['Vintage'] || '-'}</td>
+                <td>${d['Turnover'] || '-'}</td>
+                <td>${d['Entity'] || '-'}</td>
+                <td>${d['Sector'] || '-'}</td>
+                <td>${d['Premises'] || '-'}</td>
+                <td>${d['ABB'] || '-'}</td>
+                <td>${d['Bank Statements'] || '-'}</td>
+                <td>${d['GST Reg'] || '-'}</td>
+                <td>${d['ITR Filed'] || '-'}</td>
+                <td>${d['CIBIL'] || '-'}</td>
+                <td>${d['Active Loans'] || '-'}</td>
+                <td>${d['Monthly EMI'] || '-'}</td>
+                <td>${d['Unsec Loans'] || '-'}</td>
+                <td>${d['Loans (6m)'] || '-'}</td>
+                <td>${d['Loans Closing (6m)'] || '-'}</td>
+                <td>${d['Closing Loan EMI'] || '-'}</td>
+                <td>${d['Enquiries'] || '-'}</td>
+                <td>${d['Age'] || '-'}</td>
+                <td>${d['Gender'] || '-'}</td>
+                <td>${d['Co-App'] || '-'}</td>
+                <td>${d['Co-App Age'] || '-'}</td>
+                <td>${d['Own House'] || '-'}</td>
+                <td>${d['Pincode'] || '-'}</td>
+                <td>${d['Req Amount'] || '-'}</td>
+                <td>${d['Purpose'] || '-'}</td>
+                <td>${a.dsaName || d['DSA Name'] || '-'}</td>
             </tr>`;
         });
     }
 
     // --- 6. ACTIONS ---
     
-    // EXPORT TO EXCEL (ADDED THIS MISSING FUNCTION)
+    // EXPORT TO EXCEL (FIXED MAPPING & ADDED)
     window.exportToExcel = () => {
         let headers = ["Date", "Customer Name", "Contact Number", "Vintage", "Turnover", "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"];
         let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
         
         apps.forEach(a => {
             let d = a.data || {};
-            let row = [a.date, a.customer, a.mobile || d.mobile, d.vintage, d.turnover, d.entityType, d.sector, d.busPremises, d.abb, d.bankStmtType, d.gstReg, d.itrFiled, d.cibil, d.activeLoans, d.monthlyEmi, d.unsecLoans, d.loansTaken6m, d.loansClosing6m, d.reducedEmi6m, d.enquiries3m, d.age, d.gender, d.coApp, d.coAppAge, d.ownHouse, d.pincode, d.reqAmount, d.purpose, a.dsaName];
+            // Format Date for CSV
+            let csvDate = formatDisplayDate(parseDate(a.date));
+            // MAPPING: Use Capitalized Keys
+            let row = [
+                csvDate, 
+                a.customer || d['Business Name'], 
+                a.mobile || d['Contact'], 
+                d['Vintage'], 
+                d['Turnover'], 
+                d['Entity'], 
+                d['Sector'], 
+                d['Premises'], 
+                d['ABB'], 
+                d['Bank Statements'], 
+                d['GST Reg'], 
+                d['ITR Filed'], 
+                d['CIBIL'], 
+                d['Active Loans'], 
+                d['Monthly EMI'], 
+                d['Unsec Loans'], 
+                d['Loans (6m)'], 
+                d['Loans Closing (6m)'], 
+                d['Closing Loan EMI'], 
+                d['Enquiries'], 
+                d['Age'], 
+                d['Gender'], 
+                d['Co-App'], 
+                d['Co-App Age'], 
+                d['Own House'], 
+                d['Pincode'], 
+                d['Req Amount'], 
+                d['Purpose'], 
+                a.dsaName || d['DSA Name']
+            ];
             
             let cleanRow = row.map(item => {
                 if (item === undefined || item === null) return "";
