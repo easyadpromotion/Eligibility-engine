@@ -28,6 +28,8 @@
         .btn-add { background-color: #2e7d32; } 
         .btn-del { background-color: #c62828; } 
         .btn-edit { background-color: #ffa000; color: #333; } 
+        .btn-hold { background-color: #ff9800; color: white; } /* NEW STYLE FOR HOLD */
+        .btn-active { background-color: #4caf50; color: white; } /* NEW STYLE FOR ACTIVE */
         .btn-reset { background-color: #ff9800; float: right; margin-right: 10px; }
 
         /* MODAL */
@@ -83,7 +85,12 @@
     <div id="users" class="section">
         <h2>👥 Active DSA Users</h2>
         <div style="text-align:right; margin-bottom:10px;"><button class="btn btn-add" onclick="openModal('user')">+ Add User</button></div>
-        <div class="table-container"><table id="userTable"><thead><tr><th>Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+        <div class="table-container">
+            <table id="userTable">
+                <thead><tr><th>Name</th><th>Mobile</th><th>Username</th><th>Password</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
         <h2 style="margin-top:30px;">🔔 Pending Requests</h2>
         <div class="table-container"><table id="requestTable"><thead><tr><th>Name</th><th>Mobile</th><th>Username</th><th>Action</th></tr></thead><tbody></tbody></table></div>
     </div>
@@ -319,29 +326,20 @@
     let policies=[], users=[], requests=[], apps=[];
 
    // --- 1. DATE HELPER FUNCTIONS ---
-    // Fixes the mixed date formats (DD/MM vs MM/DD)
     function parseDate(dateStr) {
         if (!dateStr) return new Date(0); 
         if (typeof dateStr !== 'string') return new Date(dateStr);
-
-        let parts = dateStr.split(/[/-]/); // Split by / or -
+        let parts = dateStr.split(/[/-]/);
         if (parts.length === 3) {
-            let p1 = parseInt(parts[0]); // Day or Month?
+            let p1 = parseInt(parts[0]);
             let p2 = parseInt(parts[1]);
-            let p3 = parseInt(parts[2]); // Year
-
-            // If first part > 12, it is Day (DD/MM/YYYY)
+            let p3 = parseInt(parts[2]);
             if (p1 > 12) return new Date(p3, p2 - 1, p1);
-            
-            // If first part is Year (YYYY-MM-DD)
             if (p1 > 2000) return new Date(p1, p2 - 1, p3);
-            
-            // If ambiguous (e.g. 12/05/2025), default JS handling
         }
         return new Date(dateStr);
     }
 
-    // Standardizes display to DD/MM/YYYY
     function formatDisplayDate(dateObj) {
         if (!dateObj || isNaN(dateObj.getTime())) return '-';
         let d = dateObj.getDate().toString().padStart(2, '0');
@@ -350,7 +348,7 @@
         return `${d}/${m}/${y}`;
     }
 
-    // --- 2. UPDATED LOAD DATA (With Sorting) ---
+    // --- 2. UPDATED LOAD DATA ---
     function loadAllData() {
         if(!db) return;
         
@@ -365,19 +363,16 @@
         
         db.collection("applications").onSnapshot(snap => { 
             apps = snap.docs.map(doc => ({id: doc.id, ...doc.data()})); 
-            
-            // SORT: Newest Date First
             apps.sort((a, b) => {
                 let dateA = parseDate(a.date || a.data?.date);
                 let dateB = parseDate(b.date || b.data?.date);
                 return dateB - dateA; 
             });
-
             renderTables(); 
         });
     }
 
-    // --- 3. UPDATED RENDER TABLES (With Date Formatting) ---
+    // --- 3. UPDATED RENDER TABLES ---
     function renderTables() {
         // Policy Table
         const pT = document.querySelector('#policyTable tbody'); pT.innerHTML='';
@@ -390,15 +385,40 @@
             });
         }
         
-        // User Table
+        // --- UPDATED USER TABLE (With Status & Toggle) ---
         const uT = document.querySelector('#userTable tbody'); uT.innerHTML='';
-        users.forEach(u => uT.innerHTML += `<tr><td>${u.name}</td><td>${u.mobile}</td><td>${u.user}</td><td>${u.pass}</td><td><button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button></td></tr>`);
+        users.forEach(u => {
+            // Default status is 'Active' if not found
+            const status = u.status || 'Active';
+            const statusColor = status === 'Hold' ? '#c62828' : '#2e7d32'; // Red if Hold, Green if Active
+            
+            // Logic for Toggle Button (Opposite of current status)
+            let actionBtn = '';
+            if(status === 'Active') {
+                actionBtn = `<button class="btn btn-hold" onclick="toggleUserStatus('${u.id}', 'Hold')">Hold</button>`;
+            } else {
+                actionBtn = `<button class="btn btn-active" onclick="toggleUserStatus('${u.id}', 'Active')">Active</button>`;
+            }
+
+            uT.innerHTML += `
+                <tr>
+                    <td>${u.name}</td>
+                    <td>${u.mobile}</td>
+                    <td>${u.user}</td>
+                    <td>${u.pass}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${status}</td>
+                    <td>
+                        ${actionBtn}
+                        <button class="btn btn-del" onclick="delDoc('dsa_users','${u.id}')">Del</button>
+                    </td>
+                </tr>`;
+        });
         
         // Request Table
         const rT = document.querySelector('#requestTable tbody'); rT.innerHTML='';
         requests.forEach(r => rT.innerHTML += `<tr><td>${r.name}</td><td>${r.mobile}</td><td>${r.user}</td><td><button class="btn btn-add" onclick="approveReq('${r.id}')">Approve</button></td></tr>`);
         
-        // Application Table (Fixed Dates & Columns)
+        // Application Table
         const aT = document.querySelector('#appTable tbody'); 
         aT.innerHTML = '';
         apps.forEach(a => {
@@ -442,9 +462,20 @@
     }
     // ACTIONS
     window.uploadDefaultPolicies = () => { if(confirm("Load Defaults?")) { defaultPolicies.forEach(p => db.collection("policies").add(p)); } };
+    
+    // UPDATED: Approve now sets Status = Active
     window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { db.collection("dsa_users").add({...r, status:"Active"}); db.collection("dsa_requests").doc(id).delete(); } };
-    window.delDoc = (col, id) => { if(confirm("Delete?")) db.collection(col).doc(id).delete(); };
+    
+    window.delDoc = (col, id) => { if(confirm("Permanently Delete User?")) db.collection(col).doc(id).delete(); };
+    
+    // NEW: Toggle Status Function
+    window.toggleUserStatus = (id, newStatus) => {
+        if(confirm(`Change user status to ${newStatus}?`)) {
+            db.collection("dsa_users").doc(id).update({ status: newStatus });
+        }
+    };
 
+    // UPDATED: Save User now sets Status = Active
     window.saveUser = () => {
         const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" };
         db.collection("dsa_users").add(u); closeModal('user');
@@ -452,12 +483,10 @@
 
     window.savePolicy = () => {
         let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
-        // FIX: SAVING MIN/MAX per Program
         let progs = []; 
         document.querySelectorAll('#progContainer .dynamic-row').forEach(r => {
             let sel = r.querySelector('select').value;
             let inps = r.querySelectorAll('input');
-            // 0: Val, 1: Min, 2: Max
             progs.push({type: sel, val: inps[0].value, min: inps[1].value, max: inps[2].value});
         });
         let conds = []; document.querySelectorAll('#condContainer .dynamic-row').forEach(r => { let i = r.querySelectorAll('input'); if(i[0].value) conds.push({name:i[0].value, val:i[1].value}); });
@@ -483,9 +512,9 @@
             bankingTypes: bTypes, programs: progs, conditions: conds, 
             remarks: document.getElementById('remarks').value,
             geoLimit: document.getElementById('geoLimit').value,
-    pinBased: document.getElementById('pinBased').value,
-    pinScope: document.getElementById('pinScope').value,
-    pinList: document.getElementById('pinList').value,
+            pinBased: document.getElementById('pinBased').value,
+            pinScope: document.getElementById('pinScope').value,
+            pinList: document.getElementById('pinList').value,
         };
         
         let idx = document.getElementById('p_id').value;
@@ -508,13 +537,11 @@
         setVal('pinScope', p.pinScope);
         setVal('pinList', p.pinList);
 
-// Logic to show/hide boxes based on saved data
-toggleField('pinOptionBox', p.pinBased === 'Yes');
-toggleField('pinListBox', p.pinScope === 'Specific List');
+        toggleField('pinOptionBox', p.pinBased === 'Yes');
+        toggleField('pinListBox', p.pinScope === 'Specific List');
         
         ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
         
-        // Populate Programs with Min/Max
         document.getElementById('progContainer').innerHTML='';
         if(p.programs && Array.isArray(p.programs)) {
             p.programs.forEach(pr => addProg(pr.type, pr.val, pr.min, pr.max));
@@ -547,7 +574,6 @@ toggleField('pinListBox', p.pinScope === 'Specific List');
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
     
-    // UPDATED: ADD PROGRAM (With Min/Max Loan)
     window.addProg=(t='ABB',v='',min='',max='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`
         <div class="dynamic-row" style="align-items:center;">
             <select style="width:25%"><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select>
@@ -564,9 +590,7 @@ toggleField('pinListBox', p.pinScope === 'Specific List');
     window.updateAdminPass = () => { const p = document.getElementById('newAdminPass').value; if(p) { localStorage.setItem('admin_pass', p); savedAdminPass = p; alert("Updated"); } };
     window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
     
-    // --- UPDATED EXPORT TO EXCEL ---
     window.exportToExcel = () => {
-        // 1. Define Headers
         let headers = [
             "Date", "Customer Name", "Contact Number", "Vintage", "Turnover", 
             "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", 
@@ -576,56 +600,22 @@ toggleField('pinListBox', p.pinScope === 'Specific List');
             "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", 
             "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"
         ];
-
-        // 2. Start CSV Content
         let csvContent = "data:text/csv;charset=utf-8,";
         csvContent += headers.join(",") + "\n";
-
-        // 3. Loop through Data
         apps.forEach(a => {
             let d = a.data || {};
             let row = [
-                a.date,
-                a.customer,
-                a.mobile || d.mobile,
-                d.vintage,
-                d.turnover,
-                d.entityType,
-                d.sector,
-                d.busPremises,
-                d.abb,
-                d.bankStmtType,
-                d.gstReg,
-                d.itrFiled,
-                d.cibil,
-                d.activeLoans,
-                d.monthlyEmi,
-                d.unsecLoans,
-                d.loansTaken6m,
-                d.loansClosing6m,
-                d.reducedEmi6m,
-                d.enquiries3m,
-                d.age,
-                d.gender,
-                d.coApp,
-                d.coAppAge,
-                d.ownHouse,
-                d.pincode,
-                d.reqAmount,
-                d.purpose,
-                a.dsaName
+                a.date, a.customer, a.mobile || d.mobile, d.vintage, d.turnover, d.entityType, d.sector, d.busPremises,
+                d.abb, d.bankStmtType, d.gstReg, d.itrFiled, d.cibil, d.activeLoans, d.monthlyEmi, d.unsecLoans,
+                d.loansTaken6m, d.loansClosing6m, d.reducedEmi6m, d.enquiries3m, d.age, d.gender, d.coApp, d.coAppAge,
+                d.ownHouse, d.pincode, d.reqAmount, d.purpose, a.dsaName
             ];
-
-            // Clean data: replace undefined with empty string and remove commas inside text
             let cleanRow = row.map(item => {
                 if (item === undefined || item === null) return "";
                 return `"${String(item).replace(/"/g, '""')}"`;
             });
-
             csvContent += cleanRow.join(",") + "\n";
         });
-
-        // 4. Trigger Download
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -639,6 +629,3 @@ toggleField('pinListBox', p.pinScope === 'Specific List');
 </script>
 </body>
 </html>
-
-
-
