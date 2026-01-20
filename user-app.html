@@ -10,20 +10,7 @@
     <style>
         /* MAIN LAYOUT */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
-        
-        /* UPDATED: Sidebar transitions for mobile */
-        .sidebar { 
-            width: 260px; 
-            background-color: #1a237e; 
-            color: white; 
-            padding: 25px; 
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
-            z-index: 100; 
-            transition: 0.3s; /* Smooth slide */
-        }
-        
+        .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; transition: 0.3s; }
         .main-content { flex: 1; padding: 30px; overflow-y: auto; transition: 0.3s; }
 
         /* NAVIGATION */
@@ -70,35 +57,18 @@
         .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
         .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
 
-        /* --- NEW MOBILE STYLES (Fixes Blue Screen Issue) --- */
-        .menu-btn {
-            display: none; 
-            position: fixed; top: 15px; left: 15px;
-            background: #1a237e; color: white;
-            border: none; padding: 10px; border-radius: 5px;
-            font-size: 20px; z-index: 2000; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
+        /* MOBILE STYLES */
+        .menu-btn { display: none; position: fixed; top: 15px; left: 15px; background: #1a237e; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 20px; z-index: 2000; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 
         @media (max-width: 768px) {
             .menu-btn { display: block; }
-            .sidebar {
-                position: fixed; left: -280px; top: 0; height: 100%; width: 260px;
-            }
+            .sidebar { position: fixed; left: -280px; top: 0; height: 100%; width: 260px; }
             .sidebar.show { left: 0; }
             .main-content { padding: 20px; padding-top: 70px; }
-            
-            /* Stack form inputs on mobile */
             .form-grid { grid-template-columns: 1fr; }
             .details-grid { grid-template-columns: 1fr; }
-            
-            /* Adjust table overflow */
             .dash-table { display: block; overflow-x: auto; }
-            
-            /* Fix inner grids like pincode status */
-            div[style*="grid-template-columns: 1fr 1fr 1fr 1fr"] {
-                grid-template-columns: 1fr !important;
-            }
+            div[style*="grid-template-columns: 1fr 1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
         }
 
         /* PRINT FIXES */
@@ -139,16 +109,9 @@
                 <div><label>Premises</label><select class="pdf-data" data-label="Premises"><option>Owned</option><option>Rented</option></select></div>
                 
                 <div style="grid-column: span 4; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 25px; margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 6px;">
-                    <div>
-                        <label>Business Pincode</label>
-                        <input type="number" id="bPincode" onkeyup="checkBusPincodeStatus()" placeholder="6 Digits">
-                    </div>
-                    <div>
-                        <label>Eligibility Status</label>
-                        <input type="text" id="bPinStatus" readonly style="font-weight:bold; text-align:center;">
-                    </div>
+                    <div><label>Business Pincode</label><input type="number" id="bPincode" onkeyup="checkBusPincodeStatus()" placeholder="6 Digits"></div>
+                    <div><label>Eligibility Status</label><input type="text" id="bPinStatus" readonly style="font-weight:bold; text-align:center;"></div>
                 </div>
-
             </div></div></div>
 
             <div class="accordion"><div class="accordion-header" onclick="toggle(this)">2. Banking & Docs</div><div class="accordion-body"><div class="form-grid">
@@ -507,7 +470,7 @@
             document.getElementById('dlReportBtn').style.display='block';
         }
 
-        // --- 8. PDF GENERATOR ---
+        // --- 8. PDF GENERATOR (UPDATED FIX) ---
         function generateFullPDF() {
             const res = window.latestResults;
             const data = window.latestData;
@@ -537,6 +500,9 @@
             document.getElementById('pdfAppDetails').innerHTML = detailsHtml;
             
             const eTable = document.getElementById('pdfEligibleTable');
+            // CREATE A SET OF ELIGIBLE BANK NAMES
+            const eligibleBankNames = new Set(res.eligible.map(item => item.bank));
+
             if (res && res.eligible && res.eligible.length > 0) {
                 eTable.innerHTML = res.eligible.map(i => 
                     `<tr><td>${i.bank}</td><td>${i.prog}</td><td>₹ ${i.amt} Lakhs</td><td>${i.ten} m</td><td>${i.roi}</td></tr>`
@@ -545,9 +511,13 @@
                 eTable.innerHTML = `<tr><td colspan='5' style="padding:20px;">No Eligible Banks Found.</td></tr>`;
             }
             
+            // FILTER DECLINED LIST
             const rTable = document.getElementById('pdfRejectTable');
-            if (res && res.declined && res.declined.length > 0) {
-                rTable.innerHTML = res.declined.map(i => 
+            // ONLY SHOW BANKS THAT ARE NOT IN THE ELIGIBLE SET
+            const filteredDeclined = res.declined.filter(item => !eligibleBankNames.has(item.bank));
+
+            if (filteredDeclined.length > 0) {
+                rTable.innerHTML = filteredDeclined.map(i => 
                     `<tr><td>${i.bank}</td><td>${i.reason}</td></tr>`
                 ).join('');
             } else {
