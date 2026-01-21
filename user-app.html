@@ -11,12 +11,10 @@
         /* MAIN LAYOUT */
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; }
         .sidebar { width: 260px; background-color: #1a237e; color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 100; transition: 0.3s; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; transition: 0.3s; }
-
-        /* NAVIGATION */
         .nav-item { padding: 14px 15px; margin-bottom: 15px; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 15px; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover { background-color: #3949ab; }
         .nav-item.active { background-color: #3949ab; border-left: 5px solid #ffeb3b; font-weight: 600; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; transition: 0.3s; }
 
         /* FORMS */
         .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
@@ -37,15 +35,16 @@
         .report-btn { width: 100%; padding: 16px; background-color: #0288d1; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn-view { background: #1a237e; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; }
 
-        /* DASHBOARD TABLE */
+        /* DASHBOARD & REPORT STYLES */
         .dash-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
         .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         .dash-table th { background-color: #f8f9fa; color: #333; font-weight: bold; }
         .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-eligible { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
         .status-declined { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
 
-        /* PDF MODAL */
+        /* REPORT MODAL */
         #fullReportModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .report-paper { background: white; width: 850px; margin: 0 auto; padding: 40px; border-radius: 8px; font-family: Arial, sans-serif; min-height: 80vh; position: relative; }
         .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
@@ -54,7 +53,6 @@
         .report-table th { background: #f0f0f0; }
         .details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; background: #fafafa; }
         .detail-item { font-size: 13px; border-bottom: 1px dotted #ccc; padding-bottom: 5px; }
-        .hidden-field { display:none; background:#f8f9fa; padding:15px; border:1px dashed #ccc; margin-top:10px; }
 
         /* MOBILE FIXES */
         .menu-btn { display: none; position: fixed; top: 15px; left: 15px; background: #1a237e; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 20px; z-index: 2000; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
@@ -206,7 +204,6 @@
     </div></div>
 
     <script>
-        // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyAvzpBo0AXbytsGMBmbpMHqOxRs_iY2EsI",
             authDomain: "credir-engine-new.firebaseapp.com",
@@ -220,20 +217,18 @@
         let db;
         try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.error("FB Error:",e); }
 
-        // --- 2. AUTH & INIT ---
         const user = JSON.parse(sessionStorage.getItem('active_dsa_user'));
         if(!user) window.location.href = "index.html";
         document.getElementById('welcomeMsg').innerText = `Welcome, ${user.name}`;
 
         if(db) db.collection('policies').get().then(snap => document.getElementById('policyCount').innerText = snap.size);
 
-        // --- 3. GLOBAL VARS ---
         window.historyData = [];
         window.latestResults = { eligible: [], declined: [] };
         window.latestData = {};
         window.allPolicies = []; 
+        window.isPinListed = false;
 
-        // NEW: Toggle Menu Logic
         function toggleMenu() { document.getElementById('sidebar').classList.toggle('show'); }
 
         function switchView(v){
@@ -254,7 +249,6 @@
         }
         function logoutUser(){ if(confirm("Logout?")){sessionStorage.removeItem('active_dsa_user');window.location.href="index.html";} }
 
-        // --- 4. LOAD POLICIES GLOBALLY ---
         if(db) {
             db.collection('policies').get().then(snap => {
                 window.allPolicies = [];
@@ -263,7 +257,6 @@
             }).catch(e => console.error("Error loading policies:", e));
         }
 
-        // --- 5. RESIDENTIAL PINCODE AUTO-FILL ---
         async function checkPincode() {
             const pin = document.getElementById('pincodeInput').value;
             if(pin.length === 6) {
@@ -281,8 +274,6 @@
             }
         }
 
-        // --- 6. BUSINESS PINCODE CHECKER (UPDATED LOGIC) ---
-        // Helper to check pincode validity against a policy list string
         function isPincodeInList(pin, listStr) {
             if(!listStr) return false;
             let cleanList = listStr.replace(/[\n\r\t]/g, ',').split(',').map(x => x.trim());
@@ -292,6 +283,7 @@
         function checkBusPincodeStatus() {
             const pinInput = document.getElementById('bPincode').value;
             const statusField = document.getElementById('bPinStatus');
+            window.isPinListed = false;
 
             if (pinInput.length !== 6) {
                 statusField.value = "Enter 6 digits...";
@@ -314,10 +306,12 @@
             }
 
             if (specificMatchBanks.length > 0) {
+                window.isPinListed = true; 
                 if (specificMatchBanks.length <= 2) { statusField.value = `Listed: ${specificMatchBanks.join(', ')}`; } 
                 else { statusField.value = `Listed (${specificMatchBanks.length} Banks)`; }
                 statusField.style.backgroundColor = "#d4edda"; statusField.style.color = "#155724"; statusField.style.border = "2px solid #28a745";
             } else {
+                window.isPinListed = false; 
                 if (totalSpecificBanks === 0) {
                     statusField.value = "No Restrictions"; 
                     statusField.style.backgroundColor = "#fff"; statusField.style.color = "#333"; statusField.style.border = "1px solid #ccc";
@@ -328,7 +322,6 @@
             }
         }   
 
-        // --- 7. CALCULATION ENGINE ---
         function calculatePV(rate, nper, pmt) {
             if (rate === 0) return pmt * nper;
             return pmt * (1 - Math.pow(1 + rate, -nper)) / rate;
@@ -379,13 +372,19 @@
                 if (cibil < (p.minCibil||0)) { pass=false; reasons.push(`CIBIL < ${p.minCibil}`); }
                 if (parseFloat(data['Age']) < (p.ageMin||18)) { pass=false; reasons.push(`Age < ${p.ageMin}`); }
 
-                // Pincode Check (Strict logic for calculation)
+                // Pincode Check
                 if (p.pinScope === 'Specific List' && p.pinList) {
                     const bPin = document.getElementById('bPincode').value;
                     if(!isPincodeInList(bPin, p.pinList)) {
                         pass = false;
                         reasons.push(`Pincode ${bPin} not eligible`);
                     }
+                }
+
+                // CHECK FOR OWN HOUSE (New Logic Added)
+                if (p.houseReq === 'Yes' && data['Own House'] !== 'Yes') {
+                    pass = false;
+                    reasons.push("Own House Required");
                 }
 
                 if (pass) {
@@ -428,7 +427,6 @@
             document.getElementById('dlReportBtn').style.display='block';
         }
 
-        // --- 8. PDF GENERATOR (UPDATED FIX: SMART FILTERING) ---
         function generateFullPDF() {
             const res = window.latestResults;
             const data = window.latestData;
@@ -465,13 +463,11 @@
                 eTable.innerHTML = `<tr><td colspan='5' style="padding:20px;">No Eligible Banks Found.</td></tr>`;
             }
             
-            // --- UPDATED LOGIC: FILTER DECLINED LIST ---
             const rTable = document.getElementById('pdfRejectTable');
-            
-            // 1. Never show a bank in declined if it is already in Eligible
             let filteredDeclined = res.declined.filter(item => !eligibleBankNames.has(item.bank));
 
-            // 2. CHECK IF PINCODE IS LISTED (Re-calculate using saved data)
+            // Smart Filter: If Pincode is LISTED, hide Pincode errors
+            // Use saved pincode for check
             const savedPincode = data['Business Pincode'];
             let isPincodeGood = false;
             
@@ -481,7 +477,6 @@
                 );
             }
 
-            // 3. IF PINCODE IS 'LISTED' (Valid for at least one bank), HIDE 'Pincode not eligible' errors
             if (isPincodeGood) {
                 filteredDeclined = filteredDeclined.filter(d => !d.reason.includes("not eligible") && !d.reason.includes("Location"));
             }
@@ -495,7 +490,6 @@
             document.getElementById('fullReportModal').style.display='block';
         }
 
-        // --- 9. DASHBOARD VIEW ---
         async function loadHistory() {
             const t = document.querySelector('#historyTable tbody'); 
             t.innerHTML="<tr><td colspan='4'>Loading history...</td></tr>";
@@ -532,7 +526,6 @@
             if(item) {
                 window.latestData = item.data;
                 window.latestResults = item.results;
-                // Pre-fill the pincode in UI just in case, though generateFullPDF uses latestData
                 if(item.data['Business Pincode']) document.getElementById('bPincode').value = item.data['Business Pincode'];
                 generateFullPDF(); 
             } else { alert("Error loading data."); }
