@@ -328,28 +328,18 @@
     // 3. VARIABLES
     let policies=[], users=[], requests=[], apps=[];
 
-    // --- HELPER: ROBUST DATE PARSING & FORMATTING ---
+    // --- HELPER: FORMAT DATE ---
     function parseDate(dateStr) {
         if (!dateStr) return new Date(0);
-        // Handle "DD/MM/YYYY" format specifically (common in India/UK)
-        if (typeof dateStr === 'string' && dateStr.includes('/')) {
-            const parts = dateStr.split('/');
-            // If the first part is clearly day (e.g. >12), parse as DD/MM/YYYY
-            if (parseInt(parts[0]) > 12) {
-                return new Date(parts[2], parts[1] - 1, parts[0]);
-            }
-            // Fallback for MM/DD/YYYY or others
-            return new Date(dateStr);
-        }
+        if (typeof dateStr === 'string') return new Date(dateStr);
         return new Date(dateStr);
     }
-
     function formatDisplayDate(dateObj) {
         if (!dateObj || isNaN(dateObj.getTime())) return '-';
         return `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
     }
 
-    // --- 4. LOAD DATA (FIXED ID BUG) ---
+    // --- 4. LOAD DATA (UPDATED: DEDUPLICATION + SORT) ---
     function loadAllData() {
         if(!db) return;
 
@@ -367,11 +357,26 @@
             renderTables(); 
         });
 
-        // LOAD APPS - SORTED BY DATE DESC
+        // LOAD APPS (FIXED: SORT + REMOVE DUPLICATES)
         db.collection("applications").onSnapshot(snap => { 
-            apps = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
-            // Sort by Date Descending (Newest First)
-            apps.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+            let rawApps = snap.docs.map(doc => ({ ...doc.data(), id: doc.id })); 
+            
+            // 1. Sort by Date Descending (Newest First)
+            rawApps.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+
+            // 2. Remove Duplicates (Keep only first occurrence of Name + Date)
+            const seen = new Set();
+            apps = rawApps.filter(item => {
+                let d = item.data || {};
+                const name = item.customer || d['Business Name'] || '';
+                const date = new Date(item.date).toLocaleDateString(); // Group by date
+                const key = `${name}_${date}`;
+                
+                if (seen.has(key)) return false; // Skip duplicate
+                seen.add(key);
+                return true; // Keep unique
+            });
+
             renderTables(); 
         });
 
@@ -418,13 +423,12 @@
             </tr>`;
         });
 
-        // RENDER APPLICATIONS (FIXED DATA MAPPING)
+        // RENDER APPLICATIONS
         const aT = document.querySelector('#appTable tbody'); 
         aT.innerHTML = '';
         apps.forEach(a => {
             let d = a.data || {}; 
             let displayDate = formatDisplayDate(parseDate(a.date));
-            // CHECK BOTH FORMATS (Title Case and lowercase)
             aT.innerHTML += `<tr>
                 <td>${displayDate}</td>
                 <td>${a.customer || d['Business Name'] || d['customer'] || '-'}</td>
@@ -461,7 +465,7 @@
 
     // --- 6. ACTIONS ---
     
-    // SAVE POLICY (HANDLES BOTH ADD & EDIT)
+    // SAVE POLICY
     window.savePolicy = () => {
         let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
         let progs = []; 
@@ -499,7 +503,7 @@
         else db.collection("policies").add(p).then(() => closeModal('policy'));
     };
 
-    // EDIT POLICY FUNCTION (RESTORED)
+    // EDIT POLICY
     window.editPolicy = (id) => {
         let p = policies.find(x => x.id === id); if(!p) return;
         document.getElementById('p_id').value = id;
@@ -534,16 +538,14 @@
         document.getElementById('policyModal').style.display='flex';
     };
 
-    // EXPORT TO EXCEL (FIXED MAPPING & ADDED)
+    // EXPORT TO EXCEL
     window.exportToExcel = () => {
         let headers = ["Date", "Customer Name", "Contact Number", "Vintage", "Turnover", "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"];
         let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
         
         apps.forEach(a => {
             let d = a.data || {};
-            // Format Date for CSV
             let csvDate = formatDisplayDate(parseDate(a.date));
-            // MAPPING: Use Capitalized Keys
             let row = [
                 csvDate, 
                 a.customer || d['Business Name'] || d['customer'], 
@@ -619,7 +621,7 @@
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
     
-    // ADD PROGRAM (With Min/Max)
+    // ADD PROGRAM
     window.addProg=(t='ABB',v='',min='',max='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`
         <div class="dynamic-row" style="align-items:center;">
             <select style="width:25%"><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select>
