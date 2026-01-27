@@ -368,7 +368,7 @@
             const seen = new Set();
             apps = rawApps.filter(item => {
                 let d = item.data || {};
-                const name = item.customer || d['Business Name'] || '';
+                const name = (item.customer || d['Business Name'] || '').toLowerCase().trim();
                 const date = new Date(item.date).toLocaleDateString(); // Group by date
                 const key = `${name}_${date}`;
                 
@@ -465,14 +465,89 @@
 
     // --- 6. ACTIONS ---
     
-    // EXPORT TO EXCEL
+    // SAVE POLICY (HANDLES BOTH ADD & EDIT)
+    window.savePolicy = () => {
+        let bTypes = []; document.querySelectorAll('.bank-chk:checked').forEach(c => bTypes.push(c.value));
+        let progs = []; 
+        document.querySelectorAll('#progContainer .dynamic-row').forEach(r => {
+            let sel = r.querySelector('select').value;
+            let inps = r.querySelectorAll('input');
+            progs.push({type: sel, val: inps[0].value, min: inps[1].value, max: inps[2].value});
+        });
+        let conds = []; document.querySelectorAll('#condContainer .dynamic-row').forEach(r => { let i = r.querySelectorAll('input'); if(i[0].value) conds.push({name:i[0].value, val:i[1].value}); });
+
+        const p = {
+            bankName: document.getElementById('bankName').value, prodType: document.getElementById('prodType').value,
+            loanMin: +document.getElementById('loanMin').value, loanMax: +document.getElementById('loanMax').value,
+            tenMin: +document.getElementById('tenMin').value, tenMax: +document.getElementById('tenMax').value,
+            roiMin: +document.getElementById('roiMin').value, roiMax: +document.getElementById('roiMax').value,
+            pfMin: +document.getElementById('pfMin').value, pfMax: +document.getElementById('pfMax').value,
+            minVin: +document.getElementById('minVin').value, minTurn: +document.getElementById('minTurn').value, 
+            abbMin: +document.getElementById('abbMin').value, minCibil: +document.getElementById('minCibil').value,
+            itrReq: document.getElementById('itrReq').value, gstReq: document.getElementById('gstReq').value,
+            ageMin: +document.getElementById('ageMin').value, ageMax: +document.getElementById('ageMax').value,
+            coAppReq: document.getElementById('coAppReq').value, coAgeMin: document.getElementById('coAgeMin').value, coAgeMax: document.getElementById('coAgeMax').value,
+            houseReq: document.getElementById('houseReq').value, houseGeo: document.getElementById('houseGeo').value,
+            maxUnsec: +document.getElementById('maxUnsec').value, maxActive: +document.getElementById('maxActive').value, 
+            maxEnq: +document.getElementById('maxEnq').value, loans6m: +document.getElementById('loans6m').value,
+            bankingTypes: bTypes, programs: progs, conditions: conds, 
+            remarks: document.getElementById('remarks').value,
+            geoLimit: document.getElementById('geoLimit').value,
+            pinBased: document.getElementById('pinBased').value,
+            pinScope: document.getElementById('pinScope').value,
+            pinList: document.getElementById('pinList').value,
+        };
+        
+        let idx = document.getElementById('p_id').value;
+        if(idx) db.collection("policies").doc(idx).update(p).then(() => closeModal('policy')); 
+        else db.collection("policies").add(p).then(() => closeModal('policy'));
+    };
+
+    // EDIT POLICY FUNCTION (RESTORED)
+    window.editPolicy = (id) => {
+        let p = policies.find(x => x.id === id); if(!p) return;
+        document.getElementById('p_id').value = id;
+        document.getElementById('policyModalTitle').innerText = "Edit Policy";
+        
+        const setVal = (k, v) => { let el=document.getElementById(k); if(el) el.value = v || ''; };
+
+        setVal('bankName', p.bankName); setVal('prodType', p.prodType); 
+        setVal('itrReq', p.itrReq); setVal('gstReq', p.gstReq); setVal('coAppReq', p.coAppReq); setVal('houseReq', p.houseReq); 
+        setVal('houseGeo', p.houseGeo); setVal('remarks', p.remarks);
+        setVal('geoLimit', p.geoLimit); setVal('pinBased', p.pinBased); setVal('pinScope', p.pinScope); setVal('pinList', p.pinList);
+
+        toggleField('pinOptionBox', p.pinBased === 'Yes');
+        toggleField('pinListBox', p.pinScope === 'Specific List');
+        
+        ['loanMin','loanMax','tenMin','tenMax','roiMin','roiMax','pfMin','pfMax','minVin','minTurn','abbMin','minCibil','ageMin','ageMax','coAgeMin','coAgeMax','maxUnsec','maxActive','maxEnq','loans6m'].forEach(k => setVal(k, p[k]));
+        
+        document.getElementById('progContainer').innerHTML='';
+        if(p.programs && Array.isArray(p.programs)) {
+            p.programs.forEach(pr => addProg(pr.type, pr.val, pr.min, pr.max));
+        }
+        
+        document.getElementById('condContainer').innerHTML='';
+        if(p.conditions && Array.isArray(p.conditions)) {
+            p.conditions.forEach(c => addCond(c.name, c.val));
+        }
+        
+        document.querySelectorAll('.bank-chk').forEach(c => c.checked = (p.bankingTypes||[]).includes(c.value));
+        toggleField('coBox', p.coAppReq==='Yes');
+        toggleField('houseGeoBox', p.houseReq==='Yes');
+        
+        document.getElementById('policyModal').style.display='flex';
+    };
+
+    // EXPORT TO EXCEL (FIXED MAPPING & ADDED)
     window.exportToExcel = () => {
         let headers = ["Date", "Customer Name", "Contact Number", "Vintage", "Turnover", "Entity type", "Sector", "Business Premises", "ABB", "Bank Statement type", "GST Reg", "ITR Filed", "Cibil", "Active Loans", "Monthly EMI", "Unsecured Loans", "Loans Taken (6Months)", "Loans Closing(Next 6Months)", "Reduced EMI(Next 6 Months)", "Enquiries(3 Months)", "Applicant Age", "Gender", "Co-Applicant?", "Co-Applicant Age", "Own House?", "Own House Pincode", "Required Loan Amount(lakhs)", "Purpose", "DSA Name"];
         let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
         
         apps.forEach(a => {
             let d = a.data || {};
+            // Format Date for CSV
             let csvDate = formatDisplayDate(parseDate(a.date));
+            // MAPPING: Use Capitalized Keys
             let row = [
                 csvDate, 
                 a.customer || d['Business Name'] || d['customer'], 
@@ -521,11 +596,13 @@
         document.body.removeChild(link);
     };
 
-    // OTHER ACTIONS
+    // USER ACTIONS
     window.delUser = (id) => { if(confirm("Delete user?")) db.collection("dsa_users").doc(id).delete().catch(e => alert(e.message)); };
     window.toggleUserStatus = (id, s) => { if(confirm(`Set status to ${s}?`)) db.collection("dsa_users").doc(id).update({ status: s }).catch(e => alert(e.message)); };
     window.approveReq = (id) => { const r = requests.find(x => x.id === id); if(r) { const { id: x, ...data } = r; db.collection("dsa_users").add({...data, status:"Active"}).then(() => db.collection("dsa_requests").doc(id).delete()); } };
     window.delDoc = (col, id) => { if(confirm("Delete item?")) db.collection(col).doc(id).delete().catch(e => alert(e.message)); };
+
+    // MISC
     let savedAdminPass = localStorage.getItem('admin_pass') || 'admin123';
     window.checkAdminLogin = () => { if(document.getElementById('adminLockPass').value === savedAdminPass) { sessionStorage.setItem('adminLoggedIn','true'); document.getElementById('loginOverlay').style.display='none'; } else alert("Wrong Password"); };
     window.logout = () => { sessionStorage.removeItem('adminLoggedIn'); location.reload(); };
@@ -534,14 +611,28 @@
     // UI
     window.showSection=(id)=>{document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');};
     window.openModal=(t)=>{
-        if(t==='policy') { document.getElementById('policyForm').reset(); document.getElementById('p_id').value=''; document.getElementById('policyModalTitle').innerText = "New Policy"; document.getElementById('progContainer').innerHTML=''; document.getElementById('condContainer').innerHTML=''; } else { document.getElementById('userForm').reset(); document.getElementById('userModal').style.display='flex'; }
+        if(t==='policy') { 
+            document.getElementById('policyForm').reset(); 
+            document.getElementById('p_id').value=''; 
+            document.getElementById('policyModalTitle').innerText = "New Policy";
+            document.getElementById('progContainer').innerHTML=''; 
+            document.getElementById('condContainer').innerHTML=''; 
+        } else { document.getElementById('userForm').reset(); document.getElementById('userModal').style.display='flex'; }
         document.getElementById(t+'Modal').style.display='flex';
     };
     window.closeModal=(t)=>document.getElementById(t+'Modal').style.display='none';
     window.toggleField=(id,s)=>document.getElementById(id).style.display=s?'block':'none';
     
-    // ADD PROGRAM
-    window.addProg=(t='ABB',v='',min='',max='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><select style="width:25%"><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select><input type="number" placeholder="Multiplier/Val" value="${v}" style="width:20%"><input type="number" placeholder="Min Loan (L)" value="${min}" style="width:20%"><input type="number" placeholder="Max Loan (L)" value="${max}" style="width:20%"><button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button></div>`);
+    // ADD PROGRAM (With Min/Max)
+    window.addProg=(t='ABB',v='',min='',max='')=>document.getElementById('progContainer').insertAdjacentHTML('beforeend',`
+        <div class="dynamic-row" style="align-items:center;">
+            <select style="width:25%"><option ${t==='ABB'?'selected':''}>ABB</option><option ${t==='GST'?'selected':''}>GST</option><option ${t==='ITR'?'selected':''}>ITR</option><option ${t==='DSCR'?'selected':''}>DSCR</option></select>
+            <input type="number" placeholder="Multiplier/Val" value="${v}" style="width:20%">
+            <input type="number" placeholder="Min Loan (L)" value="${min}" style="width:20%">
+            <input type="number" placeholder="Max Loan (L)" value="${max}" style="width:20%">
+            <button class="btn btn-del" type="button" onclick="this.parentElement.remove()">X</button>
+        </div>`);
+        
     window.addCond=(n='', v='')=>document.getElementById('condContainer').insertAdjacentHTML('beforeend',`<div class="dynamic-row"><input placeholder="Name" value="${n}"><input placeholder="Value" value="${v}"><button class="btn btn-del" onclick="this.parentElement.remove()">X</button></div>`);
     window.saveUser = () => { const u = { name: document.getElementById('uName').value, mobile: document.getElementById('uMob').value, user: document.getElementById('uUser').value, pass: document.getElementById('uPass').value, status: "Active" }; db.collection("dsa_users").add(u).then(() => { alert("User Added!"); closeModal('user'); }); };
     
