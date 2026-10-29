@@ -3,7 +3,7 @@
   "description": "2Factor OTP login for DSA Command Center",
   "private": true,
   "main": "index.js",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "scripts": {
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
