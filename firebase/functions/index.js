@@ -67,11 +67,19 @@ const normalisePhone = raw => {
   return {ten, e164: '+91' + ten};
 };
 
+// A 2Factor key is a UUID. Pull it out of whatever was pasted into the secret prompt
+// (terminals can wrap pastes in invisible escape codes, or a label like "API Key" gets copied too).
+function apiKey() {
+  const raw = String(TWOFACTOR_API_KEY.value() || '');
+  const m = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return m ? m[0] : raw.trim();
+}
+
 async function twoFactor(path) {
-  const key = TWOFACTOR_API_KEY.value();
-  const r = await fetch(`https://2factor.in/API/V1/${encodeURIComponent(key)}/${path}`, {method: 'GET', signal: AbortSignal.timeout(10000)});
+  const r = await fetch(`https://2factor.in/API/V1/${encodeURIComponent(apiKey())}/${path}`, {method: 'GET', signal: AbortSignal.timeout(10000)});
+  const text = await r.text();
   let body = {};
-  try { body = await r.json(); } catch (e) { /* non-JSON error page */ }
+  try { body = JSON.parse(text); } catch (e) { body = {Status: 'Error', Details: `HTTP ${r.status}: ${text.slice(0, 200)}`}; }
   return {ok: r.ok, body};
 }
 
