@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// DSA Command Center — Firestore security rules
+// Access is decided here, on Google's servers. The web page only hides menus.
+// Staff documents are keyed by the E.164 phone number from Firebase Phone Auth,
+// e.g. staff/+919876543210 → { name, phone, role, branch, status }.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()  { return request.auth != null && request.auth.token.phone_number is string; }
+    function myPhone()   { return request.auth.token.phone_number; }
+    function staffPath() { return /databases/$(database)/documents/staff/$(myPhone()); }
+    function me()        { return get(staffPath()).data; }
+    function approved()  { return signedIn() && exists(staffPath()) && me().status == 'Approved' && me().role is string; }
+    function hasRole(roles) { return approved() && me().role in roles; }
+    function isAdmin()   { return hasRole(['Admin']); }
+    function isOps()     { return hasRole(['Admin', 'Operations']); }
+
+    // Leads and follow-ups: Admin/Ops see all, Branch Manager sees own branch,
+    // Sales Executive sees only records assigned to them.
+    function canSeeWork(d) {
+      return hasRole(['Admin', 'Operations'])
+        || (hasRole(['Branch Manager']) && d.branch == me().branch)
+        || (hasRole(['Sales Executive']) && d.assignedTo == myPhone());
+    }
+
+    match /staff/{phone} {
+      allow get: if signedIn() && phone == myPhone();
+      allow read: if isOps() || (hasRole(['Branch Manager']) && resource.data.branch == me().branch);
+      // A new person may only file a Pending request for their own verified number.
+      allow create: if signedIn() && phone == myPhone()
+        && request.resource.data.keys().hasOnly(['name', 'phone', 'requestedRole', 'branch', 'status', 'createdAt'])
+        && request.resource.data.status == 'Pending'
+        && request.resource.data.phone == myPhone()
+        && request.resource.data.requestedRole != 'Admin';
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read: if approved();
+      allow write: if isAdmin();
+    }
+
+    match /policies/{id} {
+      allow read: if approved();
+      allow create, update: if isOps();
+      allow delete: if isAdmin();
+    }
+
+    match /bankers/{id} {
+      allow read: if approved();
+      allow write: if isOps();
+    }
+
+    match /groups/{id}  { allow read, write: if isOps(); }
+    match /imports/{id} { allow read, write: if isOps(); }
+
+    match /leads/{id} {
+      allow read: if canSeeWork(resource.data);
+      allow create: if canSeeWork(request.resource.data);
+      allow update: if canSeeWork(resource.data) && canSeeWork(request.resource.data);
+      allow delete: if hasRole(['Admin', 'Branch Manager']) && canSeeWork(resource.data);
+    }
+
+    match /followups/{id} {
+      allow read: if canSeeWork(resource.data);
+      allow create: if canSeeWork(request.resource.data);
+      allow update: if canSeeWork(resource.data) && canSeeWork(request.resource.data);
+      allow delete: if canSeeWork(resource.data);
+    }
+
+    match /checks/{id} {
+      allow read: if isOps()
+        || (hasRole(['Branch Manager']) && resource.data.branch == me().branch)
+        || (approved() && resource.data.createdBy == myPhone());
+      allow create: if approved() && request.resource.data.createdBy == myPhone();
+      allow delete: if isAdmin();
+    }
+
+    // Daily call register: each person logs their own calls; Admin/Ops see all, BMs their branch.
+    match /calls/{id} {
+      allow read: if isOps()
+        || (hasRole(['Branch Manager']) && resource.data.branch == me().branch)
+        || (approved() && resource.data.createdBy == myPhone());
+      allow create: if approved() && request.resource.data.createdBy == myPhone()
+        && request.resource.data.branch == me().branch;
+      allow update: if approved()
+        && (resource.data.createdBy == myPhone() || isOps() || (hasRole(['Branch Manager']) && resource.data.branch == me().branch))
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if hasRole(['Admin', 'Branch Manager']);
+    }
+
+    // Anything not listed above (including the old dsa_users / dsa_requests) is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
