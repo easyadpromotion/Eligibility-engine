@@ -21,7 +21,7 @@ const db = getFirestore();
 
 const TWOFACTOR_API_KEY = defineSecret('TWOFACTOR_API_KEY');
 // Name of the SMS template approved in your 2Factor account (DLT). Set in functions/.env
-const TWOFACTOR_TEMPLATE = defineString('TWOFACTOR_TEMPLATE', {default: 'OTP1'});
+const TWOFACTOR_TEMPLATE = defineString('TWOFACTOR_TEMPLATE', {default: ''});
 // Comma-separated list of sites allowed to call these functions
 const ALLOWED_ORIGINS = defineString('ALLOWED_ORIGINS', {default: 'https://easyadpromotion.github.io'});
 // First-time setup: this number becomes Admin on its first OTP login, but only while no Admin exists yet.
@@ -106,7 +106,9 @@ exports.sendOtp = handle(async body => {
     tx.set(limRef, {sent: [...sent, now]});
   });
 
-  const {ok, body: r} = await twoFactor(`SMS/+91${ten}/AUTOGEN/${encodeURIComponent(TWOFACTOR_TEMPLATE.value())}`);
+  const tpl = String(TWOFACTOR_TEMPLATE.value() || '').trim();
+  // No template name → 2Factor's default OTP SMS template
+  const {ok, body: r} = await twoFactor(`SMS/+91${ten}/AUTOGEN${tpl ? '/' + encodeURIComponent(tpl) : ''}`);
   if (!ok || r.Status !== 'Success' || !r.Details) {
     console.error('2Factor send failed', r);
     throw new HttpError(502, 'sms_failed', 'Could not send the OTP SMS right now. Please try again in a minute.');
