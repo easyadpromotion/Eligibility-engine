@@ -3,85 +3,131 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0b1530">
+<meta name="theme-color" content="#0c1a2e">
 <title>DSA Command Center</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
+/* Corporate desk layout: fixed navy rail, cool-grey canvas, white ledgers; gold reserved for the brand mark. */
 :root{
-  --brand:#1d4ed8;--brand-2:#1e40af;--brand-soft:#eff4ff;
-  --ink:#0f172a;--ink-2:#334155;--muted:#64748b;--line:#e5e9f0;--bg:#f5f7fb;--card:#fff;
-  --side:#0b1530;--side-ink:#aab6cf;
-  --ok:#047857;--ok-bg:#ecfdf5;--warn:#b45309;--warn-bg:#fff7ed;--bad:#b91c1c;--bad-bg:#fef2f2;--info:#1d4ed8;--info-bg:#eff4ff;
-  --r:12px;--shadow:0 1px 2px rgba(15,23,42,.04),0 4px 16px rgba(15,23,42,.05);
+  --font-ui:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --brand:#1d4f91;--brand-2:#163e73;--brand-soft:#e9f0fa;--gold:#b88a2e;--gold-soft:#f6efe0;
+  --ink:#0f1b2d;--ink-2:#36465c;--muted:#66758a;--line:#dfe5ed;--line-2:#cfd8e3;
+  --bg:#f2f4f7;--card:#ffffff;--surface-2:#f7f9fb;--hover:#f3f6fa;--track:#e8edf3;--input:#ffffff;
+  --side:#0c1a2e;--side-2:#12243d;--side-ink:#a9b6c8;--side-strong:#ffffff;--side-line:rgba(255,255,255,.08);
+  --ok:#0f7a4f;--ok-bg:#e8f5ee;--ok-strong:#13855a;--warn:#9a5b06;--warn-bg:#fdf3e2;--warn-strong:#c27a12;
+  --bad:#b42318;--bad-bg:#fdecea;--bad-strong:#d03b2d;--info:#1d4f91;--info-bg:#e9f0fa;
+  --wa:#1f8f4e;--wa-2:#187a42;--wa-canvas:#ece5dd;--wa-bubble:#d9fdd3;--wa-ink:#111b21;--wa-meta:#667781;
+  --draft-bg:#eef8f1;--draft-line:#c9e9d4;--draft-ink:#1b4d32;
+  --avatar-bg:#e3eaf5;--avatar-fg:#163e73;--toast:#0f1b2d;--overlay:rgba(12,26,46,.5);
+  --r:8px;--shadow:0 1px 2px rgba(15,27,45,.05);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --brand:#5b8fd6;--brand-2:#7aa6e3;--brand-soft:#16263d;--gold:#d4a748;--gold-soft:#2a2414;
+  --ink:#e6ebf2;--ink-2:#c3cddb;--muted:#8d9bb0;--line:#243246;--line-2:#2f3f56;
+  --bg:#0a121e;--card:#101b2b;--surface-2:#132033;--hover:#16243a;--track:#1c2a3f;--input:#0e1828;
+  --side:#070e19;--side-2:#0d1828;--side-ink:#8fa0b8;--side-strong:#f1f4f9;--side-line:rgba(255,255,255,.07);
+  --ok:#4cc38a;--ok-bg:#0f2a1f;--ok-strong:#3fb37d;--warn:#e7b25c;--warn-bg:#2d2312;--warn-strong:#e0a040;
+  --bad:#f08b80;--bad-bg:#33171a;--bad-strong:#e5645a;--info:#7aa6e3;--info-bg:#16263d;
+  --wa:#2aa862;--wa-2:#23944f;--wa-canvas:#0e1a17;--wa-bubble:#144d37;--wa-ink:#e9edef;--wa-meta:#9ab0a7;
+  --draft-bg:#0f2219;--draft-line:#1f4a33;--draft-ink:#a9dcbf;
+  --avatar-bg:#1b2c45;--avatar-fg:#a9c4ea;--toast:#1d2c42;--overlay:rgba(0,0,0,.6);
+  --shadow:0 1px 2px rgba(0,0,0,.4);color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --brand:#5b8fd6;--brand-2:#7aa6e3;--brand-soft:#16263d;--gold:#d4a748;--gold-soft:#2a2414;
+  --ink:#e6ebf2;--ink-2:#c3cddb;--muted:#8d9bb0;--line:#243246;--line-2:#2f3f56;
+  --bg:#0a121e;--card:#101b2b;--surface-2:#132033;--hover:#16243a;--track:#1c2a3f;--input:#0e1828;
+  --side:#070e19;--side-2:#0d1828;--side-ink:#8fa0b8;--side-strong:#f1f4f9;--side-line:rgba(255,255,255,.07);
+  --ok:#4cc38a;--ok-bg:#0f2a1f;--ok-strong:#3fb37d;--warn:#e7b25c;--warn-bg:#2d2312;--warn-strong:#e0a040;
+  --bad:#f08b80;--bad-bg:#33171a;--bad-strong:#e5645a;--info:#7aa6e3;--info-bg:#16263d;
+  --wa:#2aa862;--wa-2:#23944f;--wa-canvas:#0e1a17;--wa-bubble:#144d37;--wa-ink:#e9edef;--wa-meta:#9ab0a7;
+  --draft-bg:#0f2219;--draft-line:#1f4a33;--draft-ink:#a9dcbf;
+  --avatar-bg:#1b2c45;--avatar-fg:#a9c4ea;--toast:#1d2c42;--overlay:rgba(0,0,0,.6);
+  --shadow:0 1px 2px rgba(0,0,0,.4);color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+body{font:14px/1.5 var(--font-ui);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
 a{color:var(--brand);text-decoration:none}
-svg.i{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.layout{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
-.side{background:var(--side);color:var(--side-ink);padding:18px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
-.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 6px;color:#fff;font-weight:700;font-size:15px;line-height:1.25}
-.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:grid;place-items:center;color:#fff;font-weight:800;flex:none}
-.brand small{display:block;font-weight:500;color:var(--side-ink);font-size:11px}
-.nav{display:flex;flex-direction:column;gap:2px}
-.nav .sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#6b7a99;padding:12px 10px 4px}
-.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-weight:500}
-.nav a:hover{background:rgba(255,255,255,.06);color:#fff}
-.nav a.active{background:rgba(59,130,246,.2);color:#fff}
-.nav a .count{margin-left:auto;background:#ef4444;color:#fff;border-radius:999px;font-size:11px;padding:0 7px;font-weight:600}
-.mode{font-size:11.5px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.05);margin-top:auto}
-.mode b{color:#fff}
-.me{border-top:1px solid rgba(255,255,255,.08);padding:12px 6px 0;display:flex;align-items:center;gap:10px}
-.avatar{width:34px;height:34px;border-radius:50%;background:#1e3a8a;color:#fff;display:grid;place-items:center;font-weight:700;flex:none;font-size:13px}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+h1,h2,h3{text-wrap:balance}
+svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.num,.kpi .v,.res .amt,td.nowrap,.mono{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--font-num);font-size:12.5px}
+.layout{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+.side{background:var(--side);color:var(--side-ink);padding:16px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:10px;overflow-y:auto;border-right:1px solid var(--side-line)}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 8px 12px;color:var(--side-strong);font-weight:700;font-size:14px;line-height:1.2;border-bottom:1px solid var(--side-line)}
+.brand .logo{width:36px;height:36px;border-radius:6px;background:var(--gold);display:grid;place-items:center;color:#0c1a2e;font-weight:800;font-size:13px;letter-spacing:.02em;flex:none}
+.brand small{display:block;font-weight:500;color:var(--side-ink);font-size:11px;margin-top:2px;letter-spacing:.01em}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav .sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--side-ink);opacity:.65;padding:14px 10px 5px;font-weight:600}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--side-ink);font-weight:500;font-size:13.5px;border-left:2px solid transparent}
+.nav a:hover{background:var(--side-2);color:var(--side-strong);text-decoration:none}
+.nav a.active{background:var(--side-2);color:var(--side-strong);border-left-color:var(--gold);font-weight:600}
+.nav a .count{margin-left:auto;background:var(--bad-strong);color:#fff;border-radius:4px;font-size:11px;padding:0 6px;font-weight:700;font-variant-numeric:tabular-nums}
+.mode{font-size:11.5px;padding:8px 10px;border-radius:6px;background:var(--side-2);margin-top:auto;line-height:1.45}
+.mode b{color:var(--side-strong)}
+.me{border-top:1px solid var(--side-line);padding:12px 6px 0;display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--avatar-bg);color:var(--avatar-fg);display:grid;place-items:center;font-weight:700;flex:none;font-size:12.5px}
+.me .avatar{background:var(--side-2);color:var(--side-strong);box-shadow:inset 0 0 0 1px var(--side-line)}
 .me .who{min-width:0;flex:1}
-.me .who b{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me .who b{display:block;color:var(--side-strong);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .me .who span{font-size:11.5px}
 .me .icon-btn{color:var(--side-ink)}
-.me .icon-btn:hover{background:rgba(255,255,255,.08);color:#fff}
-.main{padding:22px 28px 48px;min-width:0}
-.top{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
-.top h1{font-size:21px;margin:0;letter-spacing:-.01em}
-.top p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.me .icon-btn:hover{background:var(--side-2);color:var(--side-strong)}
+.main{padding:0 28px 48px;padding-left:max(28px, env(safe-area-inset-left, 0px));padding-right:max(28px, env(safe-area-inset-right, 0px));min-width:0}
+.appbar{display:flex;align-items:center;gap:12px;height:48px;margin:0 -28px 20px;padding:0 28px;border-bottom:1px solid var(--line);background:var(--card);font-size:12.5px;color:var(--muted);position:sticky;top:env(safe-area-inset-top, 0px);z-index:20}
+.appbar .crumb b{color:var(--ink);font-weight:600}
+.appbar .sp{margin-left:auto;display:flex;align-items:center;gap:10px}
+.appbar .pill{border:1px solid var(--line);border-radius:4px;padding:2px 8px;color:var(--ink-2);font-weight:600;font-size:11.5px;letter-spacing:.02em}
+.top{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top h1{font-size:22px;margin:0;letter-spacing:-.015em;font-weight:700}
+.top p{margin:3px 0 0;color:var(--muted);font-size:13px}
 .top .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 .menu-btn{display:none!important}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
-.card h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;letter-spacing:-.005em}
 .card .sub{color:var(--muted);font-size:12.5px;margin:-6px 0 12px}
 .grid{display:grid;gap:16px;align-content:start}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:16px}
-.kpi{padding:14px 16px}
-.kpi .l{font-size:12px;color:var(--muted);font-weight:500}
-.kpi .v{font-size:23px;font-weight:700;margin-top:2px;letter-spacing:-.02em}
-.kpi .h{font-size:12px;color:var(--muted)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);font:600 13px/1.2 Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none}
-.btn:hover{background:#f8fafc}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;margin-bottom:18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.kpis .kpi{border:0;border-radius:0;box-shadow:none;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
+.kpi{padding:14px 18px}
+.kpi .l{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.kpi .v{font-family:var(--font-num);font-size:24px;font-weight:600;margin-top:4px;letter-spacing:-.02em;color:var(--ink)}
+.kpi .h{font-size:12px;color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 13px;border-radius:6px;border:1px solid var(--line-2);background:var(--card);color:var(--ink);font:600 13px/1.2 var(--font-ui);cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--hover);text-decoration:none}
 .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-.btn.primary:hover{background:var(--brand-2)}
-.btn.wa{background:#16a34a;border-color:#16a34a;color:#fff}
-.btn.wa:hover{background:#15803d}
+.btn.primary:hover{background:var(--brand-2);border-color:var(--brand-2)}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:#fff}
+.btn.wa:hover{background:var(--wa-2)}
 .btn.danger{color:var(--bad)}
-.btn.sm{padding:5px 9px;font-size:12px;border-radius:7px}
-.btn[disabled]{opacity:.55;cursor:not-allowed}
-.icon-btn{padding:6px;border-radius:7px;border:0;background:none;cursor:pointer;color:var(--muted);display:inline-flex;font:inherit}
-.icon-btn:hover{background:#f1f5f9;color:var(--ink)}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:#f1f5f9;color:var(--ink-2)}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:5px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.icon-btn{padding:6px;border-radius:6px;border:0;background:none;cursor:pointer;color:var(--muted);display:inline-flex;font:inherit}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:4px;font-size:11.5px;font-weight:600;white-space:nowrap;background:var(--track);color:var(--ink-2)}
 .b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--info-bg);color:var(--info)}
 .tw{overflow-x:auto;margin:0 -18px;padding:0 18px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{text-align:left;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;padding:9px 10px;border-bottom:1px solid var(--line-2);background:var(--surface-2);white-space:nowrap}
 td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--hover)}
 tr.click{cursor:pointer}
-tr.click:hover td{background:#f8fafc}
 .muted{color:var(--muted)}.small{font-size:12px}.strong{font-weight:600}.nowrap{white-space:nowrap}.right{text-align:right}
 label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
-input,select,textarea{width:100%;padding:8px 10px;border:1px solid #d6dce6;border-radius:8px;font:inherit;color:var(--ink);background:#fff}
-input:focus,select:focus,textarea:focus{outline:2px solid #bfd3ff;border-color:var(--brand)}
-input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:var(--brand);flex:none}
-input[disabled]{background:#f8fafc;color:var(--muted)}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line-2);border-radius:6px;font:inherit;color:var(--ink);background:var(--input)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
+input[type=checkbox],input[type=radio]{width:16px;height:16px;padding:0;accent-color:var(--brand);flex:none}
+input[disabled]{background:var(--surface-2);color:var(--muted)}
+input[type=file]{padding:6px;background:var(--surface-2)}
 .fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .fg .full{grid-column:1/-1}
 .check{display:flex;gap:8px;align-items:center;font-weight:500;margin:0}
@@ -92,25 +138,25 @@ input[disabled]{background:#f8fafc;color:var(--muted)}
 .toolbar select{width:auto}
 .empty{padding:26px;text-align:center;color:var(--muted)}
 .empty svg{width:28px;height:28px;margin-bottom:6px}
-.notice{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+.notice{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;border:1px solid var(--line)}
 .notice svg{margin-top:2px}
-.notice.warn{background:var(--warn-bg);color:#7c2d12;border:1px solid #fed7aa}
-.notice.info{background:var(--info-bg);color:#1e3a8a;border:1px solid #c7d7fe}
+.notice.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.notice.info{background:var(--info-bg);color:var(--info);border-color:transparent}
 .bars{display:flex;flex-direction:column;gap:8px}
 .bar{display:grid;grid-template-columns:118px 1fr 28px;gap:10px;align-items:center;font-size:12.5px}
-.bar .t{height:8px;background:#eef2f7;border-radius:99px;overflow:hidden}
-.bar .t i{display:block;height:100%;background:var(--brand);border-radius:99px}
-.bar b{text-align:right}
+.bar .t{height:8px;background:var(--track);border-radius:2px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--brand);border-radius:2px}
+.bar b{text-align:right;font-variant-numeric:tabular-nums}
 .list{display:flex;flex-direction:column}
 .li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
 .li:last-child{border-bottom:0}
 .li .grow{flex:1;min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-size:11.5px;padding:2px 8px;border-radius:6px;background:#f1f5f9;color:var(--ink-2);display:inline-flex;align-items:center}
-.chip.up{background:#ecfdf5;color:#065f46}
-.res{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;border-left:4px solid #10b981;background:#fff}
-.res.partial{border-left-color:#f59e0b}
-.res .amt{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.chip{font-size:11.5px;padding:2px 8px;border-radius:4px;background:var(--track);color:var(--ink-2);display:inline-flex;align-items:center}
+.chip.up{background:var(--ok-bg);color:var(--ok)}
+.res{border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:6px;border-top:3px solid var(--ok-strong);background:var(--card)}
+.res.partial{border-top-color:var(--warn-strong)}
+.res .amt{font-family:var(--font-num);font-size:22px;font-weight:600;letter-spacing:-.02em}
 .res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
 .bk{display:flex;flex-direction:column;gap:9px}
@@ -118,46 +164,53 @@ input[disabled]{background:#f8fafc;color:var(--muted)}
 .split{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:16px;align-items:start}
 .steps{margin:0;padding-left:18px;color:var(--ink-2)}
 .steps li{margin:4px 0}
-.excerpt{font-size:12px;color:var(--muted);white-space:pre-wrap;max-height:74px;overflow:hidden;background:#f8fafc;border-radius:6px;padding:6px 8px;margin-top:6px;max-width:520px}
-.modal-back{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto;z-index:60}
-.modal{background:#fff;border-radius:16px;width:min(760px,100%);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.excerpt{font-size:12px;color:var(--muted);white-space:pre-wrap;max-height:74px;overflow:hidden;background:var(--surface-2);border-radius:4px;padding:6px 8px;margin-top:6px;max-width:520px}
+.modal-back{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto;z-index:60}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:10px;width:min(760px,100%);box-shadow:0 24px 60px rgba(0,0,0,.28)}
 .modal.wide{width:min(1040px,100%)}
-.modal header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
-.modal header h2{margin:0;font-size:16px;flex:1}
+.modal header{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--line)}
+.modal header h2{margin:0;font-size:16px;flex:1;font-weight:700}
 .modal .body{padding:18px 20px}
-.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
-#toast-root{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:80}
-.toast{background:#0f172a;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.2);max-width:360px}
-.toast.bad{background:#991b1b}.toast.ok{background:#065f46}
-.login{min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(1000px 600px at 10% -10%,#1e3a8a 0,transparent 60%),var(--side)}
-.login .card{width:min(440px,100%);padding:28px}
-.login .brand{color:var(--ink);padding:0;margin-bottom:6px}
+.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:13px 20px;border-top:1px solid var(--line);background:var(--surface-2);border-radius:0 0 10px 10px;flex-wrap:wrap}
+#toast-root{position:fixed;right:max(18px, env(safe-area-inset-right, 0px));bottom:max(18px, env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:var(--toast);color:#fff;padding:10px 14px;border-radius:6px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:360px;border-left:3px solid var(--gold)}
+.toast.bad{border-left-color:var(--bad-strong)}.toast.ok{border-left-color:var(--ok-strong)}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--side)}
+.login .card{width:min(440px,100%);padding:28px;border-top:3px solid var(--gold)}
+.login .brand{color:var(--ink);padding:0 0 14px;margin-bottom:6px;border-bottom:1px solid var(--line)}
 .login .brand small{color:var(--muted)}
 .stack{display:flex;flex-direction:column;gap:12px;margin-top:16px}
 .phone{display:flex}
-.phone span{padding:8px 10px;border:1px solid #d6dce6;border-right:0;border-radius:8px 0 0 8px;background:#f8fafc;font-weight:600;color:var(--ink-2)}
-.phone input{border-radius:0 8px 8px 0}
-.otp{letter-spacing:.5em;text-align:center;font-size:20px;font-weight:700}
-.err{background:var(--bad-bg);color:var(--bad);padding:8px 12px;border-radius:8px;font-size:13px;margin-top:14px}
+.phone span{padding:8px 10px;border:1px solid var(--line-2);border-right:0;border-radius:6px 0 0 6px;background:var(--surface-2);font-weight:600;color:var(--ink-2)}
+.phone input{border-radius:0 6px 6px 0}
+.otp{letter-spacing:.5em;text-align:center;font-size:20px;font-weight:700;font-family:var(--font-num)}
+.err{background:var(--bad-bg);color:var(--bad);padding:8px 12px;border-radius:6px;font-size:13px;margin-top:14px}
 .demo-users{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.demo-users button{display:flex;align-items:center;gap:10px;text-align:left;width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font:inherit;color:var(--ink)}
+.demo-users button{display:flex;align-items:center;gap:10px;text-align:left;width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer;font:inherit;color:var(--ink)}
 .demo-users button:hover{border-color:var(--brand);background:var(--brand-soft)}
 .backdrop{display:none}
-.wa-wrap{background:#efeae2;border-radius:12px;padding:16px;min-height:220px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.wa-bubble{background:#d9fdd3;border-radius:10px 0 10px 10px;padding:9px 12px;max-width:95%;white-space:pre-wrap;font-size:13.5px;box-shadow:0 1px 1px rgba(0,0,0,.08);color:#111b21}
-.wa-bubble .tm{display:block;text-align:right;font-size:11px;color:#667781;margin-top:4px}
-.draft{margin-top:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;font-size:12.5px;white-space:pre-wrap;max-height:66px;overflow:hidden;color:#14532d}
+.wa-wrap{background:var(--wa-canvas);border-radius:8px;padding:16px;min-height:220px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.wa-bubble{background:var(--wa-bubble);border-radius:8px 0 8px 8px;padding:9px 12px;max-width:95%;white-space:pre-wrap;font-size:13.5px;box-shadow:0 1px 1px rgba(0,0,0,.08);color:var(--wa-ink)}
+.wa-bubble .tm{display:block;text-align:right;font-size:11px;color:var(--wa-meta);margin-top:4px}
+.draft{margin-top:8px;background:var(--draft-bg);border:1px solid var(--draft-line);border-radius:6px;padding:8px 10px;font-size:12.5px;white-space:pre-wrap;max-height:66px;overflow:hidden;color:var(--draft-ink)}
 .draft-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
-.sec-h{grid-column:1/-1;font-weight:700;font-size:13px;color:var(--brand-2);margin-top:6px;padding-top:12px;border-top:1px solid var(--line);text-transform:uppercase;letter-spacing:.04em}
-.loan-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fbfcfe}
+.sec-h{grid-column:1/-1;font-weight:700;font-size:11.5px;color:var(--brand);margin-top:6px;padding-top:14px;border-top:1px solid var(--line);text-transform:uppercase;letter-spacing:.09em}
+.loan-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:var(--surface-2)}
 .loan-row .c2{grid-column:span 2}
 .loan-row label{font-size:11px;margin-bottom:2px}
 .loan-row .st{display:flex;align-items:flex-end;justify-content:flex-end;gap:4px;flex-wrap:wrap}
-input.auto,input[readonly]{background:#f1f5f9;color:var(--ink-2);font-weight:600}
+input.auto,input[readonly]{background:var(--track);color:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums}
 .loan-grid{display:grid;grid-template-columns:28px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.2fr);gap:8px;align-items:center}
 .loan-grid .h{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase}
 .loan-grid .n{font-weight:700;color:var(--muted);text-align:right}
 .checks{display:flex;gap:14px;flex-wrap:wrap;padding:8px 0}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.doc-slot{border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:12.5px;display:flex;align-items:center;gap:8px;background:var(--surface-2)}
+.doc-slot.have{border-color:var(--draft-line);background:var(--ok-bg);color:var(--ok)}
+.doc-slot .dot{width:8px;height:8px;border-radius:50%;background:var(--line-2);flex:none}
+.doc-slot.have .dot{background:var(--ok-strong)}
+.drop{border:1.5px dashed var(--line-2);border-radius:8px;padding:16px;background:var(--surface-2)}
+.drop.over{border-color:var(--brand);background:var(--brand-soft)}
 @media (max-width:1100px){.split{grid-template-columns:1fr}}
 @media (max-width:860px){
   .loan-row{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -165,19 +218,23 @@ input.auto,input[readonly]{background:#f1f5f9;color:var(--ink-2);font-weight:600
   .loan-grid{grid-template-columns:22px 1fr 1fr}
   .loan-grid .lt{grid-column:2/-1}
   .layout{grid-template-columns:1fr}
-  .side{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:50;transform:translateX(-100%);transition:transform .2s}
+  .side{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:50;transform:translateX(-100%);transition:transform .2s;padding-top:max(16px, env(safe-area-inset-top, 0px))}
   .side.open{transform:none}
-  .backdrop.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45}
+  .backdrop.show{display:block;position:fixed;inset:0;background:var(--overlay);z-index:45}
   .menu-btn{display:inline-flex!important}
-  .main{padding:14px 16px 48px}
+  .main{padding:0 16px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+  .appbar{margin:0 -16px 16px;padding:0 16px}
+  .appbar .hide-sm{display:none}
   .g2{grid-template-columns:1fr}
   .top .actions{margin-left:0;width:100%}
   .modal-back{padding:16px 10px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media print{
-  .side,.top .actions,.no-print,.menu-btn,#toast-root,.backdrop{display:none!important}
+  .side,.top .actions,.no-print,.menu-btn,#toast-root,.backdrop,.appbar{display:none!important}
   .layout{display:block}.main{padding:0}.split{display:block}
-  .card{box-shadow:none;break-inside:avoid;margin-bottom:12px}body{background:#fff}
+  .card{box-shadow:none;break-inside:avoid;margin-bottom:12px}body{background:#fff;color:#000}
 }
 </style>
 </head>
@@ -464,6 +521,7 @@ const state = {
   elig: {form: defaultElig(), results: null},
   imp: {group:'', onlyNew:true, fileName:'', text:'', draft:null},
   calls: {phone:'', name:'', product:'Business Loan', city:'', outcome:'', recall:'', notes:'', paste:'', editId:'', fromId:''},
+  docUp: {type:'Aadhaar', files:[], consent:false, busy:false, lead:''},
   wa: {mode:'single', leadId:'', tpl:'', text:'', stage:'', product:''}, waQueue: null,
 };
 let S = null;   // data store (LocalStore in demo, FireStoreAdapter live)
@@ -489,7 +547,7 @@ class LocalStore {
   // Mirrors the Firestore queries + rules so the demo behaves like live.
   all(c){
     const rows = this.db[c] || [], u = this.user; if (!u) return rows; const r = u.role;
-    if (c === 'leads' || c === 'followups') {
+    if (c === 'leads' || c === 'followups' || c === 'documents') {
       if (['Admin','Operations'].includes(r)) return rows;
       if (r === 'Branch Manager') return rows.filter(x => x.branch === u.branch);
       if (r === 'Sales Executive') return rows.filter(x => x.assignedTo === u.phone);
@@ -523,9 +581,9 @@ class FireStoreAdapter {
     const {db, F} = this.fb; const col = n => F.collection(db, n); const r = u.role;
     const q = (n, field, val) => F.query(col(n), F.where(field, '==', val));
     const subs = {policies: col('policies'), bankers: col('bankers'), settings: col('settings')};
-    if (['Admin','Operations'].includes(r)) Object.assign(subs, {leads:col('leads'), followups:col('followups'), checks:col('checks'), calls:col('calls'), groups:col('groups'), imports:col('imports'), staff:col('staff')});
-    else if (r === 'Branch Manager') Object.assign(subs, {leads:q('leads','branch',u.branch), followups:q('followups','branch',u.branch), checks:q('checks','branch',u.branch), calls:q('calls','branch',u.branch), staff:q('staff','branch',u.branch)});
-    else if (r === 'Sales Executive') Object.assign(subs, {leads:q('leads','assignedTo',u.phone), followups:q('followups','assignedTo',u.phone), checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
+    if (['Admin','Operations'].includes(r)) Object.assign(subs, {leads:col('leads'), followups:col('followups'), documents:col('documents'), checks:col('checks'), calls:col('calls'), groups:col('groups'), imports:col('imports'), staff:col('staff')});
+    else if (r === 'Branch Manager') Object.assign(subs, {leads:q('leads','branch',u.branch), followups:q('followups','branch',u.branch), documents:q('documents','branch',u.branch), checks:q('checks','branch',u.branch), calls:q('calls','branch',u.branch), staff:q('staff','branch',u.branch)});
+    else if (r === 'Sales Executive') Object.assign(subs, {leads:q('leads','assignedTo',u.phone), followups:q('followups','assignedTo',u.phone), documents:q('documents','assignedTo',u.phone), checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
     else Object.assign(subs, {checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
     for (const [name, ref] of Object.entries(subs)) {
       this.unsubs.push(F.onSnapshot(ref,
@@ -543,9 +601,9 @@ class FireStoreAdapter {
 
 async function loadFirebase(){
   const base = `https://www.gstatic.com/firebasejs/${FB_VER}`;
-  const [appM, A, F] = await Promise.all([import(`${base}/firebase-app.js`), import(`${base}/firebase-auth.js`), import(`${base}/firebase-firestore.js`)]);
+  const [appM, A, F, St] = await Promise.all([import(`${base}/firebase-app.js`), import(`${base}/firebase-auth.js`), import(`${base}/firebase-firestore.js`), import(`${base}/firebase-storage.js`)]);
   const app = appM.initializeApp(FIREBASE_CONFIG);
-  return {app, A, F, auth: A.getAuth(app), db: F.getFirestore(app)};
+  return {app, A, F, St, auth: A.getAuth(app), db: F.getFirestore(app), storage: St.getStorage(app)};
 }
 
 // ---------------------------------------------------------------------
@@ -984,13 +1042,76 @@ function queueModal() {
   return modal(`${Q.title} · ${Q.i + 1} of ${Q.items.length}`, `<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span class="avatar">${esc(initials(l.name))}</span><div style="flex:1"><b>${esc(l.name)}</b><div class="small muted">${esc(showPhone(l.phone))} · ${esc(l.product)} · ${esc(l.assignedName || '')}</div>${it.remarks ? `<div class="small">Follow-up: ${esc(it.remarks)}</div>` : ''}</div>${stageBadge(l.stage)}</div>
     <div class="small muted" style="margin-bottom:4px">${esc(t.name)}</div><textarea id="q_text" rows="10">${esc(text)}</textarea>
     ${it.fuId ? `<label class="check small" style="margin-top:10px"><input type="checkbox" id="q_done" ${Q.markDone ? 'checked' : ''}> Mark this follow-up done after sending</label>` : ''}
-    <div style="height:6px;background:#eef2f7;border-radius:99px;margin-top:12px;overflow:hidden"><i style="display:block;height:100%;width:${Q.i / Q.items.length * 100}%;background:#16a34a"></i></div>`,
+    <div style="height:6px;background:var(--track);border-radius:99px;margin-top:12px;overflow:hidden"><i style="display:block;height:100%;width:${Q.i / Q.items.length * 100}%;background:var(--wa)"></i></div>`,
     `<button class="btn" data-action="q-stop" style="margin-right:auto">Stop</button><button class="btn" data-action="q-skip">Skip</button><button class="btn wa" data-action="q-send">${ic('send')} Open in WhatsApp &amp; next</button>`);
 }
 function startQueue(title, items, markDone = true) {
   if (!items.length) return toast('Nobody to message', 'bad');
   state.waQueue = {title, items, i: 0, markDone}; openModal(queueModal());
 }
+
+// ---------------------------------------------------------------------
+// Customer documents: metadata in Firestore `documents`, files in Firebase Storage
+// (demo mode keeps files in this browser's IndexedDB)
+// ---------------------------------------------------------------------
+const DOC_TYPES = ['Aadhaar','PAN','Photo','Bank statement','GST certificate','GST returns','ITR','Business proof (Udyam / trade licence)','Salary slips','Form 16','Property documents','Existing loan statement','Sanction letter','Other'];
+const DOC_NEED = {
+  'Business Loan': ['Aadhaar','PAN','Photo','Bank statement','GST certificate','GST returns','ITR','Business proof (Udyam / trade licence)'],
+  'STBL': ['Aadhaar','PAN','Photo','Bank statement','Business proof (Udyam / trade licence)'],
+  'Working Capital': ['Aadhaar','PAN','Bank statement','GST returns','ITR','Business proof (Udyam / trade licence)'],
+  'Personal Loan': ['Aadhaar','PAN','Photo','Salary slips','Bank statement','Form 16'],
+  'Home Loan': ['Aadhaar','PAN','Photo','Bank statement','ITR','Property documents'],
+  'LAP': ['Aadhaar','PAN','Photo','Bank statement','ITR','Property documents'],
+};
+const docNeed = product => DOC_NEED[product] || ['Aadhaar','PAN','Bank statement'];
+const DOC_MAX = 10 * 1024 * 1024;
+const docOk = f => f.size <= DOC_MAX && (/^image\//.test(f.type) || f.type === 'application/pdf');
+const fmtSize = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+const leadDocs = id => S.all('documents').filter(d => d.leadId === id).sort((a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)));
+const docProgress = l => { const have = new Set(leadDocs(l.id).map(d => d.type)), need = docNeed(l.product); return {done: need.filter(t => have.has(t)).length, total: need.length}; };
+const canDeleteDocs = r => ['Admin','Branch Manager','Operations'].includes(r);
+const blobStore = {
+  db: null,
+  open() { return this.db ||= new Promise((res, rej) => { const q = indexedDB.open('dsa_cc_docs', 1); q.onupgradeneeded = () => q.result.createObjectStore('blobs'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async run(mode, fn) { const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('blobs', mode), st = tx.objectStore('blobs'), r = fn(st); tx.oncomplete = () => res(r?.result); tx.onerror = () => rej(tx.error); }); },
+  put(k, v) { return this.run('readwrite', st => st.put(v, k)); },
+  get(k) { return this.run('readonly', st => st.get(k)); },
+  del(k) { return this.run('readwrite', st => st.delete(k)); },
+};
+async function putDocFile(path, file) {
+  if (state.mode === 'live') { await FB.St.uploadBytes(FB.St.ref(FB.storage, path), file, {contentType: file.type}); return; }
+  try { await blobStore.put(path, file); } catch (e) { throw new Error('This browser blocked local file storage (private window?). Use a normal window.'); }
+}
+async function getDocFile(path) {
+  if (state.mode === 'live') return FB.St.getBlob(FB.St.ref(FB.storage, path));
+  const b = await blobStore.get(path); if (!b) throw new Error('File not found in this browser.'); return b;
+}
+async function delDocFile(path) {
+  if (state.mode === 'live') { try { await FB.St.deleteObject(FB.St.ref(FB.storage, path)); } catch (e) { if (e.code !== 'storage/object-not-found') throw e; } return; }
+  try { await blobStore.del(path); } catch (e) {}
+}
+function docsModal(leadId) {
+  const l = byId('leads', leadId); if (!l) return '';
+  const docs = leadDocs(l.id), have = new Set(docs.map(d => d.type)), need = docNeed(l.product), U = state.docUp, pr = docProgress(l);
+  const canDel = canDeleteDocs(state.user.role);
+  return modal(`Documents · ${l.name}`, `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span class="small muted">${esc(l.product)} · ${esc(showPhone(l.phone))} · ${esc(l.assignedName || '')}</span><span class="badge ${pr.done === pr.total ? 'b-ok' : 'b-warn'}" style="margin-left:auto">${pr.done} of ${pr.total} required documents</span></div>
+    <div class="doc-grid" style="margin-bottom:16px">${need.map(t => `<div class="doc-slot ${have.has(t) ? 'have' : ''}"><span class="dot"></span>${esc(t)}</div>`).join('')}</div>
+    <div class="drop" id="doc-drop">
+      <div class="fg" style="grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)">
+        <div><label for="doc_type">Document type</label><select id="doc_type" data-bind="docUp.type">${DOC_TYPES.map(t => `<option ${t === U.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+        <div><label for="doc_file">Files (PDF or photo, up to 10 MB each)</label><input id="doc_file" type="file" multiple accept="application/pdf,image/*" data-change="doc-pick"></div>
+      </div>
+      <p class="small muted" style="margin:8px 0 0">${U.files.length ? `<b>${U.files.length} file(s) ready:</b> ${esc(U.files.map(f => `${f.name} (${fmtSize(f.size)})`).join(', '))}` : 'Choose files or drop them here.'}</p>
+      <label class="check small" style="margin-top:10px"><input type="checkbox" id="doc_consent" data-bind="docUp.consent" ${U.consent ? 'checked' : ''}> The customer has given consent to collect and store these documents for their loan application.</label>
+      <p class="small muted" style="margin:6px 0 0">Mask the first 8 digits of the Aadhaar number before uploading, as UIDAI advises.</p>
+      <button class="btn primary" style="margin-top:12px" data-action="doc-upload" data-lead="${esc(l.id)}" ${U.busy ? 'disabled' : ''}>${ic('upload')} ${U.busy ? 'Uploading…' : 'Upload'}</button>
+    </div>
+    <h3 style="font-size:14px;margin:18px 0 8px">Uploaded <span class="badge">${docs.length}</span></h3>
+    ${docs.length ? `<div class="tw"><table><thead><tr><th>Type</th><th>File</th><th>Size</th><th>Uploaded</th><th></th></tr></thead><tbody>${docs.map(d => `<tr><td><b>${esc(d.type)}</b></td><td class="small" style="max-width:260px;overflow-wrap:anywhere">${esc(d.name)}</td><td class="small nowrap">${esc(fmtSize(d.size || 0))}</td><td class="small">${esc(fmtDate(d.uploadedAt))}<div class="muted">${esc(d.uploadedByName || '')}</div></td>
+      <td class="right nowrap"><button class="btn sm" data-action="doc-view" data-id="${esc(d.id)}">View</button>${canDel ? ` <button class="icon-btn" data-action="doc-del" data-id="${esc(d.id)}" title="Delete file" aria-label="Delete file">${ic('trash')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty small">No documents yet.</div>'}
+    <div id="doc-preview"></div>`, `<button class="btn" data-action="modal-close">Close</button>`);
+}
+const refreshDocs = leadId => { if ($('#doc-drop')) openModal(docsModal(leadId)); };
 
 // ---------------------------------------------------------------------
 // Views
@@ -1021,9 +1142,12 @@ function viewLogin() {
   } else if (L.step === 'status') {
     body = `<div class="notice warn" style="margin-top:14px">${ic('alert')}<div>Your access is <b>${esc(L.status)}</b>. An admin needs to approve it before you can sign in.</div></div><button class="btn" data-action="logout">Sign out</button>`;
   }
-  return `<div class="login"><div class="card"><div class="brand"><div class="logo">D</div><div>DSA Command Center<small>Leads · Eligibility · Bank policies · Banker contacts</small></div></div>${L.err ? `<div class="err">${esc(L.err)}</div>` : ''}${body}</div></div>`;
+  return `<div class="login"><div class="card"><div class="brand"><div class="logo">${esc(coMark())}</div><div>${esc(coName())}<small>DSA Command Center · Leads, eligibility, bank policies, customer care</small></div></div>${L.err ? `<div class="err">${esc(L.err)}</div>` : ''}${body}</div></div>`;
 }
 
+const coName = () => (S && settings().company) || 'Cheyutha Multiway Services';
+const coMark = () => coName().split(/\s+/).filter(w => /^[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'DC';
+const PAGE_LABEL = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n.label]));
 function viewShell() {
   const u = state.user, t = todayStr();
   const due = S.all('followups').filter(f => !f.done && f.date <= t).length;
@@ -1039,12 +1163,12 @@ function viewShell() {
   }
   const mode = state.mode === 'demo' ? '<b>Demo mode</b><br>Data is saved in this browser only.' : '<b>Live</b> · protected by Firebase rules';
   return `<div class="layout"><aside class="side ${state.menu ? 'open' : ''}">
-      <div class="brand"><div class="logo">D</div><div>DSA Command Center<small>${esc(u.branch)}</small></div></div>
+      <div class="brand"><div class="logo">${esc(coMark())}</div><div>${esc(coName())}<small>DSA Command Center</small></div></div>
       <nav class="nav" aria-label="Main">${nav}</nav>
       <div class="mode">${mode}</div>
       <div class="me"><span class="avatar">${esc(initials(u.name))}</span><div class="who"><b>${esc(u.name)}</b><span>${esc(u.role)}</span></div><button class="icon-btn" data-action="logout" title="Sign out" aria-label="Sign out">${ic('logout')}</button></div>
     </aside><div class="backdrop ${state.menu ? 'show' : ''}" data-action="menu-close"></div>
-    <main class="main" id="view">${viewContent(route)}</main></div>`;
+    <main class="main" id="view"><div class="appbar no-print"><span class="crumb">${esc(coName())} <span class="hide-sm">/ ${esc(u.branch)}</span> / <b>${esc(PAGE_LABEL[route] || '')}</b></span><span class="sp"><span class="hide-sm num">${esc(new Date().toLocaleDateString('en-IN', {weekday:'short', day:'2-digit', month:'short', year:'numeric'}))}</span><span class="pill">${esc(u.role)}</span></span></div>${viewContent(route)}</main></div>`;
 }
 function resolvedRoute() { return canSee(state.route) ? state.route : 'dashboard'; }
 function viewContent(route) {
@@ -1138,10 +1262,10 @@ function vCalls() {
       <a class="btn sm" href="${esc(telLink(c.phone))}" title="Call">${ic('phone')}</a><button class="btn sm wa" data-action="call-wa" data-id="${esc(c.id)}" title="Send WhatsApp follow-up">${ic('msg')}</button><button class="btn sm" data-action="call-pick" data-id="${esc(c.id)}" data-recall="1">Log result</button></div>`; }).join('')}</div>` : '<div class="empty small">No recalls due. 🎉</div>'}</div>`;
   const teamCard = isLead ? (() => { const ppl = S.all('staff').filter(x => x.status === 'Approved' && x.role && x.role !== 'Accounts');
     return `<div class="card"><h3>Team today</h3><div class="tw"><table><thead><tr><th>Person</th><th>Calls</th><th>Interested</th><th>Target</th></tr></thead><tbody>${ppl.map(x => { const cs = all.filter(c => callDone(c) && c.createdBy === x.id && dayOf(c.calledAt) === t), n = cs.length, ok = cs.filter(c => c.outcome === 'interested').length;
-      return `<tr><td><b>${esc(x.name)}</b><div class="small muted">${esc(x.role)}</div></td><td>${n}</td><td>${ok ? `<span class="badge b-ok">${ok}</span>` : 0}</td><td style="min-width:120px"><div class="bar" style="grid-template-columns:1fr 38px"><span class="t"><i style="width:${Math.min(100, n / target * 100)}%;background:${n >= target ? '#059669' : 'var(--brand)'}"></i></span><b>${Math.round(n / target * 100)}%</b></div></td></tr>`; }).join('')}</tbody></table></div></div>`; })() : '';
+      return `<tr><td><b>${esc(x.name)}</b><div class="small muted">${esc(x.role)}</div></td><td>${n}</td><td>${ok ? `<span class="badge b-ok">${ok}</span>` : 0}</td><td style="min-width:120px"><div class="bar" style="grid-template-columns:1fr 38px"><span class="t"><i style="width:${Math.min(100, n / target * 100)}%;background:${n >= target ? 'var(--ok-strong)' : 'var(--brand)'}"></i></span><b>${Math.round(n / target * 100)}%</b></div></td></tr>`; }).join('')}</tbody></table></div></div>`; })() : '';
   return header('Daily Calls', `Target ${target} calls a day · every number is saved with its result`, isLead ? `<div class="chips">${[['me','My calls'],['team','Whole team']].map(([v,l]) => `<button class="btn sm ${state.f.callsView.who === v ? 'primary' : ''}" data-action="calls-who" data-v="${v}">${l}</button>`).join('')}</div>` : '') +
   `<div class="kpis">
-    <div class="card kpi"><div class="l">My calls today</div><div class="v">${mineToday.length} <span class="small muted">/ ${target}</span></div><div class="t" style="height:8px;background:#eef2f7;border-radius:99px;overflow:hidden;margin-top:6px"><i style="display:block;height:100%;width:${pct}%;background:${pct >= 100 ? '#059669' : 'var(--brand)'}"></i></div></div>
+    <div class="card kpi"><div class="l">My calls today</div><div class="v">${mineToday.length} <span class="small muted">/ ${target}</span></div><div class="t" style="height:8px;background:var(--track);border-radius:99px;overflow:hidden;margin-top:6px"><i style="display:block;height:100%;width:${pct}%;background:${pct >= 100 ? 'var(--ok-strong)' : 'var(--brand)'}"></i></div></div>
     <div class="card kpi"><div class="l">Interested today</div><div class="v">${interested}</div><div class="h">${mineToday.length ? Math.round(interested / mineToday.length * 100) : 0}% of calls</div></div>
     <div class="card kpi"><div class="l">Recalls due</div><div class="v">${recalls.length}</div><div class="h">not interested ≠ lost</div></div>
     <div class="card kpi"><div class="l">Calling list</div><div class="v">${toCall.length}</div><div class="h">numbers waiting</div></div>
@@ -1149,7 +1273,7 @@ function vCalls() {
   <div class="split">${form}<div class="grid">${recallCard}${listCard}</div></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h3>${team ? 'Team' : 'My'} calls today <span class="badge">${today.length}</span></h3>${today.length ? `<div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Time</th><th>Customer</th><th>Result</th><th>Recall</th>${team ? '<th>By</th>' : ''}</tr></thead><tbody>${today.slice(0, 150).map(c => { const o = outcomeById(c.outcome); return `<tr><td class="small nowrap">${new Date(c.calledAt).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</td><td><b>${esc(c.name || '—')}</b><div class="small muted">${esc(showPhone(c.phone))}</div></td><td><span class="badge ${o?.cls || ''}">${esc(o?.label || c.outcome)}</span>${c.leadId ? ' <span class="badge b-ok">Lead</span>' : ''}</td><td class="small nowrap">${c.recallDate ? esc(fmtDate(c.recallDate)) : '—'}</td>${team ? `<td class="small">${esc(c.createdByName || '')}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>` : '<div class="empty small">No calls logged yet today.</div>'}</div>
-    <div class="grid">${teamCard}<div class="card"><h3>Today's results</h3>${byOutcome.length ? `<div class="bars">${byOutcome.map(([o, n]) => `<div class="bar" style="grid-template-columns:170px 1fr 34px"><span>${esc(o.label)}</span><span class="t"><i style="width:${n / maxO * 100}%;background:${o.cls === 'b-ok' ? '#059669' : o.cls === 'b-bad' ? '#dc2626' : o.cls === 'b-warn' ? '#d97706' : 'var(--brand)'}"></i></span><b>${n}</b></div>`).join('')}</div>` : '<div class="empty small">Nothing yet.</div>'}</div></div>
+    <div class="grid">${teamCard}<div class="card"><h3>Today's results</h3>${byOutcome.length ? `<div class="bars">${byOutcome.map(([o, n]) => `<div class="bar" style="grid-template-columns:170px 1fr 34px"><span>${esc(o.label)}</span><span class="t"><i style="width:${n / maxO * 100}%;background:${o.cls === 'b-ok' ? 'var(--ok-strong)' : o.cls === 'b-bad' ? 'var(--bad-strong)' : o.cls === 'b-warn' ? 'var(--warn-strong)' : 'var(--brand)'}"></i></span><b>${n}</b></div>`).join('')}</div>` : '<div class="empty small">Nothing yet.</div>'}</div></div>
   </div>`;
 }
 
@@ -1329,14 +1453,14 @@ function vReports() {
     <tr><td><b>Total</b></td><td><b>${tot.calls || 0}</b></td><td><b>${tot.interested || 0}</b></td><td><b>${tot.added || 0}</b></td><td><b>${tot.logged || 0}</b></td><td><b>${tot.sanctioned || 0}</b></td><td><b>${tot.disbursed || 0}</b><div class="small muted">${fmtL(tot.disbursedAmt || 0)}</div></td><td><b>${tot.rejected || 0}</b></td><td><b>${tot.lost || 0}</b></td><td><b>${tot.fuDone || 0}</b></td><td><b>${tot.overdue || 0}</b></td><td><b>${tot.checks || 0}</b></td><td><b>${tot.added ? Math.round(tot.disbursed / tot.added * 100) + '%' : '—'}</b></td></tr>
   </tbody></table></div><p class="small muted" style="margin:10px 0 0">Click a person to see their files. "Overdue now" is today's position, not the period's.</p></div>
   <div class="grid g2">
-    <div class="card"><h3>Disbursed amount by person</h3><div class="bars">${rows.map(x => `<div class="bar" style="grid-template-columns:130px 1fr 70px"><span>${esc(x.p.name)}</span><span class="t"><i style="width:${x.disbursedAmt/maxD*100}%;background:#059669"></i></span><b>${fmtL(x.disbursedAmt)}</b></div>`).join('')}</div></div>
+    <div class="card"><h3>Disbursed amount by person</h3><div class="bars">${rows.map(x => `<div class="bar" style="grid-template-columns:130px 1fr 70px"><span>${esc(x.p.name)}</span><span class="t"><i style="width:${x.disbursedAmt/maxD*100}%;background:var(--ok-strong)"></i></span><b>${fmtL(x.disbursedAmt)}</b></div>`).join('')}</div></div>
     ${(() => { const inR = iso => iso && iso >= r.s && iso < r.e, cs = S.all('calls').filter(c => callDone(c) && inR(c.calledAt));
       const oc = CALL_OUTCOMES.map(o => [o.label, cs.filter(c => c.outcome === o.id).length]).filter(x => x[1]).sort((a,b) => b[1] - a[1]);
       const rj = {}; S.all('leads').filter(l => stageEvents(l).some(h => h.stage === 'Rejected' && inR(h.at))).forEach(l => (l.rejection?.reasons || ['Not recorded']).forEach(x => rj[x] = (rj[x] || 0) + 1));
       const rr = Object.entries(rj).sort((a,b) => b[1] - a[1]);
       const bars = (list, color) => { const m = Math.max(1, ...list.map(x => x[1])); return `<div class="bars">${list.map(([k, n]) => `<div class="bar" style="grid-template-columns:170px 1fr 40px"><span>${esc(k)}</span><span class="t"><i style="width:${n / m * 100}%;background:${color}"></i></span><b>${n}</b></div>`).join('')}</div>`; };
       return `<div class="card"><h3>Call results</h3>${oc.length ? bars(oc, 'var(--brand)') : '<div class="empty small">No calls in this period.</div>'}</div>
-        <div class="card"><h3>Why files were rejected</h3>${rr.length ? bars(rr, '#d97706') : '<div class="empty small">No rejections in this period.</div>'}</div>`; })()}
+        <div class="card"><h3>Why files were rejected</h3>${rr.length ? bars(rr, 'var(--warn-strong)') : '<div class="empty small">No rejections in this period.</div>'}</div>`; })()}
     <div class="card"><h3>New leads by person</h3><div class="bars">${rows.map(x => `<div class="bar" style="grid-template-columns:130px 1fr 40px"><span>${esc(x.p.name)}</span><span class="t"><i style="width:${x.added/maxA*100}%"></i></span><b>${x.added}</b></div>`).join('')}</div></div>
   </div>`;
 }
@@ -1373,7 +1497,8 @@ function vLeads() {
     <td class="nowrap"><div>${esc(l.product)}</div><div class="small muted">${fmtL(l.amountLakh)}${l.bank ? ` · ${esc(l.bank)}` : ''}</div>${l.loans?.length ? `<div class="small muted">${l.loans.length} loans · EMI ${fmtINR(l.profile?.emiTotal)}</div>` : ''}${num(l.profile?.bounces3m) ? `<span class="badge b-bad">${esc(l.profile.bounces3m)} bounce(s) 3m</span>` : ''}</td>
     <td>${canEdit ? `<select class="small" data-change="lead-stage" data-id="${esc(l.id)}" style="width:auto" aria-label="Stage">${STAGES.map(s => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select>` : stageBadge(l.stage)}</td>
     <td><div>${esc(l.assignedName || '—')}</div><div class="small muted">${esc(l.branch || '')}</div></td>
-    <td class="nowrap right"><button class="btn sm" data-action="lead-elig" data-id="${esc(l.id)}" title="Check eligibility">${ic('calc')}</button>
+    <td class="nowrap right">${(() => { const pr = docProgress(l); return `<button class="btn sm" data-action="docs-open" data-lead="${esc(l.id)}" title="Documents"><span class="${pr.done === pr.total ? '' : 'muted'}">${ic('file')}</span><span class="num">${pr.done}/${pr.total}</span></button>`; })()}
+      <button class="btn sm" data-action="lead-elig" data-id="${esc(l.id)}" title="Check eligibility">${ic('calc')}</button>
       <button class="btn sm wa" data-action="wa-compose" data-lead="${esc(l.id)}" title="WhatsApp with template">${ic('msg')}</button>
       ${canEdit ? `<button class="btn sm" data-action="lead-edit" data-id="${esc(l.id)}">Edit</button>` : ''}
       ${canDel ? `<button class="icon-btn" data-action="lead-del" data-id="${esc(l.id)}" title="Delete lead" aria-label="Delete lead">${ic('trash')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No leads match.</div>'}</div>`;
@@ -1650,13 +1775,13 @@ function policyForm(p = {}) {
 }
 function bankersModal(bank) {
   const list = S.all('bankers').filter(b => b.bank === bank && !b.dnc).sort((a,b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
-  return modal(`${bank} · bankers`, list.length ? `<div class="list">${list.map(b => `<div class="li"><span class="avatar" style="background:#e0e7ff;color:#1e3a8a">${esc(initials(b.name || bank))}</span><div class="grow"><b>${esc(b.name || 'Unnamed')}</b> ${b.verified ? '<span class="badge b-ok">Verified</span>' : ''}<div class="small muted">${esc([b.designation, b.product, b.city].filter(Boolean).join(' · ') || '—')}</div><div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>${locChips(b.locations, 8)}</div><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')}</a><a class="btn sm wa" href="${esc(waLink(b.phone))}" target="_blank" rel="noopener">${ic('msg')}</a></div>`).join('')}</div>` : '<div class="empty">No contacts for this lender yet.</div>');
+  return modal(`${bank} · bankers`, list.length ? `<div class="list">${list.map(b => `<div class="li"><span class="avatar" style="background:var(--avatar-bg);color:var(--avatar-fg)">${esc(initials(b.name || bank))}</span><div class="grow"><b>${esc(b.name || 'Unnamed')}</b> ${b.verified ? '<span class="badge b-ok">Verified</span>' : ''}<div class="small muted">${esc([b.designation, b.product, b.city].filter(Boolean).join(' · ') || '—')}</div><div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>${locChips(b.locations, 8)}</div><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')}</a><a class="btn sm wa" href="${esc(waLink(b.phone))}" target="_blank" rel="noopener">${ic('msg')}</a></div>`).join('')}</div>` : '<div class="empty">No contacts for this lender yet.</div>');
 }
 
 // ---- Bankers
 function bkCard(b) {
   const can = CAN.editBankers(state.user.role);
-  return `<div class="card bk"><div style="display:flex;gap:10px;align-items:flex-start"><span class="avatar" style="background:#e0e7ff;color:#1e3a8a">${esc(initials(b.name || b.bank))}</span>
+  return `<div class="card bk"><div style="display:flex;gap:10px;align-items:flex-start"><span class="avatar" style="background:var(--avatar-bg);color:var(--avatar-fg)">${esc(initials(b.name || b.bank))}</span>
     <div style="flex:1;min-width:0"><b>${esc(b.name || 'Unnamed')}</b><div class="small muted">${esc([b.designation, b.product].filter(Boolean).join(' · ') || '—')}</div><div class="small"><b>${esc(b.bank || 'Unknown lender')}</b>${b.city ? ` · ${esc(b.city)}` : ''}</div></div>
     ${can ? `<button class="icon-btn" data-action="bk-edit" data-id="${esc(b.id)}" title="Edit contact" aria-label="Edit contact">${ic('edit')}</button>` : ''}</div>
     <div class="row">${b.verified ? '<span class="badge b-ok">Verified</span>' : '<span class="badge">Unverified</span>'}${b.dnc ? '<span class="badge b-bad">Do not contact</span>' : ''}${b.sourceGroup ? `<span class="badge b-info">${esc(b.sourceGroup)}</span>` : ''}</div>
@@ -1803,7 +1928,7 @@ function staffForm(s = {}) {
     ${fs('Branch','branch',[...new Set([...st.branches, s.branch].filter(Boolean))],s.branch || st.branches[0])}
     ${self || isNew ? '' : fs('Status','status',['Approved','On Hold','Rejected'],s.status || 'Approved')}</form>
     ${!isNew && !self ? (() => { const n = S.all('leads').filter(l => l.assignedTo === s.id && l.stage !== 'Lost').length; const others = S.all('staff').filter(x => x.id !== s.id && x.status === 'Approved' && x.role && x.role !== 'Accounts');
-      return `<div class="card" style="margin-top:14px;box-shadow:none;background:#f8fafc"><b>Move ${esc(s.name)}'s work</b><p class="small muted" style="margin:4px 0 10px">${n} active files (open leads, rejected files for re-try and disbursed customers for EMI care) and their pending follow-ups. Move them before putting someone on hold or removing them.</p>
+      return `<div class="card" style="margin-top:14px;box-shadow:none;background:var(--surface-2)"><b>Move ${esc(s.name)}'s work</b><p class="small muted" style="margin:4px 0 10px">${n} active files (open leads, rejected files for re-try and disbursed customers for EMI care) and their pending follow-ups. Move them before putting someone on hold or removing them.</p>
       <div style="display:flex;gap:8px"><select id="mv_target">${others.map(x => `<option value="${esc(x.id)}">${esc(x.name)} · ${esc(x.role)}</option>`).join('')}</select><button class="btn" data-action="staff-move" data-id="${esc(s.id)}" ${n && others.length ? '' : 'disabled'}>Move ${n} leads</button></div></div>`; })() : ''}
     ${isNew ? '<p class="small muted" style="margin:12px 0 0">They sign in with an OTP on this number. No password needed.</p>' : ''}`,
     `${!isNew && !self ? `<button class="btn danger" data-action="staff-del" data-id="${esc(s.id)}" style="margin-right:auto">Remove</button>` : ''}<button class="btn" data-action="modal-close">Cancel</button><button class="btn primary" type="submit" form="staff-form">Save</button>`);
@@ -1859,7 +1984,7 @@ const actions = {
 
   'lead-new': () => openModal(leadForm()),
   'lead-edit': el => openModal(leadForm(byId('leads', el.dataset.id))),
-  'lead-del': async el => { const l = byId('leads', el.dataset.id); if (l && confirm(`Delete lead "${l.name}"?`)) await guard(async () => { await S.remove('leads', l.id); toast('Lead deleted'); }); },
+  'lead-del': async el => { const l = byId('leads', el.dataset.id); if (l && confirm(`Delete lead "${l.name}" and its documents?`)) await guard(async () => { for (const d of leadDocs(l.id)) { await delDocFile(d.path); await S.remove('documents', d.id); } await S.remove('leads', l.id); toast('Lead deleted'); }); },
   'lead-elig': el => { const l = byId('leads', el.dataset.id); if (!l) return; state.elig.form = {...defaultElig(), ...eligFromLead(l)}; state.elig.results = null; go('eligibility'); },
   'fu-done': el => guard(() => S.update('followups', el.dataset.id, {done: true, doneAt: nowISO(), doneBy: state.user.phone})),
 
@@ -1944,6 +2069,41 @@ const actions = {
   'care-queue': el => { const D = careData(), kind = el.dataset.kind; const list = kind === 'emi' ? D.emiUnsent.map(x => x.l) : kind === 'topup' ? D.topup.map(x => x.l) : D.retryDue.map(x => x.l);
     startQueue(kind === 'emi' ? 'EMI reminders' : kind === 'topup' ? 'New loan offers' : 'Rejected – re-try', list.map(l => ({leadId: l.id, tpl: kind, kind})), false); },
   'loanbook-csv': () => loanBookCsv(),
+  'docs-open': el => { state.docUp = {type: 'Aadhaar', files: [], consent: false, busy: false, lead: el.dataset.lead}; const l = byId('leads', el.dataset.lead); if (l) { const have = new Set(leadDocs(l.id).map(d => d.type)); state.docUp.type = docNeed(l.product).find(t => !have.has(t)) || 'Other'; } openModal(docsModal(el.dataset.lead)); },
+  'doc-upload': el => guard(async () => {
+    const U = state.docUp, l = byId('leads', el.dataset.lead), u = state.user; if (!l) return;
+    if (!U.files.length) return toast('Choose at least one file', 'bad');
+    if (!U.consent) return toast('Tick the customer consent box before uploading', 'bad');
+    U.busy = true; refreshDocs(l.id); let n = 0;
+    try {
+      for (const f of U.files) {
+        const id = uid(), path = `leads/${l.id}/${id}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
+        await putDocFile(path, f);
+        await S.set('documents', id, {leadId: l.id, leadName: l.name, branch: l.branch || u.branch, assignedTo: l.assignedTo || u.phone, type: U.type, name: f.name.slice(0, 120), size: f.size, mime: f.type, path,
+          consent: true, uploadedAt: nowISO(), uploadedBy: u.phone, uploadedByName: u.name});
+        n++;
+      }
+      toast(`${n} document${n > 1 ? 's' : ''} uploaded`, 'ok');
+    } finally {
+      const have = new Set(leadDocs(l.id).map(d => d.type));
+      state.docUp = {...U, files: [], busy: false, type: docNeed(l.product).find(t => !have.has(t)) || U.type};
+      refreshDocs(l.id);
+    }
+  }),
+  'doc-view': el => guard(async () => {
+    const d = byId('documents', el.dataset.id); if (!d) return;
+    const win = d.mime === 'application/pdf' ? window.open('', '_blank') : null;
+    const blob = await getDocFile(d.path), url = URL.createObjectURL(blob);
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+    if (win) { win.location = url; return; }
+    const box = $('#doc-preview'); if (!box) return;
+    box.innerHTML = `<div class="card" style="margin-top:14px;box-shadow:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="flex:1">${esc(d.type)} · ${esc(d.name)}</b><a class="btn sm" href="${url}" target="_blank" rel="noopener">Open in new tab</a></div>${/^image\//.test(d.mime) ? `<img src="${url}" alt="${esc(d.type)}" style="max-width:100%;border-radius:6px;border:1px solid var(--line)">` : '<p class="small muted">Preview is not available for this file type here. Use "Open in new tab".</p>'}</div>`;
+    box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  }),
+  'doc-del': el => guard(async () => {
+    const d = byId('documents', el.dataset.id); if (!d || !confirm(`Delete ${d.type} (${d.name})? This cannot be undone.`)) return;
+    await delDocFile(d.path); await S.remove('documents', d.id); toast('Document deleted'); refreshDocs(d.leadId);
+  }),
   'rep-period': el => { state.f.rep = {period: el.dataset.v, offset: 0}; render(); },
   'rep-shift': el => { state.f.rep.offset = Math.min(0, state.f.rep.offset + Number(el.dataset.d)); render(); },
   'rep-now': () => { state.f.rep.offset = 0; render(); },
@@ -2163,6 +2323,7 @@ const forms = {
 };
 
 const changes = {
+  'doc-pick': el => { const all = [...(el.files || [])], ok = all.filter(docOk); if (ok.length < all.length) toast(`${all.length - ok.length} file(s) skipped: only PDF or photos up to 10 MB`, 'bad'); state.docUp.files = ok; refreshDocs(state.docUp.lead); },
   'lf-stage': el => { el.form.querySelectorAll('[data-when]').forEach(x => { x.style.display = x.dataset.when === el.value ? '' : 'none'; }); syncDisb(el.form); },
   'cmp-tpl': el => { const l = byId('leads', el.dataset.lead), t = tplById(el.value); if (l && t) { const v = fillTpl(t.body, l); $('#cmp_text').value = v; $('#cmp_prev').firstChild.nodeValue = v; } },
   'wa-pick': el => { state.wa.leadId = el.value; const l = byId('leads', el.value); if (l) { state.wa.tpl = tplForStage(l.stage).id; state.wa.text = fillTpl(tplById(state.wa.tpl).body, l); } else state.wa.text = ''; render(); },
@@ -2241,6 +2402,9 @@ document.addEventListener('change', e => {
   if (el.dataset?.bind != null) { bindSet(el); if (el.hasAttribute('data-rerender')) render(); return; }
   const fn = changes[el.dataset?.change]; if (fn) fn(el, e);
 });
+document.addEventListener('dragover', e => { const z = e.target.closest?.('#doc-drop'); if (z) { e.preventDefault(); z.classList.add('over'); } });
+document.addEventListener('dragleave', e => { const z = e.target.closest?.('#doc-drop'); if (z) z.classList.remove('over'); });
+document.addEventListener('drop', e => { const z = e.target.closest?.('#doc-drop'); if (!z) return; e.preventDefault(); const all = [...(e.dataTransfer?.files || [])], ok = all.filter(docOk); if (ok.length < all.length) toast(`${all.length - ok.length} file(s) skipped: only PDF or photos up to 10 MB`, 'bad'); state.docUp.files = ok; refreshDocs(state.docUp.lead); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal-root').innerHTML) closeModal(); });
 
 // ---------------------------------------------------------------------
@@ -2373,6 +2537,26 @@ function seedData() {
     settings: [{id:'app', branches:['Gajuwaka HQ'], staleDays:30, autoApply:false, autoApplyMin:.8, company:'Cheyutha Multiway Services'}],
   };
 }
+// Demo only: a few placeholder scans so the documents screen has something to show
+async function seedDemoDocs() {
+  if (S.all('documents').length || !S.db.leads?.[0]) return;
+  const l = S.db.leads[0], mk = (title, lines) => new Promise(res => {
+    const c = document.createElement('canvas'); c.width = 640; c.height = 400; const g = c.getContext('2d');
+    g.fillStyle = '#f7f9fb'; g.fillRect(0, 0, 640, 400); g.strokeStyle = '#b88a2e'; g.lineWidth = 6; g.strokeRect(12, 12, 616, 376);
+    g.fillStyle = '#0f1b2d'; g.font = 'bold 30px sans-serif'; g.fillText(title, 40, 80);
+    g.font = '20px sans-serif'; lines.forEach((t, i) => g.fillText(t, 40, 140 + i * 36));
+    g.fillStyle = '#b42318'; g.font = 'bold 22px sans-serif'; g.fillText('SAMPLE · DEMO DATA', 40, 350);
+    c.toBlob(res, 'image/png');
+  });
+  const items = [['Aadhaar', 'Aadhaar card (masked)', ['Name: ' + l.name, 'Aadhaar: XXXX XXXX 4821']], ['PAN', 'PAN card', ['Name: ' + l.name.toUpperCase(), 'PAN: ABCPK1234D']], ['Bank statement', 'Bank statement summary', ['Account: XXXXXX9012', 'Period: last 12 months', 'Average balance: Rs 85,000']]];
+  try {
+    for (const [type, title, lines] of items) {
+      const blob = await mk(title, lines), id = uid(), path = `leads/${l.id}/${id}-${type.replace(/\W+/g, '_')}.png`;
+      await blobStore.put(path, blob);
+      await S.set('documents', id, {leadId: l.id, leadName: l.name, branch: l.branch, assignedTo: l.assignedTo, type, name: `${type.replace(/\W+/g, '_')}_sample.png`, size: blob.size, mime: 'image/png', path, consent: true, uploadedAt: nowISO(), uploadedBy: l.assignedTo, uploadedByName: l.assignedName});
+    }
+  } catch (e) { /* storage blocked: demo simply shows no sample documents */ }
+}
 function sampleChat() {
   const d = n => { const x = new Date(Date.now() - n*864e5); return `${x.getDate()}/${x.getMonth()+1}/${String(x.getFullYear()).slice(2)}`; };
   return [
@@ -2416,6 +2600,7 @@ async function boot() {
     });
   } else {
     S = new LocalStore(); S.onChange(scheduleRender);
+    seedDemoDocs();
     let saved = null; try { saved = sessionStorage.getItem('dsa_cc_demo_user'); } catch (e) {}
     const s = saved && S.db.staff.find(x => x.id === saved && x.status === 'Approved');
     if (s) signedIn({phone: s.id, name: s.name, role: s.role, branch: s.branch}); else render();

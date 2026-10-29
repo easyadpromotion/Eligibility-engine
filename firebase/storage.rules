@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Customer documents: leads/{leadId}/{file}
+// Same visibility as the lead itself: Admin/Ops all, Branch Manager own branch,
+// Sales Executive only leads assigned to them. Everything else is closed.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function phone()    { return request.auth.token.phone_number; }
+    function staffDoc() { return /databases/(default)/documents/staff/$(phone()); }
+    function me()       { return firestore.get(staffDoc()).data; }
+    function approved() { return request.auth != null && phone() is string && firestore.exists(staffDoc()) && me().status == 'Approved'; }
+    function lead(id)   { return firestore.get(/databases/(default)/documents/leads/$(id)).data; }
+    function canSee(id) {
+      return approved() && (
+        me().role in ['Admin', 'Operations']
+        || (me().role == 'Branch Manager' && lead(id).branch == me().branch)
+        || (me().role == 'Sales Executive' && lead(id).assignedTo == phone()));
+    }
+
+    match /leads/{leadId}/{file} {
+      allow read: if canSee(leadId);
+      allow create: if canSee(leadId)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/.*');
+      allow delete: if canSee(leadId) && me().role in ['Admin', 'Branch Manager', 'Operations'];
+    }
+
+    match /{all=**} {
+      allow read, write: if false;
+    }
+  }
+}

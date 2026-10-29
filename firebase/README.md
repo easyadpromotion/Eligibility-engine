@@ -8,6 +8,8 @@ This folder holds what runs on Firebase project `credir-engine-new`:
 |---|---|
 | `functions/index.js` | 2Factor OTP login (`sendOtp`, `verifyOtp`). The 2Factor key is stored as a Firebase secret. |
 | `firestore.rules` | Who can read and write what (by role and branch). |
+| `storage.rules` | Customer documents (Aadhaar, PAN, bank statements): PDF or image, up to 10 MB, visible only to staff who can see that lead. Bucket: `credir-engine-new.firebasestorage.app` (Mumbai). |
+| `cors.json` | Lets the `/crm/` page open uploaded documents. Apply once with `gcloud storage buckets update gs://credir-engine-new.firebasestorage.app --cors-file=cors.json`. |
 | `deploy.ps1` | One-time go-live script for Windows. |
 
 ## Go live (about 15 minutes)
@@ -21,6 +23,8 @@ This folder holds what runs on Firebase project `credir-engine-new`:
    It asks you to sign in to Google, for the 2Factor template name, and for the new 2Factor key (hidden prompt). Then it deploys.
 5. **Grant one role:** in [Cloud IAM](https://console.cloud.google.com/iam-admin/iam?project=credir-engine-new), give the *Default compute service account* the **Service Account Token Creator** role.
 6. **First login:** open `/crm/` and sign in with **9398504048**. Your Admin profile is created automatically on this first login. Then add the other five members in **Staff & Settings**.
+
+**Backups:** Firestore takes a daily backup, kept for 14 days (Firebase console → Firestore → Disaster recovery).
 
 ⚠️ Publishing the rules closes the old open database. The old pages (`index.html`, `user-app.html`, `admin.html`) stop working at that moment. This is the step that removes public access to DSA passwords and customer data.
 

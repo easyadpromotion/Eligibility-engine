@@ -46,12 +46,16 @@ Push-Location functions; npm install --no-fund --no-audit; Pop-Location
 Write-Host "`nIMPORTANT: the next step publishes the new security rules." -ForegroundColor Yellow
 Write-Host 'They close the old open database, so the OLD pages (index.html, user-app.html, admin.html) will stop working.' -ForegroundColor Yellow
 Write-Host 'This is what removes the public access to DSA passwords and customer data.' -ForegroundColor Yellow
-$go = Read-Host 'Type YES to deploy functions + rules now'
+$go = Read-Host 'Type YES to deploy functions + Firestore and Storage rules now'
 if ($go -ne 'YES') { Fail 'Cancelled. Nothing was deployed.' }
 
-Step 'Deploying Cloud Functions and Firestore rules'
-firebase deploy --only "functions,firestore:rules" --project $Project
+Step 'Deploying Cloud Functions, Firestore rules and Storage rules'
+firebase deploy --only "functions,firestore:rules,storage" --project $Project
 if ($LASTEXITCODE -ne 0) { Fail 'Deploy failed. Scroll up for the reason (most often: project not on Blaze plan).' }
+
+Step 'Allowing the /crm/ site to open uploaded documents (bucket CORS)'
+gcloud storage buckets update gs://credir-engine-new.firebasestorage.app --cors-file=cors.json --project $Project
+if ($LASTEXITCODE -ne 0) { Write-Host 'CORS step skipped (gcloud not installed). Run it later in Cloud Shell.' -ForegroundColor Yellow }
 
 Step 'Done. One last manual step:'
 Write-Host '1. Open https://console.cloud.google.com/iam-admin/iam?project=credir-engine-new'

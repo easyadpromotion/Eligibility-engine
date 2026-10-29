@@ -78,6 +78,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Customer document records (the files themselves live in Firebase Storage, see storage.rules)
+    match /documents/{id} {
+      allow read: if canSeeWork(resource.data);
+      allow create: if canSeeWork(request.resource.data) && request.resource.data.uploadedBy == myPhone()
+        && request.resource.data.consent == true;
+      allow delete: if hasRole(['Admin', 'Branch Manager', 'Operations']) && canSeeWork(resource.data);
+    }
+
     // Daily call register: each person logs their own calls; Admin/Ops see all, BMs their branch.
     match /calls/{id} {
       allow read: if isOps()
