@@ -1130,7 +1130,7 @@ function viewLogin() {
       <p class="small muted" style="margin:0">${OTP_PROVIDER === '2factor' ? 'Only numbers added by your admin in Staff &amp; Settings can sign in.' : 'Your role and branch come from your staff profile. New here? Verify your number and request access.'}</p></form>`;
   } else if (L.step === 'otp') {
     body = `<form class="stack" data-form="otp-verify">
-      <div><label for="lc">Enter the 6-digit OTP sent to +91 ${esc(L.phone)}</label><input id="lc" name="code" class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+      <div><label for="lc">Enter the OTP sent to +91 ${esc(L.phone)}</label><input id="lc" name="code" class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{4,6}" required></div>
       <button class="btn primary" ${L.busy ? 'disabled' : ''}>${L.busy ? 'Verifying…' : 'Verify & sign in'}</button>
       ${OTP_PROVIDER === '2factor' ? `<button type="button" class="btn" data-action="otp-resend" ${L.resendIn > 0 || L.busy ? 'disabled' : ''}>${L.resendIn > 0 ? `Resend OTP in ${L.resendIn}s` : 'Resend OTP'}</button>` : ''}
       <button type="button" class="btn" data-action="otp-back">Change number</button></form>`;
@@ -2212,7 +2212,7 @@ const forms = {
   },
   'otp-verify': async (f, fd) => {
     const L = state.login, code = String(fd.get('code') || '').trim();
-    if (!/^\d{6}$/.test(code)) { L.err = 'Enter the 6-digit OTP.'; return render(); }
+    if (!/^\d{4,6}$/.test(code)) { L.err = 'Enter the OTP from the SMS.'; return render(); }
     L.busy = true; L.err = ''; render();
     if (OTP_PROVIDER === '2factor') {
       try { const r = await otpApi('verifyOtp', {sessionId: L.session, otp: code}); await FB.A.signInWithCustomToken(FB.auth, r.token); L.session = ''; clearInterval(resendTimer); }
