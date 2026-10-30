@@ -1795,11 +1795,51 @@ function leadForm(l = {}) {
       ${fs('Co-applicant','coApplicant',[['','— Select —'],'Available','Not available'],P.coApplicant || '')}
       ${fi('Bounces – last 6 months','bounces6m',P.bounces6m ?? '','type="number" min="0" max="99"')}
       ${fi('Bounces – last 3 months','bounces3m',P.bounces3m ?? '','type="number" min="0" max="99"')}
+      <div class="sec-h">Bank Statement Analysis</div>
+      <div class="full" id="bsa-box">${bsaCard(l)}</div>
       <div class="sec-h">Documents &amp; notes</div>`; })()}
     <div class="full"><label>Pending documents (one per line, used in WhatsApp drafts)</label><textarea name="pendingDocs" rows="2" maxlength="600" placeholder="Leave empty to use the standard list for this product">${esc(l.pendingDocs || '')}</textarea></div>
     <div class="full"><label>Notes</label><textarea name="notes" rows="2" maxlength="1000">${esc(l.notes || '')}</textarea></div></form>`,
     `<button class="btn" data-action="modal-close">Cancel</button><button class="btn primary" type="submit" form="lead-form">Save lead</button>`, true);
 }
+
+// ---- Bank Statement Analysis (Ledger Lens, opened in its own tab; results come back by postMessage)
+function bsaCard(l) {
+  const A = l.bankAnalysis, inr = v => '₹' + Math.round(num(v)).toLocaleString('en-IN');
+  const btn = l.id ? `<button type="button" class="btn ${A ? '' : 'primary'}" data-action="bsa-open" data-lead="${esc(l.id)}">${ic('file')} ${A ? 'Re-analyse statements' : 'Analyse bank statement'}</button>` : '<span class="small muted">Save the lead first, then open it again to analyse its bank statements.</span>';
+  if (!A) return `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${btn}<span class="small muted">Upload the customer's PDF statements; ABB, 6-month turnover and bounces fill in automatically.</span></div>`;
+  return `<div class="card" style="box-shadow:none;background:var(--surface-2)">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><b style="flex:1">${esc((A.accounts || []).join(', ') || 'Statement')}${A.combined ? ' (combined)' : ''} · ${esc(A.periodStart || '')} – ${esc(A.periodEnd || '')} · ${num(A.monthsCount)} months</b>${btn}</div>
+    <div class="kpis" style="margin:0 0 10px">
+      <div class="card kpi"><div class="l">ABB (last 6 m)</div><div class="v">${inr(A.abb6m)}</div></div>
+      <div class="card kpi"><div class="l">Turnover (last 6 m)</div><div class="v">₹${esc(A.turnover6mLakh)} L</div><div class="h">avg ${inr(A.avgMonthlyCredit)}/month</div></div>
+      <div class="card kpi"><div class="l">Bounces</div><div class="v ${num(A.bounces6m) ? 'neg' : ''}">${num(A.bounces6m)} / ${num(A.bounces3m)}</div><div class="h">6 months / 3 months</div></div>
+      <div class="card kpi"><div class="l">EMIs seen (recent)</div><div class="v">${inr(A.monthlyEmiRecent)}</div><div class="h">${(A.emis || []).length} lender(s) · pass-through ${num(A.passthroughPct)}%</div></div>
+    </div>
+    ${(A.emis || []).length ? `<div class="tw"><table><thead><tr><th>EMI to</th><th>Last EMI</th><th>Last date</th><th>Times</th></tr></thead><tbody>${A.emis.map(e => `<tr><td>${esc(e.lender)}${e.recent ? '' : ' <span class="badge">old</span>'}</td><td>${inr(e.lastAmount)}</td><td>${esc(e.lastDate)}</td><td>${num(e.count)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="small muted">No EMI / NACH debits found in the statement.</div>'}
+    ${(A.loanCredits || []).length ? `<div class="small" style="margin-top:6px"><b>Loans credited:</b> ${A.loanCredits.map(c => `${esc(c.lender)} ${inr(c.amount)} (${esc(c.date)})`).join(' · ')}</div>` : ''}
+    <details style="margin-top:8px"><summary class="small">Month-wise credit, debit and ABB</summary><div class="tw"><table><thead><tr><th>Month</th><th>Credit</th><th>Debit</th><th>ABB</th></tr></thead><tbody>${(A.monthly || []).map(m => `<tr><td>${esc(m.label)}</td><td>${inr(m.credit)}</td><td>${inr(m.debit)}</td><td>${inr(m.abb)}</td></tr>`).join('')}</tbody></table></div></details>
+    <div class="small muted" style="margin-top:6px">Analysed ${esc(fmtDate(String(A.analysedAt || '').slice(0, 10)))}${A.by ? ' by ' + esc(A.by) : ''}. The statement itself is not stored, only these figures.</div></div>`;
+}
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin || !e.data || e.data.type !== 'ledgerlens-result') return;
+  const reply = m => { try { e.source?.postMessage({type: 'ledgerlens-saved', leadId: e.data.leadId, ...m}, location.origin); } catch (x) { /* tab closed */ } };
+  const l = byId('leads', e.data.leadId), A = e.data.summary;
+  if (!l || !A) return reply({ok: false, error: 'This lead is not open in the CRM any more. Open the lead and try again.'});
+  const P = l.profile || {}, n = v => (v == null || isNaN(+v)) ? null : +v;
+  const bankAnalysis = {...A, by: state.user?.name || '', byPhone: state.user?.phone || ''};
+  const profile = {...P, abb: n(A.abb6m), turnover6m: n(A.turnover6mLakh), bounces6m: n(A.bounces6m), bounces3m: n(A.bounces3m)};
+  S.update('leads', l.id, {bankAnalysis, profile, updatedAt: nowISO()}).then(() => {
+    const form = document.getElementById('lead-form');
+    if (form && form.querySelector('[name="id"]')?.value === l.id) {
+      const set = (k, v) => { const f = form.querySelector(`[name="${k}"]`); if (f && v != null) f.value = v; };
+      set('abb', profile.abb); set('turnover6m', profile.turnover6m); set('bounces6m', profile.bounces6m); set('bounces3m', profile.bounces3m);
+      const box = form.querySelector('#bsa-box'); if (box) box.innerHTML = bsaCard({...l, bankAnalysis});
+    }
+    toast(`Bank statement analysis saved for ${l.name}`, 'ok');
+    reply({ok: true, abb: profile.abb, turnover: profile.turnover6m, b6: profile.bounces6m, b3: profile.bounces3m});
+  }).catch(err => { console.error(err); toast(friendly(err), 'bad'); reply({ok: false, error: friendly(err)}); });
+});
 
 // ---- Follow-ups
 function fuList(arr, done = false, drafts = false) {
@@ -2182,6 +2222,9 @@ const actions = {
   'wa-compose': el => openModal(composerModal(el.dataset.lead, el.dataset.fu || '', el.dataset.tpl || '', el.dataset.li)),
   'wa-quick': el => { const l = byId('leads', el.dataset.lead); if (!l) return; const t = tplForStage(l.stage); openWhatsApp(l, fillTpl(t.body, l), t.id, el.dataset.fu); toast('Opened in WhatsApp. Press send there, then tick Done.', 'ok'); },
   'cmp-send': el => { const l = byId('leads', el.dataset.lead), text = $('#cmp_text')?.value || ''; if (l && text.trim() && openWhatsApp(l, text, $('#cmp_tpl')?.value, el.dataset.fu)) { closeModal(); toast('Opened in WhatsApp. Press send there.', 'ok'); } },
+  'bsa-open': el => { const l = byId('leads', el.dataset.lead); if (!l) return;
+    const w = window.open(`statement.html?lead=${encodeURIComponent(l.id)}&name=${encodeURIComponent(l.name || '')}`, 'ledgerlens');
+    if (!w) toast('Allow pop-ups for this site to open the statement analysis', 'bad'); },
   'fu-quick': el => { const l = byId('leads', el.dataset.lead); if (!l) return; guard(async () => {
     await S.add('followups', {leadId: l.id, leadName: l.name, leadPhone: l.phone, date: addDays(todayStr(), 1), time: '11:00', remarks: `Next step for ${l.stage} file`, note: '', done: false,
       branch: l.branch, assignedTo: l.assignedTo, assignedName: l.assignedName, createdAt: nowISO(), createdBy: state.user.phone});
