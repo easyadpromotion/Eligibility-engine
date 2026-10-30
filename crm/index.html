@@ -2411,7 +2411,7 @@ const changes = {
       } else { text = await file.text(); state.imp.ocr = ''; }
       const I = state.imp; I.text = text; I.fileName = file.name; I.draft = null;
       const gm = file.name.match(/WhatsApp Chat (?:with |- )?(.+?)(?:\.txt|\.zip)?$/i);
-      if (gm && !I.group) I.group = gm[1].trim();
+      if (!I.group) I.group = (gm ? gm[1] : file.name.replace(/\.(txt|zip)$/i, '')).trim().slice(0, 80);
       render();
     } catch (e) { toast(e.message, 'bad'); }
   },
