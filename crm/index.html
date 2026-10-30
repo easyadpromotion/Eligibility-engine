@@ -581,6 +581,31 @@ const fsEnc = v => Array.isArray(v) ? v.map(x => Array.isArray(x) ? {__a: fsEnc(
 const fsDec = v => Array.isArray(v) ? v.map(fsDec)
   : (v && typeof v === 'object') ? (Array.isArray(v.__a) && Object.keys(v).length === 1 ? fsDec(v.__a) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsDec(x)]))) : v;
 
+// Policies saved by the old Eligibility Engine use other field names (bankName, prodType, minVin…).
+// Show them in the new format without changing the stored record; the first edit saves the new fields.
+const LEGACY_PRODUCT = {TERM: 'Business Loan', UBL: 'Business Loan', HTBL: 'Business Loan', STBL: 'STBL', OD: 'Working Capital'};
+function normLegacyPolicy(d) {
+  if (d.bank || !d.bankName) return d;
+  const n = v => (v === '' || v == null || isNaN(+v)) ? undefined : +v, yes = v => String(v || '').toLowerCase() === 'yes';
+  const notes = [
+    d.remarks, ...(d.conditions || []).map(c => c && c.name ? `${String(c.name).trim()}: ${c.val ?? ''}` : ''),
+    ...(d.programs || []).map(g => g && g.type ? `${g.type} program: ${g.val ?? ''} (₹${g.min ?? '?'}–${g.max ?? '?'} L)` : ''),
+    d.bankingTypes?.length ? `Banking: ${d.bankingTypes.join(', ')}` : '',
+    n(d.ageMin) || n(d.ageMax) ? `Age ${d.ageMin ?? '?'}–${d.ageMax ?? '?'}` : '',
+    yes(d.coAppReq) ? `Co-applicant needed${n(d.coAgeMin) ? ` (age ${d.coAgeMin}–${d.coAgeMax ?? '?'})` : ''}` : '',
+    yes(d.houseReq) ? `Own house needed${n(d.houseGeo) ? ` within ${d.houseGeo} km` : ''}` : '',
+    n(d.maxEnq) ? `Max enquiries: ${d.maxEnq}` : '', n(d.maxActive) ? `Max active loans: ${d.maxActive}` : '', n(d.loans6m) ? `Max loans in 6 months: ${d.loans6m}` : '',
+    n(d.pfMin) ? `PF ${d.pfMin}${n(d.pfMax) && +d.pfMax !== +d.pfMin ? `–${d.pfMax}` : ''}%` : '',
+    d.pinScope === 'Specific List' && d.pinList ? `Serves ${String(d.pinList).split(/\s+/).filter(Boolean).length} PIN codes (list in old record)` : d.pinScope ? `Area: ${d.pinScope}` : '',
+  ].filter(Boolean).join('\n');
+  const out = {...d, bank: titleCase(String(d.bankName).trim()).replace(/\b(Gst|Abb|Od|Stbl|Ubl|Htbl|Itr|Bl|Lap|Sfb|Nbfc|Dscr)\b/g, m => m.toUpperCase()).replace(/\bL&t\b/g, 'L&T'), product: LEGACY_PRODUCT[String(d.prodType || '').toUpperCase()] || 'Business Loan', active: true, legacy: true,
+    minCibil: n(d.minCibil), minVintageYrs: n(d.minVin), minTurnoverLakh: n(d.minTurn), minAbb: n(d.abbMin), loanMinLakh: n(d.loanMin), loanMaxLakh: n(d.loanMax),
+    roiMin: n(d.roiMin), roiMax: n(d.roiMax), tenureMaxMonths: n(d.tenMax), itrRequired: yes(d.itrReq), gstRequired: yes(d.gstReq),
+    geo: n(d.geoLimit) ? `${+d.geoLimit} km` : '', notes, source: 'Old Eligibility Engine', version: d.version || 1, history: d.history || []};
+  Object.keys(out).forEach(k => out[k] === undefined && delete out[k]);
+  return out;
+}
+
 class FireStoreAdapter {
   constructor(fb){ this.fb = fb; this.cache = {}; this.unsubs = []; this.listeners = new Set(); }
   onChange(f){ this.listeners.add(f); }
@@ -595,7 +620,7 @@ class FireStoreAdapter {
     else Object.assign(subs, {checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
     for (const [name, ref] of Object.entries(subs)) {
       this.unsubs.push(F.onSnapshot(ref,
-        snap => { this.cache[name] = snap.docs.map(d => ({...fsDec(d.data()), id: d.id})); this.emit(); },
+        snap => { this.cache[name] = snap.docs.map(d => { const o = {...fsDec(d.data()), id: d.id}; return name === 'policies' ? normLegacyPolicy(o) : o; }); this.emit(); },
         err => { console.error(name, err); toast(`Could not load ${name} (${err.code})`, 'bad'); }));
     }
   }
@@ -1860,7 +1885,7 @@ function vBankers() {
     const groups = [...map.entries()].sort((a,b) => (a[0] === 'Location not known') - (b[0] === 'Location not known') || b[1].length - a[1].length || a[0].localeCompare(b[0]));
     body = `<div class="cards">${groups.map(([loc, list]) => `<div class="card"><h3>${esc(loc)} <span class="badge b-info">${list.length}</span><span class="small muted" style="margin-left:auto;font-weight:500">${uniq(list.map(b => b.bank)).length} lenders</span></h3><div class="list">${list.map(b => `<div class="li"><div class="grow"><b>${esc(b.bank || 'Unknown lender')}</b><div class="small muted">${esc([b.name, b.designation, b.product].filter(Boolean).join(' · ') || '—')}${b.geo ? ` · ${esc(b.geo)}` : ''}</div></div>${b.dnc ? '<span class="badge b-bad">DNC</span>' : `<a class="btn sm" href="${esc(telLink(b.phone))}" title="Call ${esc(showPhone(b.phone))}">${ic('phone')}</a><a class="btn sm wa" href="${esc(waLink(b.phone))}" target="_blank" rel="noopener" title="WhatsApp">${ic('msg')}</a>`}</div>`).join('')}</div></div>`).join('')}</div>`;
   } else body = `<div class="cards">${rows.map(bkCard).join('')}</div>`;
-  return header('Banker Directory', `${rows.length} contacts · ${banks.length} lenders · ${locs.length} locations`, can ? `<a class="btn" href="#/import">${ic('upload')} Import chat</a><button class="btn primary" data-action="bk-new">${ic('plus')} Add contact</button>` : '') +
+  return header('Banker Directory', `${rows.length} contacts · ${banks.length} lenders · ${locs.length} locations`, can ? `<a class="btn" href="#/import">${ic('upload')} Import chat</a><button class="btn primary" data-action="bk-new">${ic('plus')} Add contact</button>${state.user.role === 'Admin' ? `<button class="btn" data-action="bk-dedupe">Remove duplicates</button>` : ''}` : '') +
   `<div class="notice info">${ic('shield')}<div>Business contacts shared in professional DSA groups. Use them only for loan work, and mark <b>Do not contact</b> if someone asks to be removed.</div></div>
   <div class="toolbar"><div class="search">${ic('search')}<input id="bk_q" data-bind="f.bk.q" data-rerender value="${esc(f.q)}" placeholder="Search name, lender, location, product…" aria-label="Search contacts"></div>
     <select id="bk_bank" data-bind="f.bk.bank" data-rerender aria-label="Lender"><option value="">All lenders</option>${banks.map(b => `<option ${b === f.bank ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
@@ -1890,7 +1915,7 @@ function bkForm(b = {}) {
 function vGroups() {
   const gs = S.all('groups').slice().sort((a,b) => String(b.lastImportAt || '').localeCompare(String(a.lastImportAt || '')));
   const imps = S.all('imports').slice().sort((a,b) => String(b.at).localeCompare(String(a.at))).slice(0,10);
-  return header('DSA Groups', 'WhatsApp groups you collect policies and banker contacts from', `<a class="btn primary" href="#/import">${ic('upload')} Import chat</a>`) +
+  return header('DSA Groups', 'WhatsApp groups you collect policies and banker contacts from', `${state.user.role === 'Admin' ? '<button class="btn" data-action="grp-dedupe">Remove duplicates</button>' : ''}<a class="btn primary" href="#/import">${ic('upload')} Import chat</a>`) +
   `<div class="card"><h3>Groups</h3>${gs.length ? `<div class="tw"><table><thead><tr><th>Group</th><th>People seen</th><th>Messages read</th><th>Policy updates</th><th>Contacts</th><th>Latest message</th><th></th></tr></thead><tbody>${gs.map(g => `<tr>
     <td><b>${esc(g.name)}</b><div class="small muted">Imported ${esc(ago(g.lastImportAt))}${g.lastImportBy ? ` by ${esc(g.lastImportBy)}` : ''}</div></td>
     <td>${esc(g.members || 0)}</td><td>${esc(g.messages || 0)}</td><td>${esc(g.policiesFound || 0)}</td><td>${esc(g.contactsFound || 0)}</td>
@@ -1904,7 +1929,7 @@ function draftView(d) {
   const pol = d.policies, con = d.contacts, bankers = S.all('bankers');
   return `<div class="card" style="margin-top:16px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">3 · Review what was found</h3>
     <button class="btn sm" data-action="imp-select-high">Select high confidence</button><button class="btn sm" data-action="imp-select-none">Clear selection</button>
-    <button class="btn primary" data-action="imp-apply" ${pol.some(p => p.sel) || con.some(c => c.sel) ? '' : 'disabled'}>${ic('check')} Apply selected</button></div>
+    <button class="btn primary" data-action="imp-apply" ${!state.imp.saving && (pol.some(p => p.sel) || con.some(c => c.sel)) ? '' : 'disabled'}>${state.imp.saving ? 'Saving… please wait' : `${ic('check')} Apply selected`}</button></div>
     <p class="small muted">${esc(d.stats.messages)} messages from ${esc(d.stats.senders)} people · ${fmtDate(d.stats.fromISO)} – ${fmtDate(d.stats.toISO)}${d.stats.skipped ? ` · ${esc(d.stats.skipped)} older messages skipped` : ''}</p>
     <h3 style="margin-top:16px">Policy updates <span class="badge b-info">${pol.length}</span></h3>
     ${pol.length ? `<div class="tw"><table><thead><tr><th></th><th>Lender</th><th>Product</th><th>What changes</th><th>Confidence</th></tr></thead><tbody>${pol.map((p,i) => {
@@ -2157,6 +2182,45 @@ const actions = {
     box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
   }),
   // Download keeps the original file and names it "<customer>_<document type>.<ext>"
+  // Same mobile number saved more than once → keep the oldest card, fill its blanks from the others, delete the rest.
+  'bk-dedupe': el => guard(async () => {
+    const by = {}; for (const b of S.all('bankers')) (by[digits10(b.phone)] ||= []).push(b);
+    const sets = Object.values(by).filter(a => a.length > 1);
+    if (!sets.length) return toast('No duplicate contacts found', 'ok');
+    const extra = sets.reduce((n, a) => n + a.length - 1, 0);
+    if (!confirm(`Found ${extra} duplicate cards for ${sets.length} numbers. Merge them into one card each? The extra cards are deleted.`)) return;
+    el.disabled = true; el.textContent = 'Merging…';
+    for (const a of sets) {
+      a.sort((x, y) => String(x.createdAt || x.firstSeen || '').localeCompare(String(y.createdAt || y.firstSeen || '')));
+      const [keep, ...rest] = a, patch = {};
+      for (const o of rest) for (const k of ['name','bank','designation','product','city','geo','email','notes','sourceGroup']) if (!keep[k] && !patch[k] && o[k]) patch[k] = o[k];
+      patch.locations = uniq(a.flatMap(o => o.locations || []));
+      patch.verified = a.some(o => o.verified); patch.dnc = a.some(o => o.dnc);
+      patch.firstSeen = a.map(o => o.firstSeen).filter(Boolean).sort()[0] || keep.firstSeen || '';
+      patch.lastSeen = a.map(o => o.lastSeen).filter(Boolean).sort().pop() || keep.lastSeen || '';
+      await S.update('bankers', keep.id, patch);
+      for (const o of rest) await S.remove('bankers', o.id);
+    }
+    toast(`Merged ${extra} duplicate cards`, 'ok');
+  }),
+  // Same group name twice → keep one; identical import-log lines → keep one.
+  'grp-dedupe': el => guard(async () => {
+    const by = {}; for (const g of S.all('groups')) (by[g.name] ||= []).push(g);
+    const gx = Object.values(by).filter(a => a.length > 1);
+    const seen = new Set(), ix = S.all('imports').slice().sort((a, b) => String(a.at).localeCompare(String(b.at))).filter(i => { const k = [i.group, i.file, i.messages, String(i.at).slice(0, 10)].join('|'); if (seen.has(k)) return true; seen.add(k); return false; });
+    const n = gx.reduce((s, a) => s + a.length - 1, 0);
+    if (!n && !ix.length) return toast('No duplicates found', 'ok');
+    if (!confirm(`Remove ${n} duplicate group rows and ${ix.length} repeated import-log lines?`)) return;
+    el.disabled = true;
+    for (const a of gx) {
+      a.sort((x, y) => String(x.createdAt || '').localeCompare(String(y.createdAt || '')));
+      const [keep, ...rest] = a;
+      await S.update('groups', keep.id, {messages: Math.min(...a.map(g => g.messages || 0)), policiesFound: Math.min(...a.map(g => g.policiesFound || 0)), contactsFound: Math.min(...a.map(g => g.contactsFound || 0)), members: Math.max(...a.map(g => g.members || 0))});
+      for (const g of rest) await S.remove('groups', g.id);
+    }
+    for (const i of ix) await S.remove('imports', i.id);
+    toast('Duplicates removed', 'ok');
+  }),
   'doc-dl': el => guard(async () => {
     const d = byId('documents', el.dataset.id); if (!d) return;
     el.disabled = true;
@@ -2203,8 +2267,10 @@ const actions = {
   }),
   'imp-select-high': () => { const m = settings().autoApplyMin, d = state.imp.draft; d.policies.forEach(p => p.sel = p.conf >= m); d.contacts.forEach(c => c.sel = c.conf >= m); render(); },
   'imp-select-none': () => { const d = state.imp.draft; d.policies.forEach(p => p.sel = false); d.contacts.forEach(c => c.sel = false); render(); },
-  'imp-apply': () => guard(async () => {
-    const r = await applyDraft(false);
+  'imp-apply': el => guard(async () => {
+    if (state.imp.saving) return;
+    state.imp.saving = true; el.disabled = true; el.textContent = 'Saving… please wait';
+    let r; try { r = await applyDraft(false); } finally { state.imp.saving = false; }
     toast(`Policies: ${r.pc} new, ${r.pu} updated${r.ps ? `, ${r.ps} skipped (older)` : ''} · Contacts: ${r.cn} new, ${r.cu} refreshed`, 'ok');
     if (!state.imp.draft.policies.length && !state.imp.draft.contacts.length) { state.imp.draft = null; state.imp.text = ''; state.imp.fileName = ''; }
     render();
