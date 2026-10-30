@@ -197,6 +197,12 @@ input[type=file]{padding:6px;background:var(--surface-2)}
 .sec-h{grid-column:1/-1;font-weight:700;font-size:11.5px;color:var(--brand);margin-top:6px;padding-top:14px;border-top:1px solid var(--line);text-transform:uppercase;letter-spacing:.09em}
 .loan-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:var(--surface-2)}
 .loan-row .c2{grid-column:span 2}
+.login-row{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:var(--surface-2)}
+.login-row .lg-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px}
+.login-row .lg-grid+.lg-grid{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.login-row .c2{grid-column:span 2}
+.login-row label{font-size:11px;margin-bottom:2px}
+.login-row .lg-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:600;font-size:13px}
 .loan-row label{font-size:11px;margin-bottom:2px}
 .loan-row .st{display:flex;align-items:flex-end;justify-content:flex-end;gap:4px;flex-wrap:wrap}
 input.auto,input[readonly]{background:var(--track);color:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums}
@@ -215,6 +221,7 @@ input.auto,input[readonly]{background:var(--track);color:var(--ink-2);font-weigh
 @media (max-width:860px){
   .loan-row{grid-template-columns:repeat(2,minmax(0,1fr))}
   .loan-row .c2{grid-column:span 2}
+  .login-row .lg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .loan-grid{grid-template-columns:22px 1fr 1fr}
   .loan-grid .lt{grid-column:2/-1}
   .layout{grid-template-columns:1fr}
@@ -618,19 +625,33 @@ class FireStoreAdapter {
     else if (r === 'Branch Manager') Object.assign(subs, {leads:q('leads','branch',u.branch), followups:q('followups','branch',u.branch), documents:q('documents','branch',u.branch), checks:q('checks','branch',u.branch), calls:q('calls','branch',u.branch), staff:q('staff','branch',u.branch)});
     else if (r === 'Sales Executive') Object.assign(subs, {leads:q('leads','assignedTo',u.phone), followups:q('followups','assignedTo',u.phone), documents:q('documents','assignedTo',u.phone), checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
     else Object.assign(subs, {checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
-    for (const [name, ref] of Object.entries(subs)) {
-      this.unsubs.push(F.onSnapshot(ref,
-        snap => { this.cache[name] = snap.docs.map(d => { const o = {...fsDec(d.data()), id: d.id}; return name === 'policies' ? normLegacyPolicy(o) : o; }); this.emit(); },
-        err => { console.error(name, err); toast(`Could not load ${name} (${err.code})`, 'bad'); }));
-    }
+    this.subs = subs; this.tries = {};
+    for (const [name, ref] of Object.entries(subs)) this.listen(name, ref);
   }
-  stop(){ this.unsubs.forEach(u => u()); this.unsubs = []; this.cache = {}; }
+  listen(name, ref) {
+    const {F} = this.fb;
+    const un = F.onSnapshot(ref,
+        snap => { this.tries[name] = 0; this.cache[name] = snap.docs.map(d => { const o = {...fsDec(d.data()), id: d.id}; return name === 'policies' ? normLegacyPolicy(o) : o; }); this.emit(); },
+        err => { console.error(name, err); const n = (this.tries[name] || 0) + 1; this.tries[name] = n;
+          if (n <= 5) setTimeout(() => { if (this.subs) this.listen(name, ref); }, 2000 * n);   // reconnect: 2 s, 4 s, 6 s…
+          else toast(`Could not load ${name} (${err.code}). Refresh the page.`, 'bad'); });
+    this.unsubs.push(un);
+  }
+  // Re-open every listener (used when the tab becomes visible again after a long break)
+  restart() { if (!this.subs) return; this.unsubs.forEach(u => u()); this.unsubs = []; for (const [n, r] of Object.entries(this.subs)) this.listen(n, r); }
+  stop(){ this.unsubs.forEach(u => u()); this.unsubs = []; this.cache = {}; this.subs = null; }
   all(c){ return this.cache[c] || []; }
   async add(c,o){ const {db,F} = this.fb; const ref = await F.addDoc(F.collection(db,c), fsEnc(clone(o))); return {...o, id: ref.id}; }
   async set(c,id,o){ const {db,F} = this.fb; const d = clone(o); delete d.id; await F.setDoc(F.doc(db,c,id), fsEnc(d)); }
   async update(c,id,p){ const {db,F} = this.fb; const d = clone(p); delete d.id; await F.updateDoc(F.doc(db,c,id), fsEnc(d)); }
   async remove(c,id){ const {db,F} = this.fb; await F.deleteDoc(F.doc(db,c,id)); }
 }
+
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  try { if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000 && S?.restart) S.restart(); } catch (e) { /* store not ready yet */ }
+});
 
 async function loadFirebase(){
   const base = `https://www.gstatic.com/firebasejs/${FB_VER}`;
@@ -1078,7 +1099,7 @@ function fillTpl(body, l = {}) {
   const docs = String(l.pendingDocs || DOCS_BY_PRODUCT[l.product] || DOCS_BY_PRODUCT.default).split(/[,\n]+/).map(x => x.trim()).filter(Boolean).map(x => '• ' + x).join('\n');
   const v = {name: l.name || 'Sir/Madam', product: l.product || 'loan', amount: num(l.amountLakh) ? Math.round(num(l.amountLakh)*1e5).toLocaleString('en-IN') : '—',
     bank: l.bank || 'our partner bank', loginId: l.loginId || 'will be shared shortly', docs, executive: l.assignedName || l.createdByName || state.user?.name || '', company: st.company || '', branch: l.branch || state.user?.branch || '', date: fmtDate(todayStr())};
-  const D = l.disbursal || {}, e = emiInfo(D);
+  const D = l._loan || loanDisbursals(l)[0]?.d || l.disbursal || {}, e = emiInfo(D);
   Object.assign(v, {lender: D.lender || l.bank || 'the bank', emi: num(D.emi) ? Math.round(num(D.emi)).toLocaleString('en-IN') : '—', emiDate: e?.next ? fmtDate(e.next) : '—',
     paid: e ? e.paid : '—', pending: e ? e.pending : '—', tenure: D.tenure || '—', reasons: (l.rejection?.reasons || []).join(', ')});
   return String(body).replace(/\{(\w+)\}/g, (m, k) => k in v ? v[k] : m);
@@ -1092,8 +1113,8 @@ function openWhatsApp(lead, text, tplId, fuId, extra = {}) {
   guard(() => S.update('leads', lead.id, {waLog: [...(lead.waLog || []), entry].slice(-25), ...extra}));
   return true;
 }
-function composerModal(leadId, fuId = '', tplId = '') {
-  const l = byId('leads', leadId); if (!l) return '';
+function composerModal(leadId, fuId = '', tplId = '', li) {
+  const l = withLoan(byId('leads', leadId), li); if (!l) return '';
   const t = tplById(tplId) || tplForStage(l.stage), sent = lastSent(l);
   return modal(`WhatsApp · ${l.name}`, `<div class="split" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px">
     <div><div class="small muted" style="margin-bottom:8px">${esc(showPhone(l.phone))} · ${esc(l.product)} · ${stageBadge(l.stage)}</div>
@@ -1106,7 +1127,7 @@ function composerModal(leadId, fuId = '', tplId = '') {
 function queueModal() {
   const Q = state.waQueue; if (!Q) return '';
   if (Q.i >= Q.items.length) { const sent = Q.items.filter(x => x.sent).length; state.waQueue = null; toast(`Queue finished: ${sent} opened in WhatsApp, ${Q.items.length - sent} skipped`, 'ok'); return ''; }
-  const it = Q.items[Q.i], l = byId('leads', it.leadId), t = tplById(it.tpl) || tplForStage(l?.stage);
+  const it = Q.items[Q.i], l = withLoan(byId('leads', it.leadId), it.li), t = tplById(it.tpl) || tplForStage(l?.stage);
   if (!l) { Q.i++; return queueModal(); }
   const text = fillTpl(t.body, l);
   return modal(`${Q.title} · ${Q.i + 1} of ${Q.items.length}`, `<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span class="avatar">${esc(initials(l.name))}</span><div style="flex:1"><b>${esc(l.name)}</b><div class="small muted">${esc(showPhone(l.phone))} · ${esc(l.product)} · ${esc(l.assignedName || '')}</div>${it.remarks ? `<div class="small">Follow-up: ${esc(it.remarks)}</div>` : ''}</div>${stageBadge(l.stage)}</div>
@@ -1360,7 +1381,7 @@ function vCalls() {
 // ---- Customer care: EMI reminders, top-up offers, rejected-file re-try
 function careData() {
   const t = todayStr(), win = num(settings().emiWindow) || 7, leads = S.all('leads');
-  const disb = leads.filter(l => l.stage === 'Disbursed').map(l => ({l, d: l.disbursal || {}, e: emiInfo(l.disbursal)}));
+  const disb = leads.flatMap(l => loanDisbursals(l).map(({d, li}) => ({l, d, li, e: emiInfo(d)})));
   const emiDue = disb.filter(x => x.e && !x.e.closed && daysUntil(x.e.next) >= 0 && daysUntil(x.e.next) <= win).sort((a,b) => a.e.next.localeCompare(b.e.next));
   const emiUnsent = emiDue.filter(x => x.d.remindedFor !== x.e.next);
   const topup = disb.filter(x => x.e && !x.e.closed && x.e.paid >= 3 && (!x.d.topupAt || daysSince(x.d.topupAt) >= 30)).sort((a,b) => b.e.paid - a.e.paid);
@@ -1368,10 +1389,13 @@ function careData() {
   const retryDue = rejected.filter(x => x.next <= addDays(t, 3));
   return {disb, emiDue, emiUnsent, topup, rejected, retryDue};
 }
-function careExtra(kind, l) {
-  const t = todayStr();
-  if (kind === 'emi') { const e = emiInfo(l.disbursal); return {disbursal: {...(l.disbursal || {}), remindedFor: e?.next || ''}}; }
-  if (kind === 'topup') return {disbursal: {...(l.disbursal || {}), topupAt: nowISO()}};
+function careExtra(kind, l, li = -1) {
+  const t = todayStr(); li = li == null || li === '' ? -1 : +li;
+  const patchLoan = p => { if (li < 0) return {disbursal: {...(l.disbursal || {}), ...p}};
+    const logins = (l.logins || []).map((x, i) => i === li ? {...x, ...p} : x), first = logins.find(x => x.status === 'Disbursed');
+    return {logins, disbursal: first ? {...first} : l.disbursal || null}; };
+  if (kind === 'emi') { const e = emiInfo(loanOf(l, li)); return patchLoan({remindedFor: e?.next || ''}); }
+  if (kind === 'topup') return patchLoan({topupAt: nowISO()});
   if (kind === 'retry') { const n = l.nurture || {}; return {nurture: {...n, lastAt: nowISO(), count: (n.count || 0) + 1, nextDate: nextTouch(l, addDays(t, 7))}}; }
   return {};
 }
@@ -1380,16 +1404,16 @@ function vCare() {
   const tabs = [['emi', `EMI reminders`, D.emiUnsent.length], ['topup', 'New loan offers', D.topup.length], ['retry', 'Rejected – re-try', D.retryDue.length], ['loans', 'Disbursed loan book', 0]];
   const tabBar = `<div class="chips" style="margin-bottom:14px">${tabs.map(([v, l, n]) => `<button class="btn sm ${f.tab === v ? 'primary' : ''}" data-action="care-tab" data-v="${v}">${l}${n ? ` <span class="badge b-bad" style="margin-left:4px">${n}</span>` : ''}</button>`).join('')}</div>`;
   const who = l => `<b>${esc(l.name)}</b><div class="small muted">${esc(showPhone(l.phone))} · ${esc(l.assignedName || '')}</div>`;
-  const acts = (l, kind, tpl, sent) => `<div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">${sent ? '<span class="badge b-ok">Sent</span>' : ''}<button class="btn sm wa" data-action="care-send" data-lead="${esc(l.id)}" data-kind="${kind}">${ic('send')} Send</button><button class="btn sm" data-action="wa-compose" data-lead="${esc(l.id)}" data-tpl="${tpl}">Edit draft</button>${sent ? '' : `<button class="btn sm" data-action="care-mark" data-lead="${esc(l.id)}" data-kind="${kind}" title="Mark as done without opening WhatsApp">${ic('check')}</button>`}</div>`;
+  const acts = (l, kind, tpl, sent, li = -1) => `<div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">${sent ? '<span class="badge b-ok">Sent</span>' : ''}<button class="btn sm wa" data-action="care-send" data-lead="${esc(l.id)}" data-kind="${kind}" data-li="${li}">${ic('send')} Send</button><button class="btn sm" data-action="wa-compose" data-lead="${esc(l.id)}" data-tpl="${tpl}" data-li="${li}">Edit draft</button>${sent ? '' : `<button class="btn sm" data-action="care-mark" data-lead="${esc(l.id)}" data-kind="${kind}" data-li="${li}" title="Mark as done without opening WhatsApp">${ic('check')}</button>`}</div>`;
   let body = '';
   if (f.tab === 'emi') {
     body = `<div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><h3 style="margin:0;flex:1">EMIs due in the next ${win} days</h3>${D.emiUnsent.length ? `<button class="btn wa" data-action="care-queue" data-kind="emi">${ic('send')} Send ${D.emiUnsent.length} reminders one by one</button>` : ''}</div>
       <p class="small muted" style="margin:0 0 10px">Send a reminder 2–3 days before the EMI date so the customer keeps balance and avoids a bounce.</p>
-      ${D.emiDue.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Lender</th><th>EMI</th><th>Due</th><th>Paid / pending</th><th></th></tr></thead><tbody>${D.emiDue.map(x => `<tr><td>${who(x.l)}</td><td>${esc(x.d.lender || x.l.bank || '—')}<div class="small muted">${esc(x.l.product)}</div></td><td><b>${fmtINR(x.d.emi)}</b></td><td class="nowrap"><b>${esc(fmtDate(x.e.next))}</b><div class="small ${daysUntil(x.e.next) <= 2 ? '' : 'muted'}" style="${daysUntil(x.e.next) <= 2 ? 'color:var(--bad)' : ''}">${esc(inDays(daysUntil(x.e.next)))}</div></td><td>${x.e.paid} / ${x.e.pending}<div class="small muted">of ${x.e.tenure}</div></td><td>${acts(x.l, 'emi', 'emi', x.d.remindedFor === x.e.next)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No EMIs due in this window.</div>'}</div>`;
+      ${D.emiDue.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Lender</th><th>EMI</th><th>Due</th><th>Paid / pending</th><th></th></tr></thead><tbody>${D.emiDue.map(x => `<tr><td>${who(x.l)}</td><td>${esc(x.d.lender || x.l.bank || '—')}<div class="small muted">${esc(x.l.product)}</div></td><td><b>${fmtINR(x.d.emi)}</b></td><td class="nowrap"><b>${esc(fmtDate(x.e.next))}</b><div class="small ${daysUntil(x.e.next) <= 2 ? '' : 'muted'}" style="${daysUntil(x.e.next) <= 2 ? 'color:var(--bad)' : ''}">${esc(inDays(daysUntil(x.e.next)))}</div></td><td>${x.e.paid} / ${x.e.pending}<div class="small muted">of ${x.e.tenure}</div></td><td>${acts(x.l, 'emi', 'emi', x.d.remindedFor === x.e.next, x.li)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No EMIs due in this window.</div>'}</div>`;
   } else if (f.tab === 'topup') {
     body = `<div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><h3 style="margin:0;flex:1">Customers with 3+ EMIs paid</h3>${D.topup.length ? `<button class="btn wa" data-action="care-queue" data-kind="topup">${ic('send')} Send ${D.topup.length} offers one by one</button>` : ''}</div>
       <p class="small muted" style="margin:0 0 10px">After 3 on-time EMIs most lenders consider a top-up or a second loan. Each customer comes back here 30 days after the last offer.</p>
-      ${D.topup.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Loan</th><th>EMIs paid</th><th>Pending</th><th>Last offer</th><th></th></tr></thead><tbody>${D.topup.map(x => `<tr><td>${who(x.l)}</td><td>${esc(x.d.lender || x.l.bank || '')} · ${fmtL(x.d.amountLakh || x.l.amountLakh)}<div class="small muted">EMI ${fmtINR(x.d.emi)} · ${esc(x.l.product)}</div></td><td><span class="badge b-ok">${x.e.paid}</span></td><td>${x.e.pending}${x.e.pending <= 6 ? ' <span class="badge b-warn">closing soon</span>' : ''}</td><td class="small">${x.d.topupAt ? esc(ago(x.d.topupAt)) : 'Never'}</td><td>${acts(x.l, 'topup', 'topup', false)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No customers ready for an offer right now.</div>'}</div>`;
+      ${D.topup.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Loan</th><th>EMIs paid</th><th>Pending</th><th>Last offer</th><th></th></tr></thead><tbody>${D.topup.map(x => `<tr><td>${who(x.l)}</td><td>${esc(x.d.lender || x.l.bank || '')} · ${fmtL(x.d.amountLakh || x.l.amountLakh)}<div class="small muted">EMI ${fmtINR(x.d.emi)} · ${esc(x.l.product)}</div></td><td><span class="badge b-ok">${x.e.paid}</span></td><td>${x.e.pending}${x.e.pending <= 6 ? ' <span class="badge b-warn">closing soon</span>' : ''}</td><td class="small">${x.d.topupAt ? esc(ago(x.d.topupAt)) : 'Never'}</td><td>${acts(x.l, 'topup', 'topup', false, x.li)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No customers ready for an offer right now.</div>'}</div>`;
   } else if (f.tab === 'retry') {
     const row = x => { const l = x.l, R = l.rejection || {}, sm = loanSummary(l.loans || []), ready = x.retry && x.retry <= t;
       return `<tr><td>${who(l)}</td><td>${esc(R.lender || l.bank || '—')}<div class="small muted">${esc(l.product)} · ${fmtL(l.amountLakh)}</div></td>
@@ -1490,7 +1514,7 @@ function teamStats(r) {
     const hit = st => ev.some(h => h.stage === st && inR(h.at));
     if (hit('Logged In')) { x.logged++; touched = true; }
     if (hit('Sanctioned')) { x.sanctioned++; x.sanctionedAmt += amt; touched = true; }
-    if (hit('Disbursed')) { x.disbursed++; x.disbursedAmt += num(l.disbursal?.amountLakh) || amt; touched = true; }
+    if (hit('Disbursed')) { x.disbursed++; x.disbursedAmt += loanDisbursals(l).reduce((a, y) => a + num(y.d.amountLakh), 0) || amt; touched = true; }
     if (hit('Rejected')) { x.rejected++; touched = true; }
     if (hit('Lost')) { x.lost++; touched = true; }
     if (!touched && ev.some(h => inR(h.at))) touched = true;
@@ -1574,7 +1598,7 @@ function vLeads() {
     <select id="leads_stage" data-bind="f.leads.stage" data-rerender aria-label="Stage"><option value="">All stages</option>${STAGES.map(s => `<option ${s === f.stage ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
   ${rows.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Requirement</th><th>Stage</th><th>Handler</th><th></th></tr></thead><tbody>${rows.map(l => `<tr>
     <td><div class="strong">${esc(l.name)}</div><div class="small muted">${esc(showPhone(l.phone))}${l.bizName ? ` · ${esc(l.bizName)}` : ''}${l.city ? ` · ${esc(l.city)}` : ''}</div>${l.profile && (l.profile.sector || l.profile.bizType || l.profile.vintageYrs) ? `<div class="small muted">${esc([l.profile.sector, l.profile.bizType, l.profile.vintageYrs ? l.profile.vintageYrs + ' yrs' : ''].filter(Boolean).join(' · '))}</div>` : ''}</td>
-    <td class="nowrap"><div>${esc(l.product)}</div><div class="small muted">${fmtL(l.amountLakh)}${l.bank ? ` · ${esc(l.bank)}` : ''}</div>${l.loans?.length ? `<div class="small muted">${l.loans.length} loans · EMI ${fmtINR(l.profile?.emiTotal)}</div>` : ''}${num(l.profile?.bounces3m) ? `<span class="badge b-bad">${esc(l.profile.bounces3m)} bounce(s) 3m</span>` : ''}</td>
+    <td class="nowrap"><div>${esc(l.product)}</div><div class="small muted">${fmtL(l.amountLakh)}${l.bank && !l.logins?.length ? ` · ${esc(l.bank)}` : ''}</div>${l.logins?.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">${l.logins.map(g => `<span class="badge ${LOGIN_BADGE[g.status] || ''}" title="${esc(g.status)}${g.amountLakh ? ' · ₹' + fmtNumL(g.amountLakh) + ' L' : ''}">${esc(g.lender || 'Bank')}: ${esc(g.status)}</span>`).join('')}</div>` : ''}${l.loans?.length ? `<div class="small muted">${l.loans.length} loans · EMI ${fmtINR(l.profile?.emiTotal)}</div>` : ''}${num(l.profile?.bounces3m) ? `<span class="badge b-bad">${esc(l.profile.bounces3m)} bounce(s) 3m</span>` : ''}</td>
     <td>${canEdit ? `<select class="small" data-change="lead-stage" data-id="${esc(l.id)}" style="width:auto" aria-label="Stage">${STAGES.map(s => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select>` : stageBadge(l.stage)}</td>
     <td><div>${esc(l.assignedName || '—')}</div><div class="small muted">${esc(l.branch || '')}</div></td>
     <td class="nowrap right">${(() => { const pr = docProgress(l); return `<button class="btn sm" data-action="docs-open" data-lead="${esc(l.id)}" title="Documents"><span class="${pr.done === pr.total ? '' : 'muted'}">${ic('file')}</span><span class="num">${pr.done}/${pr.total}</span></button>`; })()}
@@ -1597,6 +1621,79 @@ const loanStatus = (x, e) => {
   if (start && start >= since) out.push('<span class="badge b-info">Taken ≤ 3 m</span>');
   return out.join('');
 };
+// ---- Bank logins: one file can be logged in with several lenders, each with its own status and loan.
+const LOGIN_STATUS = ['Logged in', 'Under process', 'Sanctioned', 'Disbursed', 'Rejected', 'Withdrawn'];
+const LOGIN_BADGE = {'Logged in': 'b-info', 'Under process': 'b-warn', 'Sanctioned': 'b-info', 'Disbursed': 'b-ok', 'Rejected': 'b-bad', 'Withdrawn': ''};
+// Logins saved on the lead; an older lead with a single disbursal shows as one disbursed login.
+function leadLogins(l) {
+  if (Array.isArray(l?.logins) && l.logins.length) return l.logins;
+  const D = l?.disbursal;
+  return D && (D.firstEmiDate || D.amountLakh || D.lender) ? [{...D, lender: D.lender || l.bank || '', status: 'Disbursed', loginId: l.loginId || ''}] : [];
+}
+// Every disbursed loan of a lead, with its index in lead.logins (-1 = old single disbursal)
+function loanDisbursals(l) {
+  if (Array.isArray(l?.logins) && l.logins.length) return l.logins.map((d, li) => ({d, li})).filter(x => x.d.status === 'Disbursed');
+  return l?.stage === 'Disbursed' ? [{d: l.disbursal || {}, li: -1}] : [];
+}
+const loanOf = (l, li) => li >= 0 ? (l.logins || [])[li] || {} : (l.disbursal || {});
+const withLoan = (l, li) => l && li != null && li !== '' ? {...l, _loan: loanOf(l, +li)} : l;
+const fmtNumL = v => (Math.round(num(v) * 100) / 100).toLocaleString('en-IN');
+function loginRows(list) {
+  return list.map((x, i) => { const st = x.status || 'Logged in', e = emiInfo(x), on = arr => arr.includes(st) ? '' : 'style="display:none"';
+    return `<div class="login-row" data-i="${i}">
+      <div class="lg-h">Bank ${i + 1} <span class="badge ${LOGIN_BADGE[st] || ''}" data-lg="badge">${esc(st)}</span></div>
+      <div class="lg-grid">
+        <div class="c2"><label>Lender</label><input name="lg_lender_${i}" list="dl-lenders" value="${esc(x.lender || '')}" maxlength="60" placeholder="e.g. Tata Capital"></div>
+        <div><label>Status</label><select name="lg_status_${i}" data-change="lg-status">${LOGIN_STATUS.map(o => `<option ${o === st ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div><label>Login / ref. ID</label><input name="lg_id_${i}" value="${esc(x.loginId || '')}" maxlength="40"></div>
+        <div><label>Login date</label><input type="date" name="lg_date_${i}" value="${esc(x.loginDate || '')}"></div>
+        <div><label>Applied (₹ lakh)</label><input type="number" name="lg_amt_${i}" min="0" step="0.01" value="${esc(x.appliedLakh ?? '')}"></div>
+        <div data-lgw="Sanctioned|Disbursed" ${on(['Sanctioned','Disbursed'])}><label>Sanctioned (₹ lakh)</label><input type="number" name="lg_sanc_${i}" min="0" step="0.01" value="${esc(x.sanctionLakh ?? '')}"></div>
+        <div class="c2" data-lgw="Rejected|Withdrawn" ${on(['Rejected','Withdrawn'])}><label>Reason</label><input name="lg_rej_${i}" value="${esc(x.rejectReason || '')}" maxlength="120" placeholder="e.g. Low CIBIL, negative area"></div>
+        <div class="c2" data-lgw="Logged in|Under process|Sanctioned" ${on(['Logged in','Under process','Sanctioned'])}><label>Remarks</label><input name="lg_note_${i}" value="${esc(x.note || '')}" maxlength="120" placeholder="e.g. PD done, valuation pending"></div>
+      </div>
+      <div class="lg-grid" data-lgw="Disbursed" ${on(['Disbursed'])}>
+        <div><label>Disbursed (₹ lakh)</label><input type="number" name="lg_disamt_${i}" class="lg-calc" min="0" step="0.01" value="${esc(x.amountLakh ?? '')}"></div>
+        <div><label>ROI (%)</label><input type="number" name="lg_roi_${i}" class="lg-calc" min="0" max="60" step="0.01" value="${esc(x.roi ?? '')}"></div>
+        <div><label>Loan account no.</label><input name="lg_acct_${i}" value="${esc(x.acct || '')}" maxlength="30"></div>
+        <div><label>Disbursement date</label><input type="date" name="lg_disb_${i}" class="lg-calc" value="${esc(x.disbDate || '')}"></div>
+        <div><label>1st EMI date</label><input type="date" name="lg_first_${i}" class="lg-calc" value="${esc(x.firstEmiDate || '')}"></div>
+        <div><label>Tenure (months)</label><input type="number" name="lg_ten_${i}" class="lg-calc" min="1" max="480" value="${esc(x.tenure ?? '')}"></div>
+        <div><label>EMI amount (₹)</label><input type="number" name="lg_emi_${i}" class="lg-calc" min="0" value="${esc(x.emi ?? '')}"></div>
+        <div><label>Last EMI (auto)</label><input class="auto" data-lg="last" readonly tabindex="-1" value="${e ? esc(fmtDate(e.last)) : ''}"></div>
+        <div><label>EMIs paid (auto)</label><input class="auto" data-lg="paid" readonly tabindex="-1" value="${e ? e.paid : ''}"></div>
+        <div><label>EMIs pending (auto)</label><input class="auto" data-lg="pending" readonly tabindex="-1" value="${e ? (e.closed ? 'Closed' : e.pending) : ''}"></div>
+        <div class="c2"><label>Next EMI (auto)</label><input class="auto" data-lg="next" readonly tabindex="-1" value="${e?.next ? esc(fmtDate(e.next) + ' (' + inDays(daysUntil(e.next)) + ')') : ''}"></div>
+      </div>
+    </div>`; }).join('');
+}
+function readLoginRows(form, old = []) {
+  const n = Math.min(10, Math.max(0, Math.floor(num(form.querySelector('[name="loginCount"]')?.value)))), g = (k, i) => form.querySelector(`[name="lg_${k}_${i}"]`)?.value ?? '';
+  return Array.from({length: n}, (_, i) => {
+    const prev = old[i] || {}, status = g('status', i) || 'Logged in', lender = g('lender', i).trim();
+    const x = {lender: clip(lender, 60), status, loginId: clip(g('id', i), 40), loginDate: g('date', i), appliedLakh: numOrNull(g('amt', i)),
+      sanctionLakh: numOrNull(g('sanc', i)), rejectReason: clip(g('rej', i), 120), note: clip(g('note', i), 120),
+      amountLakh: numOrNull(g('disamt', i)), roi: numOrNull(g('roi', i)), acct: clip(g('acct', i), 30), disbDate: g('disb', i), firstEmiDate: g('first', i), tenure: numOrNull(g('ten', i)), emi: numOrNull(g('emi', i)),
+      // reminder history stays only while it is the same lender
+      remindedFor: prev.lender === lender ? prev.remindedFor || '' : '', topupAt: prev.lender === lender ? prev.topupAt || '' : '',
+      statusAt: prev.status === status && prev.statusAt ? prev.statusAt : nowISO()};
+    if (status === 'Disbursed' && !x.emi && x.amountLakh && x.roi && x.tenure) x.emi = Math.round(pmt(x.roi, x.tenure, x.amountLakh * 1e5));
+    return x;
+  });
+}
+function syncLogins(form) {
+  form.querySelectorAll('.login-row').forEach((el, i) => {
+    const g = k => el.querySelector(`[name="lg_${k}_${i}"]`)?.value || '';
+    const e = emiInfo({firstEmiDate: g('first'), tenure: g('ten')}), set = (k, v) => { const f = el.querySelector(`[data-lg="${k}"]`); if (f) f.value = v; };
+    set('last', e ? fmtDate(e.last) : ''); set('paid', e ? e.paid : ''); set('pending', e ? (e.closed ? 'Closed' : e.pending) : ''); set('next', e?.next ? `${fmtDate(e.next)} (${inDays(daysUntil(e.next))})` : '');
+    const amt = num(g('disamt')), roi = num(g('roi')), ten = num(g('ten')), emiEl = el.querySelector(`[name="lg_emi_${i}"]`);
+    if (emiEl) emiEl.placeholder = amt && roi && ten ? `Suggested ₹${inr0(pmt(roi, ten, amt * 1e5))}` : '';
+  });
+  const rows = readLoginRows(form), sum = form.querySelector('#lg_summary');
+  if (sum) { const c = st => rows.filter(x => x.status === st).length, d = rows.filter(x => x.status === 'Disbursed');
+    sum.textContent = rows.length ? `${rows.length} bank${rows.length > 1 ? 's' : ''} · ${c('Disbursed')} disbursed (₹${fmtNumL(d.reduce((a, x) => a + num(x.amountLakh), 0))} L) · ${c('Logged in') + c('Under process') + c('Sanctioned')} in process · ${c('Rejected') + c('Withdrawn')} rejected/withdrawn` : ''; }
+}
+
 function loanRows(list) {
   return list.map((x, i) => { const e = emiInfo(x);
     return `<div class="loan-row" data-i="${i}">
@@ -1656,21 +1753,13 @@ function leadForm(l = {}) {
     ${fi('Bank login / reference ID','loginId',l.loginId,'maxlength="40"')}
     <input type="hidden" name="fromCall" value="${esc(l.fromCall || '')}">
     ${(() => { const D = l.disbursal || {}, de = emiInfo(D), R = l.rejection || {}, show = st => (l.stage || 'New') === st ? '' : 'style="display:none"';
-      return `<div class="sec-h" data-when="Disbursed" ${show('Disbursed')}>Disbursement &amp; EMI details (used for EMI reminders and top-up offers)</div>
-      <div class="full fg" data-when="Disbursed" ${show('Disbursed')}>
-        <div><label>Lender</label><input name="d_lender" list="dl-lenders" value="${esc(D.lender || l.bank || '')}" maxlength="60"></div>
-        ${fi('Disbursed amount (₹ lakh)','d_amount',D.amountLakh ?? l.amountLakh ?? '','type="number" min="0" step="0.01" data-disb')}
-        ${fi('ROI (%)','d_roi',D.roi ?? '','type="number" min="0" max="60" step="0.01" data-disb')}
-        ${fi('Loan account no.','d_acct',D.acct || '','maxlength="30"')}
-        ${fi('Disbursement date','d_disb',D.disbDate || '','type="date" data-disb')}
-        ${fi('1st EMI date','d_first',D.firstEmiDate || '','type="date" data-disb')}
-        ${fi('Loan tenure (months)','d_ten',D.tenure ?? '','type="number" min="1" max="480" data-disb')}
-        ${fi('EMI amount (₹)','d_emi',D.emi ?? '','type="number" min="0" data-disb')}
-        <div><label>Last EMI date</label><input id="d_last" readonly tabindex="-1" value="${de ? esc(fmtDate(de.last)) : ''}"></div>
-        <div><label>EMIs paid (auto)</label><input id="d_paid" readonly tabindex="-1" value="${de ? de.paid : ''}"></div>
-        <div><label>EMIs pending (auto)</label><input id="d_pending" readonly tabindex="-1" value="${de ? (de.closed ? 'Closed' : de.pending) : ''}"></div>
-        <div><label>Next EMI</label><input id="d_next" readonly tabindex="-1" value="${de?.next ? esc(fmtDate(de.next) + ' (' + inDays(daysUntil(de.next)) + ')') : ''}"></div>
+      const LG = leadLogins(l);
+      return `<div class="sec-h">Bank logins &amp; disbursement (one row per lender · EMI reminders and top-up offers use each disbursed loan)</div>
+      <div class="full fg">
+        <div><label>No. of banks logged in</label><input name="loginCount" type="number" min="0" max="10" value="${LG.length || ''}" data-login-count placeholder="0"></div>
+        <div class="c2" style="display:flex;align-items:flex-end"><span class="small muted" id="lg_summary"></span></div>
       </div>
+      <div class="full" id="login-rows">${loginRows(LG)}</div>
       <div class="sec-h" data-when="Rejected" ${show('Rejected')}>Rejection details (file goes to monthly re-try follow-up)</div>
       <div class="full fg" data-when="Rejected" ${show('Rejected')}>
         <div><label>Rejected by (lender)</label><input name="r_lender" list="dl-lenders" value="${esc(R.lender || l.bank || '')}" maxlength="60"></div>
@@ -1732,6 +1821,8 @@ function vFollow() {
       <div class="fg" style="grid-template-columns:1fr 1fr"><div><label>Date</label><input type="date" name="date" required value="${t}"></div><div><label>Time</label><input type="time" name="time" value="11:00"></div></div>
       <div><label>What to do</label><textarea name="remarks" rows="3" maxlength="500" required placeholder="e.g. Collect 12-month bank statement"></textarea></div><button class="btn primary">Add follow-up</button></form>` : '<div class="empty">Add an open lead first.</div>'}
     </div><div class="grid">${sec('Overdue', over, 'b-bad')}${sec('Today', tod, 'b-warn')}${sec('Upcoming', up, 'b-info')}
+    ${(() => { const has = new Set(open.map(f => f.leadId)), none = leads.filter(l => !has.has(l.id) && l.stage !== 'Rejected');
+      return `<div class="card"><h3>Open files with no follow-up <span class="badge ${none.length ? 'b-warn' : ''}">${none.length}</span></h3>${none.length ? `<p class="small muted" style="margin:-4px 0 8px">Every open file should have a next step. Schedule one for tomorrow 11:00 in one click.</p><div class="list">${none.map(l => `<div class="li"><div class="grow"><div class="strong">${esc(l.name)} ${stageBadge(l.stage)}</div><div class="small muted">${esc(l.product)} · ${fmtL(l.amountLakh)}${l.assignedName ? ' · ' + esc(l.assignedName) : ''}${l.logins?.length ? ' · ' + l.logins.map(g => esc(g.lender) + ': ' + esc(g.status)).join(', ') : ''}</div></div><button class="btn sm" data-action="fu-quick" data-lead="${esc(l.id)}">${ic('plus')} Tomorrow 11:00</button></div>`).join('')}</div>` : '<div class="empty small">All open files have a follow-up.</div>'}</div>`; })()}
     <div class="card"><h3>Recently completed</h3>${done.length ? fuList(done, true) : '<div class="empty small">Nothing yet.</div>'}</div></div></div>`;
 }
 
@@ -2088,14 +2179,18 @@ const actions = {
   'policy-edit': el => openModal(policyForm(byId('policies', el.dataset.id))),
   'policy-del': async el => { const p = byId('policies', el.dataset.id); if (p && confirm(`Delete ${p.bank} · ${p.product} and its history?`)) await guard(async () => { await S.remove('policies', p.id); closeModal(); toast('Policy deleted'); }); },
 
-  'wa-compose': el => openModal(composerModal(el.dataset.lead, el.dataset.fu || '', el.dataset.tpl || '')),
+  'wa-compose': el => openModal(composerModal(el.dataset.lead, el.dataset.fu || '', el.dataset.tpl || '', el.dataset.li)),
   'wa-quick': el => { const l = byId('leads', el.dataset.lead); if (!l) return; const t = tplForStage(l.stage); openWhatsApp(l, fillTpl(t.body, l), t.id, el.dataset.fu); toast('Opened in WhatsApp. Press send there, then tick Done.', 'ok'); },
   'cmp-send': el => { const l = byId('leads', el.dataset.lead), text = $('#cmp_text')?.value || ''; if (l && text.trim() && openWhatsApp(l, text, $('#cmp_tpl')?.value, el.dataset.fu)) { closeModal(); toast('Opened in WhatsApp. Press send there.', 'ok'); } },
+  'fu-quick': el => { const l = byId('leads', el.dataset.lead); if (!l) return; guard(async () => {
+    await S.add('followups', {leadId: l.id, leadName: l.name, leadPhone: l.phone, date: addDays(todayStr(), 1), time: '11:00', remarks: `Next step for ${l.stage} file`, note: '', done: false,
+      branch: l.branch, assignedTo: l.assignedTo, assignedName: l.assignedName, createdAt: nowISO(), createdBy: state.user.phone});
+    toast(`Follow-up set for ${l.name}, tomorrow 11:00`, 'ok'); }); },
   'fu-queue': () => { const t = todayStr(); startQueue('Due follow-ups', S.all('followups').filter(f => !f.done && f.date <= t).sort(byDate).filter(f => byId('leads', f.leadId)).map(f => ({leadId: f.leadId, fuId: f.id, remarks: f.remarks}))); },
   'q-send': () => {
     const Q = state.waQueue; if (!Q) return; const it = Q.items[Q.i], l = byId('leads', it.leadId), text = $('#q_text')?.value || '';
     const t = tplById(it.tpl) || tplForStage(l?.stage);
-    if (l && text.trim() && openWhatsApp(l, text, t?.id, it.fuId, it.kind ? careExtra(it.kind, l) : {})) { it.sent = true; const done = $('#q_done'); if (it.fuId && done?.checked) guard(() => S.update('followups', it.fuId, {done: true, doneAt: nowISO(), doneBy: state.user.phone})); if (done) Q.markDone = done.checked; }
+    if (l && text.trim() && openWhatsApp(l, text, t?.id, it.fuId, it.kind ? careExtra(it.kind, l, it.li) : {})) { it.sent = true; const done = $('#q_done'); if (it.fuId && done?.checked) guard(() => S.update('followups', it.fuId, {done: true, doneAt: nowISO(), doneBy: state.user.phone})); if (done) Q.markDone = done.checked; }
     Q.i++; const html = queueModal(); if (html) openModal(html); else closeModal();
   },
   'q-skip': () => { const Q = state.waQueue; if (!Q) return; Q.i++; const html = queueModal(); if (html) openModal(html); else closeModal(); },
@@ -2143,12 +2238,12 @@ const actions = {
   }),
   'call-wa': el => { const c = byId('calls', el.dataset.id); if (!c) return; const t = tplById('nurture') || templates()[0]; window.open(waLink(c.phone, fillTpl(t.body, {...c, assignedName: c.createdByName})), '_blank', 'noopener'); guard(() => S.update('calls', c.id, {waAt: nowISO()})); toast('Opened in WhatsApp. Log the result after you talk.', 'ok'); },
   'care-tab': el => { state.f.care.tab = el.dataset.v; render(); },
-  'care-send': el => { const l = byId('leads', el.dataset.lead), kind = el.dataset.kind; if (!l) return; const t = tplById(kind); if (openWhatsApp(l, fillTpl(t.body, l), kind, '', careExtra(kind, l))) toast('Opened in WhatsApp. Press send there.', 'ok'); },
-  'care-mark': el => { const l = byId('leads', el.dataset.lead); if (l) guard(async () => { await S.update('leads', l.id, careExtra(el.dataset.kind, l)); toast('Marked as done', 'ok'); }); },
+  'care-send': el => { const l = byId('leads', el.dataset.lead), kind = el.dataset.kind, li = el.dataset.li; if (!l) return; const t = tplById(kind); if (openWhatsApp(l, fillTpl(t.body, withLoan(l, li)), kind, '', careExtra(kind, l, li))) toast('Opened in WhatsApp. Press send there.', 'ok'); },
+  'care-mark': el => { const l = byId('leads', el.dataset.lead); if (l) guard(async () => { await S.update('leads', l.id, careExtra(el.dataset.kind, l, el.dataset.li)); toast('Marked as done', 'ok'); }); },
   'care-skip': el => { const l = byId('leads', el.dataset.lead); if (l) guard(async () => { const n = l.nurture || {}; await S.update('leads', l.id, {nurture: {...n, nextDate: nextTouch(l, addDays(todayStr(), 7))}}); toast('Moved to next month', ''); }); },
   'retry-reopen': el => { const l = byId('leads', el.dataset.lead); if (!l || !confirm(`Re-open ${l.name}'s file for a fresh login?`)) return; guard(async () => { await S.update('leads', l.id, {stage: 'Contacted', updatedAt: nowISO(), stageHistory: [...(l.stageHistory || []), {stage: 'Contacted', at: nowISO(), by: state.user.phone}]}); toast(`${l.name} is back in the pipeline`, 'ok'); }); },
-  'care-queue': el => { const D = careData(), kind = el.dataset.kind; const list = kind === 'emi' ? D.emiUnsent.map(x => x.l) : kind === 'topup' ? D.topup.map(x => x.l) : D.retryDue.map(x => x.l);
-    startQueue(kind === 'emi' ? 'EMI reminders' : kind === 'topup' ? 'New loan offers' : 'Rejected – re-try', list.map(l => ({leadId: l.id, tpl: kind, kind})), false); },
+  'care-queue': el => { const D = careData(), kind = el.dataset.kind; const list = kind === 'emi' ? D.emiUnsent : kind === 'topup' ? D.topup : D.retryDue;
+    startQueue(kind === 'emi' ? 'EMI reminders' : kind === 'topup' ? 'New loan offers' : 'Rejected – re-try', list.map(x => ({leadId: x.l.id, tpl: kind, kind, li: x.li ?? -1})), false); },
   'loanbook-csv': () => loanBookCsv(),
   'docs-open': el => { state.docUp = {type: 'Aadhaar', files: [], consent: false, busy: false, lead: el.dataset.lead}; const l = byId('leads', el.dataset.lead); if (l) { const have = new Set(leadDocs(l.id).map(d => d.type)); state.docUp.type = docNeed(l.product).find(t => !have.has(t)) || 'Other'; } openModal(docsModal(el.dataset.lead)); },
   'doc-upload': el => guard(async () => {
@@ -2387,16 +2482,20 @@ const forms = {
     const profile = {sector: fd.get('sector') || '', vintageYrs: nOrN('vintageYrs'), bizType: fd.get('bizType') || '', turnover6m: nOrN('turnover6m'), banking: fd.getAll('banking'),
       abb: nOrN('abb'), existingLoans: loans.length, emiTotal, closingCount: sm.closingCount, closingEmi: sm.closingEmi, recentCount: sm.recentCount, recentEmi: sm.recentEmi,
       applicantPin: pin('applicantPin'), businessPin: pin('businessPin'), gender: fd.get('gender') || '', age: nOrN('age'), coApplicant: fd.get('coApplicant') || '', bounces6m: b6, bounces3m: b3};
-    const stage = fd.get('stage'), old = id ? byId('leads', id) : null, extra = {};
-    if (stage === 'Disbursed' || old?.disbursal) {
-      const D = {lender: clip(fd.get('d_lender'),60), amountLakh: numOrNull(fd.get('d_amount')), roi: numOrNull(fd.get('d_roi')), acct: clip(fd.get('d_acct'),30),
-        disbDate: fd.get('d_disb') || '', firstEmiDate: fd.get('d_first') || '', tenure: numOrNull(fd.get('d_ten')), emi: numOrNull(fd.get('d_emi')),
-        remindedFor: old?.disbursal?.remindedFor || '', topupAt: old?.disbursal?.topupAt || ''};
-      if (D.disbDate && D.firstEmiDate && D.firstEmiDate < D.disbDate) return toast('1st EMI date cannot be before the disbursement date', 'bad');
-      if (!D.emi && D.amountLakh && D.roi && D.tenure) D.emi = Math.round(pmt(D.roi, D.tenure, D.amountLakh * 1e5));
-      if (stage === 'Disbursed' || D.firstEmiDate) extra.disbursal = D;
-      if (stage === 'Disbursed' && !(D.firstEmiDate && D.tenure)) toast('Tip: add the 1st EMI date and tenure so EMI reminders start automatically', '');
-    }
+    let stage = fd.get('stage'); const old = id ? byId('leads', id) : null, extra = {};
+    { const pk = readLoginRows(f); if (pk.some(x => x.status === 'Disbursed') && !['Disbursed','Lost'].includes(stage)) stage = 'Disbursed';
+      else if (pk.length && ['New','Contacted','Docs Pending','Eligibility Done'].includes(stage)) stage = 'Logged In'; }
+    const logins = readLoginRows(f, old ? leadLogins(old) : []);
+    const noLender = logins.findIndex(x => !x.lender);
+    if (noLender >= 0) return toast(`Enter the lender name for bank ${noLender + 1}`, 'bad');
+    const badDate = logins.findIndex(x => x.disbDate && x.firstEmiDate && x.firstEmiDate < x.disbDate);
+    if (badDate >= 0) return toast(`Bank ${badDate + 1}: 1st EMI date cannot be before the disbursement date`, 'bad');
+    const disbLogins = logins.filter(x => x.status === 'Disbursed');
+    if (stage === 'Disbursed' && !disbLogins.length) return toast('For a disbursed file, add the bank login and set that lender\'s status to Disbursed', 'bad');
+    extra.logins = logins;
+    // Older screens and reports read lead.disbursal: keep it pointing at the first disbursed loan
+    extra.disbursal = disbLogins[0] ? {...disbLogins[0]} : null;
+    if (disbLogins.some(x => !(x.firstEmiDate && x.tenure))) toast('Tip: add the 1st EMI date and tenure for each disbursed bank so EMI reminders start automatically', '');
     if (stage === 'Rejected') {
       const reasons = fd.getAll('r_reason');
       if (!reasons.length) return toast('Select at least one rejection reason', 'bad');
@@ -2465,6 +2564,13 @@ const forms = {
 
 const changes = {
   'doc-pick': el => { const all = [...(el.files || [])], ok = all.filter(docOk); if (ok.length < all.length) toast(`${all.length - ok.length} file(s) skipped: only PDF or photos up to 10 MB`, 'bad'); state.docUp.files = ok; refreshDocs(state.docUp.lead); },
+  'lg-status': el => {
+    const row = el.closest('.login-row'), st = el.value; if (!row) return;
+    row.querySelectorAll('[data-lgw]').forEach(x => { x.style.display = x.dataset.lgw.split('|').includes(st) ? '' : 'none'; });
+    const b = row.querySelector('[data-lg="badge"]'); if (b) { b.textContent = st; b.className = 'badge ' + (LOGIN_BADGE[st] || ''); }
+    syncLogins(el.form);
+    if (st === 'Disbursed') { const sel = el.form.querySelector('[name="stage"]'); if (sel && !['Disbursed','Lost'].includes(sel.value)) { sel.value = 'Disbursed'; sel.dispatchEvent(new Event('change', {bubbles: true})); } }
+  },
   'lf-stage': el => { el.form.querySelectorAll('[data-when]').forEach(x => { x.style.display = x.dataset.when === el.value ? '' : 'none'; }); syncDisb(el.form); },
   'cmp-tpl': el => { const l = byId('leads', el.dataset.lead), t = tplById(el.value); if (l && t) { const v = fillTpl(t.body, l); $('#cmp_text').value = v; $('#cmp_prev').firstChild.nodeValue = v; } },
   'wa-pick': el => { state.wa.leadId = el.value; const l = byId('leads', el.value); if (l) { state.wa.tpl = tplForStage(l.stage).id; state.wa.text = fillTpl(tplById(state.wa.tpl).body, l); } else state.wa.text = ''; render(); },
@@ -2541,6 +2647,12 @@ document.addEventListener('input', e => {
     form.querySelector('#loan-rows').innerHTML = loanRows(rows); syncLoans(form); return;
   }
   if (el.classList?.contains('loan-emi') || el.classList?.contains('loan-calc')) { syncLoans(el.form); return; }
+  if (el.hasAttribute?.('data-login-count')) {
+    const form = el.form, n = Math.min(10, Math.max(0, Math.floor(num(el.value)))), cur = readLoginRows(form, []);
+    const rows = Array.from({length: n}, (_, i) => cur[i] || {lender: i === 0 ? (form.querySelector('[name="bank"]')?.value || '') : '', status: 'Logged in'});
+    form.querySelector('#login-rows').innerHTML = loginRows(rows); syncLogins(form); return;
+  }
+  if (el.classList?.contains('lg-calc')) { syncLogins(el.form); return; }
   if (el.hasAttribute?.('data-disb')) { syncDisb(el.form); return; } if (el.dataset?.bind == null || el.tagName === 'SELECT' || el.type === 'checkbox') return;
   bindSet(el); if (el.hasAttribute('data-rerender')) scheduleRender();
 });
