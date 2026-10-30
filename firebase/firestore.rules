@@ -40,6 +40,9 @@ service cloud.firestore {
     match /settings/{id} {
       allow read: if approved();
       allow write: if isAdmin();
+      // Branch Managers may edit the WhatsApp message templates, and nothing else in settings.
+      allow update: if hasRole(['Branch Manager'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['templates']);
     }
 
     match /policies/{id} {
@@ -81,8 +84,13 @@ service cloud.firestore {
     // Customer document records (the files themselves live in Firebase Storage, see storage.rules)
     match /documents/{id} {
       allow read: if canSeeWork(resource.data);
+      // The record must copy branch/assignedTo from a lead this person can actually see.
       allow create: if canSeeWork(request.resource.data) && request.resource.data.uploadedBy == myPhone()
-        && request.resource.data.consent == true;
+        && request.resource.data.consent == true
+        && exists(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && canSeeWork(get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data)
+        && request.resource.data.branch == get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.branch
+        && request.resource.data.assignedTo == get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.assignedTo;
       allow delete: if hasRole(['Admin', 'Branch Manager', 'Operations']) && canSeeWork(resource.data);
     }
 
