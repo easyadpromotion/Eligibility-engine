@@ -573,6 +573,13 @@ class LocalStore {
   reset(){ this.db = seedData(); this.persist(); }
 }
 
+// Firestore cannot store a list directly inside a list (e.g. policy history keeps [old, new] pairs).
+// Wrap inner lists as {__a: [...]} on save and unwrap them on load; the rest of the app never sees this.
+const fsEnc = v => Array.isArray(v) ? v.map(x => Array.isArray(x) ? {__a: fsEnc(x)} : fsEnc(x))
+  : (v && typeof v === 'object') ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsEnc(x)])) : v;
+const fsDec = v => Array.isArray(v) ? v.map(fsDec)
+  : (v && typeof v === 'object') ? (Array.isArray(v.__a) && Object.keys(v).length === 1 ? fsDec(v.__a) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsDec(x)]))) : v;
+
 class FireStoreAdapter {
   constructor(fb){ this.fb = fb; this.cache = {}; this.unsubs = []; this.listeners = new Set(); }
   onChange(f){ this.listeners.add(f); }
@@ -587,15 +594,15 @@ class FireStoreAdapter {
     else Object.assign(subs, {checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
     for (const [name, ref] of Object.entries(subs)) {
       this.unsubs.push(F.onSnapshot(ref,
-        snap => { this.cache[name] = snap.docs.map(d => ({...d.data(), id: d.id})); this.emit(); },
+        snap => { this.cache[name] = snap.docs.map(d => ({...fsDec(d.data()), id: d.id})); this.emit(); },
         err => { console.error(name, err); toast(`Could not load ${name} (${err.code})`, 'bad'); }));
     }
   }
   stop(){ this.unsubs.forEach(u => u()); this.unsubs = []; this.cache = {}; }
   all(c){ return this.cache[c] || []; }
-  async add(c,o){ const {db,F} = this.fb; const ref = await F.addDoc(F.collection(db,c), clone(o)); return {...o, id: ref.id}; }
-  async set(c,id,o){ const {db,F} = this.fb; const d = clone(o); delete d.id; await F.setDoc(F.doc(db,c,id), d); }
-  async update(c,id,p){ const {db,F} = this.fb; const d = clone(p); delete d.id; await F.updateDoc(F.doc(db,c,id), d); }
+  async add(c,o){ const {db,F} = this.fb; const ref = await F.addDoc(F.collection(db,c), fsEnc(clone(o))); return {...o, id: ref.id}; }
+  async set(c,id,o){ const {db,F} = this.fb; const d = clone(o); delete d.id; await F.setDoc(F.doc(db,c,id), fsEnc(d)); }
+  async update(c,id,p){ const {db,F} = this.fb; const d = clone(p); delete d.id; await F.updateDoc(F.doc(db,c,id), fsEnc(d)); }
   async remove(c,id){ const {db,F} = this.fb; await F.deleteDoc(F.doc(db,c,id)); }
 }
 
@@ -915,6 +922,43 @@ async function applyDraft(onlyHigh = false) {
   d.policies = d.policies.filter(p => !p.applied);
   d.contacts = d.contacts.filter(c => !c.applied);
   return r;
+}
+
+// Screenshot reading (OCR) for chat exports made "With media". Runs in the browser; images never leave the device.
+const OCR_MAX = 60;
+let tessPromise = null;
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  return tessPromise ||= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    s.onload = () => res(window.Tesseract); s.onerror = () => { tessPromise = null; rej(new Error('Could not load the screenshot reader. Check the internet and try again.')); };
+    document.head.append(s);
+  });
+}
+// Reads every screenshot the chat refers to and puts its text under that message,
+// indented so it is never mistaken for a new message line.
+async function ocrChatImages(zip, text, onStep) {
+  const IMG = /\.(jpe?g|png|webp)$/i, REF = /([\w\-]+\.(?:jpe?g|png|webp))/gi;
+  const files = new Map(Object.values(zip.files).filter(z => !z.dir && IMG.test(z.name)).map(z => [z.name.split('/').pop(), z]));
+  if (!files.size) return {text, read: 0, found: 0};
+  const names = [...new Set([...text.matchAll(REF)].map(m => m[1]).filter(n => files.has(n)))];
+  const todo = names.slice(-OCR_MAX);   // newest screenshots first matter most
+  if (!todo.length) return {text, read: 0, found: files.size};
+  const T = await loadTesseract(), worker = await T.createWorker('eng');
+  const out = {};
+  try {
+    for (let i = 0; i < todo.length; i++) {
+      onStep?.(i + 1, todo.length);
+      try { const {data} = await worker.recognize(await files.get(todo[i]).async('blob')); out[todo[i]] = String(data.text || '').trim(); }
+      catch (e) { console.warn('OCR failed', todo[i], e); }
+    }
+  } finally { await worker.terminate(); }
+  const lines = text.split('\n').map(l => {
+    const name = [...l.matchAll(REF)].map(m => m[1]).find(n => out[n]);
+    return name ? l + '\n' + out[name].split('\n').map(x => x.trim()).filter(Boolean).map(x => '  ' + x).join('\n') : l;
+  });
+  return {text: lines.join('\n'), read: Object.values(out).filter(Boolean).length, found: names.length, skipped: names.length - todo.length};
 }
 
 let jszipPromise = null;
@@ -1878,7 +1922,7 @@ function vImport() {
   const I = state.imp, st = settings(), groups = S.all('groups'), g = groups.find(x => x.name === I.group.trim());
   const how = `<div class="card"><h3>1 · Export the group chat from WhatsApp</h3><ol class="steps">
       <li>Open the DSA group on your phone.</li>
-      <li><b>Android:</b> ⋮ → More → Export chat → <b>Without media</b>.<br><b>iPhone:</b> tap the group name → Export Chat → <b>Without Media</b>.</li>
+      <li><b>Android:</b> ⋮ → More → Export chat → <b>Include media</b>.<br><b>iPhone:</b> tap the group name → Export Chat → <b>Attach Media</b>.<br><span class="muted">With media, policy screenshots are read too. Without media is faster but text only.</span></li>
       <li>Send the file to this computer (email / Drive). A .txt or the .zip both work.</li>
       <li>Repeat weekly. Only new messages are read each time.</li></ol>
       <p class="small muted" style="margin:10px 0 0">This uses WhatsApp's own export. Reading WhatsApp Web with a bot breaks WhatsApp's terms and can get your number banned.</p></div>`;
@@ -1886,6 +1930,7 @@ function vImport() {
       <div><label for="imp_group">Group name</label><input id="imp_group" data-bind="imp.group" value="${esc(I.group)}" list="dl-groups" placeholder="e.g. Vizag DSA Connect" maxlength="80"><datalist id="dl-groups">${groups.map(x => `<option value="${esc(x.name)}">`).join('')}</datalist></div>
       <div><label for="imp_file">Chat export (.txt / .zip) or import file (.json)</label><input id="imp_file" type="file" accept=".txt,.zip,.json,text/plain,application/zip,application/json" data-change="imp-file"></div></div>
     ${I.fileName ? `<p class="small" style="margin:10px 0 0">Loaded <b>${esc(I.fileName)}</b> · ${Math.max(1, Math.round(I.text.length/1024))} KB</p>` : ''}
+    ${I.ocr ? `<p class="small muted" id="imp_ocr" style="margin:6px 0 0">${esc(I.ocr)}</p>` : ''}
     <label class="check small" style="margin-top:12px"><input type="checkbox" id="imp_new" data-bind="imp.onlyNew" data-rerender ${I.onlyNew ? 'checked' : ''}> Only messages after the last import${g?.lastMessageAt ? ` (${fmtDate(g.lastMessageAt)})` : ''}</label>
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn primary" data-action="imp-analyse" ${I.text ? '' : 'disabled'}>${ic('search')} Analyse chat</button>${state.mode === 'demo' ? '<button class="btn" data-action="imp-sample">Load sample chat</button>' : ''}</div>
     <p class="small muted" style="margin:12px 0 0">Auto-apply is <b>${st.autoApply ? 'on' : 'off'}</b>${st.autoApply ? `: updates with ${Math.round(st.autoApplyMin*100)}%+ confidence apply straight away, the rest wait here.` : ': every change waits for your review.'} Change it in Staff &amp; Settings.</p></div>`;
@@ -2355,7 +2400,15 @@ const changes = {
         const entry = Object.values(zip.files).find(z => !z.dir && /\.txt$/i.test(z.name));
         if (!entry) throw new Error('No .txt chat file inside this zip');
         text = await entry.async('string');
-      } else text = await file.text();
+        if (Object.values(zip.files).some(z => !z.dir && /\.(jpe?g|png|webp)$/i.test(z.name))) {
+          state.imp.ocr = 'Reading screenshots…'; render();
+          try {
+            const r = await ocrChatImages(zip, text, (i, n) => { state.imp.ocr = `Reading screenshots ${i} of ${n}… (a few seconds each)`; const el = $('#imp_ocr'); if (el) el.textContent = state.imp.ocr; });
+            text = r.text;
+            state.imp.ocr = r.read ? `Read text from ${r.read} screenshot${r.read === 1 ? '' : 's'}${r.skipped ? ` (newest ${OCR_MAX} of ${r.found})` : ''}` : 'No readable text found in the screenshots';
+          } catch (e) { state.imp.ocr = e.message; }
+        } else state.imp.ocr = '';
+      } else { text = await file.text(); state.imp.ocr = ''; }
       const I = state.imp; I.text = text; I.fileName = file.name; I.draft = null;
       const gm = file.name.match(/WhatsApp Chat (?:with |- )?(.+?)(?:\.txt|\.zip)?$/i);
       if (gm && !I.group) I.group = gm[1].trim();
