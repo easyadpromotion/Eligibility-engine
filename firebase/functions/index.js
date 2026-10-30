@@ -23,7 +23,7 @@ const TWOFACTOR_API_KEY = defineSecret('TWOFACTOR_API_KEY');
 // Name of the SMS template approved in your 2Factor account (DLT). Set in functions/.env
 const TWOFACTOR_TEMPLATE = defineString('TWOFACTOR_TEMPLATE', {default: ''});
 // Comma-separated list of sites allowed to call these functions
-const ALLOWED_ORIGINS = defineString('ALLOWED_ORIGINS', {default: 'https://easyadpromotion.github.io'});
+const ALLOWED_ORIGINS = defineString('ALLOWED_ORIGINS', {default: 'https://easyadpromotion.github.io,https://credir-engine-new.web.app,https://credir-engine-new.firebaseapp.com'});
 // First-time setup: this number becomes Admin on its first OTP login, but only while no Admin exists yet.
 const BOOTSTRAP_ADMIN = defineString('BOOTSTRAP_ADMIN', {default: ''});
 const BOOTSTRAP_ADMIN_NAME = defineString('BOOTSTRAP_ADMIN_NAME', {default: 'Admin'});

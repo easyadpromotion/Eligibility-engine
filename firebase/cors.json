@@ -1,1 +1,1 @@
-[{"origin":["https://easyadpromotion.github.io"],"method":["GET"],"responseHeader":["Content-Type"],"maxAgeSeconds":3600}]
+[{"origin": ["https://easyadpromotion.github.io", "https://credir-engine-new.web.app", "https://credir-engine-new.firebaseapp.com"], "method": ["GET"], "responseHeader": ["Content-Type"], "maxAgeSeconds": 3600}]
