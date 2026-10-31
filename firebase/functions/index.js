@@ -51,7 +51,7 @@ function cors(req, res) {
     res.set('Access-Control-Allow-Origin', origin);
     res.set('Vary', 'Origin');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.set('Access-Control-Max-Age', '3600');
   }
   if (req.method === 'OPTIONS') { res.status(origin && allowed.includes(origin) ? 204 : 403).send(''); return false; }
@@ -168,4 +168,41 @@ exports.verifyOtp = handle(async body => {
   }
   const token = await auth.createCustomToken(uid, {phone_number: s.phone});
   return {token};
+});
+
+
+/**
+ * Phone history for the Daily Calls screen.
+ * A Sales Executive can only read their own calls under the database rules, but before calling a
+ * number they need to know what colleagues already heard from that customer. This returns a short,
+ * read-only summary for ONE 10-digit number to any approved staff member:
+ * earlier call results/remarks (who, when, what) and whether the number is already a lead / disbursed.
+ */
+exports.phoneHistory = onRequest({region: 'asia-south1', maxInstances: 5, timeoutSeconds: 15}, async (req, res) => {
+  if (!cors(req, res)) return;
+  try {
+    const m = String(req.get('authorization') || '').match(/^Bearer\s+(.+)$/i);
+    if (!m) throw new HttpError(401, 'auth', 'Sign in again.');
+    let who;
+    try { who = await getAuth().verifyIdToken(m[1]); } catch (e) { throw new HttpError(401, 'auth', 'Your session expired. Sign in again.'); }
+    const me = await db.doc(`staff/${who.phone_number}`).get();
+    if (!me.exists || me.get('status') !== 'Approved') throw new HttpError(403, 'not_approved', 'Your access is not active.');
+    const {e164} = normalisePhone((req.body || {}).phone);
+    const [callsSnap, leadsSnap] = await Promise.all([
+      db.collection('calls').where('phone', '==', e164).limit(60).get(),
+      db.collection('leads').where('phone', '==', e164).limit(10).get(),
+    ]);
+    const calls = callsSnap.docs.map(d => d.data()).filter(c => c.outcome && c.outcome !== 'pending')
+      .map(c => ({by: c.createdByName || '', at: c.calledAt || c.createdAt || '', outcome: c.outcome, notes: String(c.notes || '').slice(0, 200), name: c.name || '', recallDate: c.recallDate || ''}))
+      .sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 25);
+    const leads = leadsSnap.docs.map(d => { const l = d.data();
+      const disb = (Array.isArray(l.logins) && l.logins.length ? l.logins.filter(g => g.status === 'Disbursed') : (l.stage === 'Disbursed' && l.disbursal ? [l.disbursal] : []))
+        .map(g => ({lender: g.lender || l.bank || '', date: g.disbDate || '', amountLakh: g.amountLakh || null}));
+      return {name: l.name || '', stage: l.stage || '', assignedName: l.assignedName || '', branch: l.branch || '', updatedAt: l.updatedAt || l.createdAt || '', disbursed: disb};
+    });
+    res.json({calls, leads});
+  } catch (e) {
+    if (e instanceof HttpError) return res.status(e.status).json({code: e.code, message: e.message});
+    console.error(e); res.status(500).json({code: 'server', message: 'Could not load the history right now.'});
+  }
 });

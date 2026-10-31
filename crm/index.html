@@ -197,6 +197,22 @@ input[type=file]{padding:6px;background:var(--surface-2)}
 .sec-h{grid-column:1/-1;font-weight:700;font-size:11.5px;color:var(--brand);margin-top:6px;padding-top:14px;border-top:1px solid var(--line);text-transform:uppercase;letter-spacing:.09em}
 .loan-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:var(--surface-2)}
 .loan-row .c2{grid-column:span 2}
+.alert-red{display:flex;gap:10px;align-items:flex-start;background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad-strong);border-left:5px solid var(--bad-strong);border-radius:6px;padding:9px 12px;margin-bottom:8px;font-size:13px}
+.alert-red b{display:block}
+.ph-hist td{vertical-align:top}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dh{font-size:11px;color:var(--muted);text-align:center;font-weight:600;padding:2px 0}
+.cal button{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:6px 4px;min-height:52px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;color:var(--ink);font:inherit}
+.cal button:hover{background:var(--hover)}
+.cal button.out{opacity:.35}
+.cal button.today{border-color:var(--brand)}
+.cal button.sel{background:var(--brand);color:#fff;border-color:var(--brand)}
+.cal button .n{font-family:var(--font-num);font-size:11px;padding:0 6px;border-radius:99px;background:var(--brand-soft);color:var(--brand)}
+.cal button.future .n{background:var(--warn-bg);color:var(--warn)}
+.cal button.sel .n{background:rgba(255,255,255,.25);color:#fff}
+[data-hov]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
+#hov-card{position:fixed;z-index:200;max-width:440px;width:calc(100vw - 32px);max-height:60vh;overflow:auto;background:var(--card);border:1px solid var(--line-2);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:10px 12px;font-size:12.5px}
+#hov-card table{font-size:12px}
 .login-row{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:var(--surface-2)}
 .login-row .lg-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px}
 .login-row .lg-grid+.lg-grid{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
@@ -304,7 +320,8 @@ const REJECT_REASONS = [['Low ABB',1],['Less business vintage',3],['Less turnove
 const CALL_OUTCOMES = [
   {id:'interested',     label:'Interested',               days:null, cls:'b-ok'},
   {id:'callback',       label:'Busy / call back',         days:1,    cls:'b-warn'},
-  {id:'no_answer',      label:'No answer / switched off', days:1,    cls:'b-warn'},
+  {id:'no_answer',      label:'No answer',                days:1,    cls:'b-warn'},
+  {id:'switched_off',   label:'Switched off',             days:1,    cls:'b-bad'},
   {id:'not_now',        label:'Not now',                  days:30,   cls:''},
   {id:'not_interested', label:'Not interested',           days:60,   cls:'b-bad'},
   {id:'not_needed',     label:"Don't need loan",          days:90,   cls:'b-bad'},
@@ -525,7 +542,7 @@ const state = {
   mode: FIREBASE_CONFIG && !FORCE_DEMO ? 'live' : 'demo',
   user: null, route: 'dashboard', menu: false,
   login: {step: FIREBASE_CONFIG && !FORCE_DEMO ? 'loading' : 'phone', phone:'', err:'', busy:false, status:'', session:'', resendIn:0},
-  f: {care:{tab:'emi'}, callsView:{who:'me'}, rep:{period:'month', offset:0}, leads:{q:'',stage:''}, pol:{q:'',product:'',stale:false}, bk:{q:'',bank:'',loc:'',view:'cards'}},
+  f: {care:{tab:'emi'}, callsView:{who:'me'}, callsCal:{month:'', date:''}, rep:{period:'month', offset:0}, leads:{q:'',stage:''}, pol:{q:'',product:'',stale:false}, bk:{q:'',bank:'',loc:'',view:'cards'}},
   elig: {form: defaultElig(), results: null},
   imp: {group:'', onlyNew:true, fileName:'', text:'', draft:null},
   calls: {phone:'', name:'', product:'Business Loan', city:'', outcome:'', recall:'', notes:'', paste:'', editId:'', fromId:''},
@@ -1317,14 +1334,117 @@ function callRecalls() {
   return S.all('calls').filter(c => callDone(c) && c.recallDate && c.recallDate <= t && !c.recallDone && !c.leadId && (team || c.createdBy === u.phone))
     .sort((a,b) => String(a.recallDate).localeCompare(String(b.recallDate)));
 }
+// Earlier calls and lead status for one number, across the whole team (server lookup in live mode,
+// because each Sales Executive can only read their own calls directly).
+function phoneHistoryLocal(d) {
+  const calls = S.all('calls').filter(c => digits10(c.phone) === d && callDone(c))
+    .map(c => ({by: c.createdByName || '', at: c.calledAt || c.createdAt || '', outcome: c.outcome, notes: c.notes || '', name: c.name || '', recallDate: c.recallDate || ''}))
+    .sort((a,b) => String(b.at).localeCompare(String(a.at)));
+  const leads = S.all('leads').filter(l => digits10(l.phone) === d).map(l => ({name: l.name, stage: l.stage, assignedName: l.assignedName || '', branch: l.branch || '', updatedAt: l.updatedAt || l.createdAt || '',
+    disbursed: loanDisbursals(l).map(({d: g}) => ({lender: g.lender || l.bank || '', date: g.disbDate || '', amountLakh: g.amountLakh || null}))}));
+  return {calls, leads};
+}
+const phCache = {};
+function phoneHistory(d) {
+  const hit = phCache[d];
+  if (hit && Date.now() - hit.t < 120000) return hit;
+  phCache[d] = {t: Date.now(), status: 'loading'};
+  (async () => {
+    try {
+      let data;
+      if (state.mode === 'live' && OTP_API && FB?.auth?.currentUser) {
+        const tok = await FB.auth.currentUser.getIdToken();
+        const r = await fetch(`${OTP_API}/phoneHistory`, {method: 'POST', headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + tok}, body: JSON.stringify({phone: d})});
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.message || 'Could not load the history');
+        data = j;
+      } else data = phoneHistoryLocal(d);
+      phCache[d] = {t: Date.now(), status: 'ok', data};
+    } catch (e) { phCache[d] = {t: Date.now(), status: 'err', msg: e.message, data: phoneHistoryLocal(d)}; }
+    if (digits10(state.calls?.phone) === d) render();
+  })();
+  return phCache[d];
+}
+const fmtDT = iso => { if (!iso) return '—'; const x = new Date(iso); return isNaN(x) ? String(iso) : `${fmtDate(localDay(x))} ${x.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'})}`; };
 function callLookup(phone) {
   const d = digits10(phone); if (d.length !== 10) return '';
-  const lead = S.all('leads').find(l => digits10(l.phone) === d);
-  const prev = S.all('calls').filter(c => digits10(c.phone) === d && callDone(c)).sort((a,b) => String(b.calledAt).localeCompare(String(a.calledAt)))[0];
-  const bits = [];
-  if (lead) bits.push(`Already a lead: <b>${esc(lead.name)}</b> ${stageBadge(lead.stage)} with ${esc(lead.assignedName || '')}`);
-  if (prev) bits.push(`Called ${esc(ago(prev.calledAt))} by ${esc(prev.createdByName || '')}: <span class="badge ${outcomeById(prev.outcome)?.cls || ''}">${esc(outcomeById(prev.outcome)?.label || prev.outcome)}</span>${prev.notes ? ` · ${esc(prev.notes)}` : ''}`);
-  return bits.length ? `<div class="notice info" style="margin:0">${ic('alert')}<div>${bits.join('<br>')}</div></div>` : '';
+  const h = phoneHistory(d);
+  if (h.status === 'loading') return '<div class="small muted">Checking this number with the team…</div>';
+  const {calls = [], leads = []} = h.data || {}, alerts = [];
+  const sw = calls.filter(c => c.outcome === 'switched_off'), wr = calls.filter(c => c.outcome === 'wrong');
+  if (sw.length) alerts.push(`<b>Switched off customer</b>Switched off ${sw.length} time${sw.length > 1 ? 's' : ''} · last ${esc(fmtDT(sw[0].at))} by ${esc(sw[0].by)}${sw[0].notes ? ` · “${esc(sw[0].notes)}”` : ''}`);
+  if (wr.length) alerts.push(`<b>Wrong number</b>Marked wrong number by ${esc(wr[0].by)} on ${esc(fmtDT(wr[0].at))}${wr[0].notes ? ` · “${esc(wr[0].notes)}”` : ''}`);
+  const cut = addDays(todayStr(), -90);
+  leads.forEach(l => {
+    const recent = (l.disbursed || []).filter(g => g.date ? g.date >= cut : (l.stage === 'Disbursed' && String(l.updatedAt).slice(0, 10) >= cut));
+    if (recent.length) alerts.push(`<b>Disbursed in the last 90 days</b>${esc(l.name)}: ${recent.map(g => `${esc(g.lender || 'loan')}${g.amountLakh ? ' ₹' + esc(g.amountLakh) + ' L' : ''}${g.date ? ' on ' + esc(fmtDate(g.date)) + ` (${daysSince(g.date)} days ago)` : ''}`).join(', ')} · handled by ${esc(l.assignedName || '—')}`);
+  });
+  const leadLine = leads.length ? `<div class="small" style="margin-bottom:6px">Lead: ${leads.map(l => `<b>${esc(l.name)}</b> ${stageBadge(l.stage)} · ${esc(l.assignedName || '')}`).join(' · ')}</div>` : '';
+  const table = calls.length ? `<div class="tw ph-hist" style="max-height:220px;overflow:auto"><table><thead><tr><th>Team member</th><th>Date &amp; time</th><th>Result</th><th>Remarks</th></tr></thead><tbody>${calls.slice(0, 25).map(c => { const o = outcomeById(c.outcome);
+    return `<tr><td>${esc(c.by || '—')}</td><td class="nowrap small">${esc(fmtDT(c.at))}</td><td><span class="badge ${o?.cls || ''}">${esc(o?.label || c.outcome)}</span></td><td class="small">${esc(c.notes || '—')}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="small muted">No earlier calls to this number by the team.</div>';
+  return `${alerts.map(a => `<div class="alert-red" role="alert">${ic('alert')}<div>${a}</div></div>`).join('')}
+    <div class="card" style="box-shadow:none;background:var(--surface-2);padding:10px 12px"><div class="small strong" style="margin-bottom:6px">Earlier on this number (${calls.length} call${calls.length === 1 ? '' : 's'})${h.status === 'err' ? ' <span class="badge b-warn">showing only what you can see</span>' : ''}</div>${leadLine}${table}</div>`;
+}
+// ---- Hover card: one person's calls (done) or plan (recalls + follow-ups) for a date
+function hovRows(who, date, kind) {
+  const ppl = byId('staff', who);
+  if (kind === 'plan') {
+    const rc = S.all('calls').filter(c => callDone(c) && c.createdBy === who && c.recallDate === date && !c.recallDone && !c.leadId);
+    const fu = S.all('followups').filter(f => !f.done && f.assignedTo === who && f.date === date);
+    return `<b>${esc(ppl?.name || '')} · ${esc(fmtDate(date))}</b><div class="small muted" style="margin-bottom:6px">${rc.length} recall(s) · ${fu.length} follow-up(s)</div>
+      ${rc.length || fu.length ? `<table><thead><tr><th>Customer</th><th>Type</th><th>Remarks</th></tr></thead><tbody>${rc.map(c => { const o = outcomeById(c.outcome); return `<tr><td>${esc(c.name || 'Unknown')}<div class="muted">${esc(showPhone(c.phone))}</div></td><td><span class="badge ${o?.cls || ''}">Recall · ${esc(o?.label || c.outcome)}</span></td><td>${esc(c.notes || '—')}</td></tr>`; }).join('')}${fu.map(f => `<tr><td>${esc(f.leadName)}<div class="muted">${esc(f.time || '')}</div></td><td><span class="badge b-info">Follow-up</span></td><td>${esc(f.remarks || '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Nothing planned.</div>'}`;
+  }
+  const cs = S.all('calls').filter(c => callDone(c) && c.createdBy === who && dayOf(c.calledAt) === date).sort((a,b) => String(a.calledAt).localeCompare(String(b.calledAt)));
+  return `<b>${esc(ppl?.name || '')} · ${esc(fmtDate(date))}</b><div class="small muted" style="margin-bottom:6px">${cs.length} call(s) · ${cs.filter(c => c.outcome === 'interested').length} interested</div>
+    ${cs.length ? `<table><thead><tr><th>Time</th><th>Customer</th><th>Result</th><th>Remarks</th></tr></thead><tbody>${cs.map(c => { const o = outcomeById(c.outcome); return `<tr><td class="nowrap">${esc(new Date(c.calledAt).toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'}))}</td><td>${esc(c.name || 'Unknown')}<div class="muted">${esc(showPhone(c.phone))}</div></td><td><span class="badge ${o?.cls || ''}">${esc(o?.label || c.outcome)}</span></td><td>${esc(c.notes || '—')}</td></tr>`; }).join('')}</tbody></table>` : '<div class="muted">No calls logged.</div>'}`;
+}
+function showHov(el) {
+  let card = document.getElementById('hov-card');
+  if (!card) { card = document.createElement('div'); card.id = 'hov-card'; document.body.append(card); }
+  card.innerHTML = hovRows(el.dataset.who, el.dataset.date, el.dataset.kind); card.hidden = false;
+  const r = el.getBoundingClientRect(), cw = Math.min(440, innerWidth - 32), ch = card.offsetHeight;
+  let left = r.right + 10; if (left + cw > innerWidth - 16) left = Math.max(16, r.left - cw - 10);
+  if (left < 16 || r.left - cw - 10 < 16 && r.right + 10 + cw > innerWidth - 16) left = 16;
+  card.style.left = left + 'px'; card.style.top = Math.max(16, Math.min(r.top, innerHeight - ch - 16)) + 'px';
+}
+function hideHov() { const c = document.getElementById('hov-card'); if (c) c.hidden = true; }
+document.addEventListener('mouseover', e => { const el = e.target.closest?.('[data-hov]'); if (el) showHov(el); });
+document.addEventListener('mouseout', e => { const el = e.target.closest?.('[data-hov]'); if (el && !el.contains(e.relatedTarget)) hideHov(); });
+document.addEventListener('focusin', e => { const el = e.target.closest?.('[data-hov]'); if (el) showHov(el); else hideHov(); });
+// ---- Calendar for Admin / Branch Manager: past days = calls done, future days = recalls + follow-ups planned
+function callsCalendar(all, ppl) {
+  const t = todayStr(), F = state.f.callsCal, month = F.month || t.slice(0, 7), sel = F.date || t;
+  const [y, m] = month.split('-').map(Number), first = new Date(y, m - 1, 1), startPad = (first.getDay() + 6) % 7, dim = new Date(y, m, 0).getDate();
+  const done = {}, plan = {};
+  all.forEach(c => { if (callDone(c)) { const d = dayOf(c.calledAt); if (d) done[d] = (done[d] || 0) + 1; if (c.recallDate && !c.recallDone && !c.leadId) plan[c.recallDate] = (plan[c.recallDate] || 0) + 1; } });
+  S.all('followups').forEach(f => { if (!f.done && f.date) plan[f.date] = (plan[f.date] || 0) + 1; });
+  const cells = [];
+  for (let i = 0; i < startPad; i++) cells.push('<span></span>');
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${month}-${String(d).padStart(2, '0')}`, fut = ds > t, n = fut ? plan[ds] : done[ds];
+    cells.push(`<button type="button" class="${fut ? 'future' : ''} ${ds === t ? 'today' : ''} ${ds === sel ? 'sel' : ''}" data-action="cal-pick" data-v="${ds}" aria-label="${esc(fmtDate(ds))}"><span>${d}</span>${n ? `<span class="n">${n}</span>` : ''}</button>`);
+  }
+  const fut = sel > t, kind = fut ? 'plan' : 'done';
+  let cols, rowsHtml;
+  if (!fut) {
+    const day = all.filter(c => callDone(c) && dayOf(c.calledAt) === sel);
+    cols = CALL_OUTCOMES.filter(o => day.some(c => c.outcome === o.id));
+    rowsHtml = ppl.map(x => { const cs = day.filter(c => c.createdBy === x.id); if (!cs.length) return '';
+      return `<tr><td><span data-hov tabindex="0" data-who="${esc(x.id)}" data-date="${sel}" data-kind="done"><b>${esc(x.name)}</b></span></td><td><b>${cs.length}</b></td>${cols.map(o => { const n = cs.filter(c => c.outcome === o.id).length; return `<td>${n ? `<span class="badge ${o.cls}">${n}</span>` : '·'}</td>`; }).join('')}</tr>`; }).join('');
+  } else {
+    const rc = all.filter(c => callDone(c) && c.recallDate === sel && !c.recallDone && !c.leadId), fu = S.all('followups').filter(f => !f.done && f.date === sel);
+    cols = CALL_OUTCOMES.filter(o => rc.some(c => c.outcome === o.id));
+    rowsHtml = ppl.map(x => { const cs = rc.filter(c => c.createdBy === x.id), fs = fu.filter(f => f.assignedTo === x.id); if (!cs.length && !fs.length) return '';
+      return `<tr><td><span data-hov tabindex="0" data-who="${esc(x.id)}" data-date="${sel}" data-kind="plan"><b>${esc(x.name)}</b></span></td><td><b>${cs.length + fs.length}</b></td>${cols.map(o => { const n = cs.filter(c => c.outcome === o.id).length; return `<td>${n ? `<span class="badge ${o.cls}">${n}</span>` : '·'}</td>`; }).join('')}<td>${fs.length ? `<span class="badge b-info">${fs.length}</span>` : '·'}</td></tr>`; }).join('');
+  }
+  const mName = first.toLocaleDateString('en-IN', {month: 'long', year: 'numeric'});
+  return `<div class="card" style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">Team calendar</h3>
+      <button class="btn sm" data-action="cal-month" data-v="-1" aria-label="Previous month">‹</button><b>${esc(mName)}</b><button class="btn sm" data-action="cal-month" data-v="1" aria-label="Next month">›</button>
+      <button class="btn sm" data-action="cal-pick" data-v="${t}">Today</button><button class="btn sm" data-action="cal-pick" data-v="${addDays(t, 1)}">Tomorrow</button></div>
+    <div class="grid g2" style="align-items:start"><div><div class="cal">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<span class="dh">${d}</span>`).join('')}${cells.join('')}</div>
+      <p class="small muted" style="margin:8px 0 0">Blue = calls done that day · amber = recalls and follow-ups planned. Click a date.</p></div>
+    <div><h3 style="font-size:14px;margin:0 0 8px">${esc(fmtDate(sel))} · ${fut ? 'planned (recalls by last result, follow-ups)' : sel === t ? 'calls today by result' : 'calls by result'}</h3>
+      ${rowsHtml ? `<div class="tw"><table><thead><tr><th>Team member</th><th>Total</th>${cols.map(o => `<th>${esc(o.label)}</th>`).join('')}${fut ? '<th>Follow-ups</th>' : ''}</tr></thead><tbody>${rowsHtml}</tbody></table></div><p class="small muted" style="margin:6px 0 0">Point at a name to see each customer.</p>` : `<div class="empty small">${fut ? 'Nothing planned for this date.' : 'No calls logged on this date.'}</div>`}</div></div></div>`;
 }
 function vCalls() {
   const u = state.user, C = state.calls, st = settings(), target = num(st.callTarget) || 50, t = todayStr();
@@ -1363,7 +1483,7 @@ function vCalls() {
       <a class="btn sm" href="${esc(telLink(c.phone))}" title="Call">${ic('phone')}</a><button class="btn sm wa" data-action="call-wa" data-id="${esc(c.id)}" title="Send WhatsApp follow-up">${ic('msg')}</button><button class="btn sm" data-action="call-pick" data-id="${esc(c.id)}" data-recall="1">Log result</button></div>`; }).join('')}</div>` : '<div class="empty small">No recalls due. 🎉</div>'}</div>`;
   const teamCard = isLead ? (() => { const ppl = S.all('staff').filter(x => x.status === 'Approved' && x.role && x.role !== 'Accounts');
     return `<div class="card"><h3>Team today</h3><div class="tw"><table><thead><tr><th>Person</th><th>Calls</th><th>Interested</th><th>Target</th></tr></thead><tbody>${ppl.map(x => { const cs = all.filter(c => callDone(c) && c.createdBy === x.id && dayOf(c.calledAt) === t), n = cs.length, ok = cs.filter(c => c.outcome === 'interested').length;
-      return `<tr><td><b>${esc(x.name)}</b><div class="small muted">${esc(x.role)}</div></td><td>${n}</td><td>${ok ? `<span class="badge b-ok">${ok}</span>` : 0}</td><td style="min-width:120px"><div class="bar" style="grid-template-columns:1fr 38px"><span class="t"><i style="width:${Math.min(100, n / target * 100)}%;background:${n >= target ? 'var(--ok-strong)' : 'var(--brand)'}"></i></span><b>${Math.round(n / target * 100)}%</b></div></td></tr>`; }).join('')}</tbody></table></div></div>`; })() : '';
+      return `<tr><td><span data-hov tabindex="0" data-who="${esc(x.id)}" data-date="${t}" data-kind="done"><b>${esc(x.name)}</b></span><div class="small muted">${esc(x.role)}</div></td><td>${n}</td><td>${ok ? `<span class="badge b-ok">${ok}</span>` : 0}</td><td style="min-width:120px"><div class="bar" style="grid-template-columns:1fr 38px"><span class="t"><i style="width:${Math.min(100, n / target * 100)}%;background:${n >= target ? 'var(--ok-strong)' : 'var(--brand)'}"></i></span><b>${Math.round(n / target * 100)}%</b></div></td></tr>`; }).join('')}</tbody></table></div></div>`; })() : '';
   return header('Daily Calls', `Target ${target} calls a day · every number is saved with its result`, isLead ? `<div class="chips">${[['me','My calls'],['team','Whole team']].map(([v,l]) => `<button class="btn sm ${state.f.callsView.who === v ? 'primary' : ''}" data-action="calls-who" data-v="${v}">${l}</button>`).join('')}</div>` : '') +
   `<div class="kpis">
     <div class="card kpi"><div class="l">My calls today</div><div class="v">${mineToday.length} <span class="small muted">/ ${target}</span></div><div class="t" style="height:8px;background:var(--track);border-radius:99px;overflow:hidden;margin-top:6px"><i style="display:block;height:100%;width:${pct}%;background:${pct >= 100 ? 'var(--ok-strong)' : 'var(--brand)'}"></i></div></div>
@@ -1375,7 +1495,7 @@ function vCalls() {
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h3>${team ? 'Team' : 'My'} calls today <span class="badge">${today.length}</span></h3>${today.length ? `<div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Time</th><th>Customer</th><th>Result</th><th>Recall</th>${team ? '<th>By</th>' : ''}</tr></thead><tbody>${today.slice(0, 150).map(c => { const o = outcomeById(c.outcome); return `<tr><td class="small nowrap">${new Date(c.calledAt).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</td><td><b>${esc(c.name || '—')}</b><div class="small muted">${esc(showPhone(c.phone))}</div></td><td><span class="badge ${o?.cls || ''}">${esc(o?.label || c.outcome)}</span>${c.leadId ? ' <span class="badge b-ok">Lead</span>' : ''}</td><td class="small nowrap">${c.recallDate ? esc(fmtDate(c.recallDate)) : '—'}</td>${team ? `<td class="small">${esc(c.createdByName || '')}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>` : '<div class="empty small">No calls logged yet today.</div>'}</div>
     <div class="grid">${teamCard}<div class="card"><h3>Today's results</h3>${byOutcome.length ? `<div class="bars">${byOutcome.map(([o, n]) => `<div class="bar" style="grid-template-columns:170px 1fr 34px"><span>${esc(o.label)}</span><span class="t"><i style="width:${n / maxO * 100}%;background:${o.cls === 'b-ok' ? 'var(--ok-strong)' : o.cls === 'b-bad' ? 'var(--bad-strong)' : o.cls === 'b-warn' ? 'var(--warn-strong)' : 'var(--brand)'}"></i></span><b>${n}</b></div>`).join('')}</div>` : '<div class="empty small">Nothing yet.</div>'}</div></div>
-  </div>`;
+  </div>${isLead ? callsCalendar(all, S.all('staff').filter(x => x.status === 'Approved' && x.role)) : ''}`;
 }
 
 // ---- Customer care: EMI reminders, top-up offers, rejected-file re-try
@@ -2245,6 +2365,9 @@ const actions = {
   'tpl-edit': el => openModal(tplForm(tplById(el.dataset.id))),
   'tpl-del': el => guard(async () => { if (!confirm('Delete this template?')) return; await saveSettings({templates: templates().filter(t => t.id !== el.dataset.id)}); closeModal(); toast('Template deleted'); }),
   'tpl-reset': () => guard(async () => { if (confirm('Go back to the default templates? Your edits will be lost.')) { await saveSettings({templates: null}); toast('Default templates restored'); } }),
+  'cal-pick': el => { const v = el.dataset.v; state.f.callsCal.date = v; state.f.callsCal.month = v.slice(0, 7); hideHov(); render(); },
+  'cal-month': el => { const F = state.f.callsCal, cur = F.month || todayStr().slice(0, 7), [y, m] = cur.split('-').map(Number), d = new Date(y, m - 1 + Number(el.dataset.v), 1);
+    F.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; hideHov(); render(); },
   'calls-who': el => { state.f.callsView.who = el.dataset.v; render(); },
   'call-outcome': el => { const o = outcomeById(el.dataset.v), C = state.calls; C.outcome = o.id; C.recall = o.days ? addDays(todayStr(), o.days) : ''; render(); },
   'call-clear': () => { state.calls = {...state.calls, phone:'', name:'', city:'', outcome:'', recall:'', notes:'', editId:'', fromId:''}; render(); },
@@ -2258,6 +2381,7 @@ const actions = {
     if (id && byId('calls', id)) await S.update('calls', id, data);
     else { const doc = await S.add('calls', {...data, createdAt: nowISO(), createdBy: u.phone, createdByName: u.name, branch: u.branch, assignedTo: u.phone, recallDone: false, leadId: ''}); id = doc.id; }
     if (C.fromId && byId('calls', C.fromId)) await S.update('calls', C.fromId, {recallDone: true});
+    delete phCache[d];
     const keep = C.product; state.calls = {phone:'', name:'', product: keep, city:'', outcome:'', recall:'', notes:'', paste: C.paste, editId:'', fromId:''};
     toast(o.id === 'interested' ? 'Saved. Now fill the lead details.' : `Call saved${data.recallDate ? ` · recall on ${fmtDate(data.recallDate)}` : ''}`, 'ok');
     if (o.id === 'interested') {
