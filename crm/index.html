@@ -2104,9 +2104,38 @@ function policyForm(p = {}) {
     <div class="full"><label>Notes (documents, exclusions, special schemes)</label><textarea name="notes" rows="3" maxlength="1500">${esc(p.notes || '')}</textarea></div></form>`,
     `<button class="btn" data-action="modal-close">Cancel</button><button class="btn primary" type="submit" form="pol-form">Save${p.id ? ` as v${(p.version || 1) + 1}` : ''}</button>`);
 }
+// Banker intimation: a ready WhatsApp message introducing the customer's case to the lender's banker.
+// Built from the eligibility check on screen (and the linked lead); shares the profile, never the customer's phone.
+function bankerDraft(bank, generic = false) {
+  const st = settings(), u = state.user || {}, R = state.elig?.results, co = st.company || 'our DSA office';
+  const L = (s, v) => v != null && v !== '' && v !== false && !(typeof v === 'number' && !v) ? `• ${s}: ${v}` : '';
+  const sign = `Regards,\n${u.name || ''}${u.phone ? ' · ' + showPhone(u.phone) : ''}\n${co}`;
+  if (!generic && R && R.items?.some(i => i.p.bank === bank)) {
+    const I = R.input, it = R.items.find(i => i.p.bank === bank), l = byId('leads', I.leadId), P = l?.profile || {};
+    const biz = [l?.bizName, P.sector, P.bizType, num(I.vintage) ? `${I.vintage} yrs vintage` : ''].filter(Boolean).join(' · ');
+    const emiN = (l?.loans || []).length;
+    return [`Hi {banker},`, `Greetings from ${co}. Sharing a new ${I.product} case for ${bank}. Please check and confirm.`, '',
+      L('Customer', [I.name, I.city].filter(Boolean).join(', ')), L('Business', biz),
+      L('Loan required', num(I.loanLakh) ? `₹${fmtNumL(I.loanLakh)} L${num(I.tenure) ? ` for ${I.tenure} months` : ''}` : ''),
+      L('CIBIL', num(I.cibil) || ''), L('Turnover', num(I.turnover) ? `₹${fmtNumL(I.turnover)} L per year` : (num(P.turnover6m) ? `₹${fmtNumL(P.turnover6m)} L in last 6 months` : '')),
+      L('ABB', num(I.abb) ? fmtINR(I.abb) : ''), L('Monthly income considered', num(I.monthlyIncome) ? fmtINR(I.monthlyIncome) : ''),
+      L('Existing EMIs', num(I.existingEmi) ? `${fmtINR(I.existingEmi)} / month${emiN ? ` (${emiN} loan${emiN > 1 ? 's' : ''})` : ''}` : 'Nil'),
+      L('Bounces (6 m / 3 m)', P.bounces6m != null || P.bounces3m != null ? `${P.bounces6m ?? 0} / ${P.bounces3m ?? 0}` : ''),
+      `• ITR: ${I.itr ? 'Yes' : 'No'} · GST: ${I.gst ? 'Yes' : 'No'}`,
+      it && num(it.offerLakh) ? `• Our estimate as per your policy: up to ₹${fmtNumL(it.offerLakh)} L, EMI ≈ ${fmtINR(it.emi)}` : '', '',
+      `Please confirm eligibility, ROI and the documents needed for login.`, '', sign].filter((x, i, a) => x !== '' || (a[i - 1] !== '' && i > 0)).join('\n');
+  }
+  return [`Hi {banker},`, `Greetings from ${co}. We are a DSA in ${u.branch || 'your area'} and source ${bank} cases regularly.`, '',
+    `Please share your latest policy: product-wise minimum CIBIL, ROI, vintage, turnover/ABB norms, loan range and serviceable locations.`,
+    `We have customers ready for login this week.`, '', sign].join('\n');
+}
 function bankersModal(bank) {
   const list = S.all('bankers').filter(b => b.bank === bank && !b.dnc).sort((a,b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
-  return modal(`${bank} · bankers`, list.length ? `<div class="list">${list.map(b => `<div class="li"><span class="avatar" style="background:var(--avatar-bg);color:var(--avatar-fg)">${esc(initials(b.name || bank))}</span><div class="grow"><b>${esc(b.name || 'Unnamed')}</b> ${b.verified ? '<span class="badge b-ok">Verified</span>' : ''}<div class="small muted">${esc([b.designation, b.product, b.city].filter(Boolean).join(' · ') || '—')}</div><div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>${locChips(b.locations, 8)}</div><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')}</a><a class="btn sm wa" href="${esc(waLink(b.phone))}" target="_blank" rel="noopener">${ic('msg')}</a></div>`).join('')}</div>` : '<div class="empty">No contacts for this lender yet.</div>');
+  const draft = bankerDraft(bank), forCase = !!(state.elig?.results?.items?.some(i => i.p.bank === bank));
+  const box = list.length ? `<div class="card" style="box-shadow:none;background:var(--surface-2);margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><b style="flex:1">${forCase ? 'Case intimation draft' : 'Policy request draft'}</b><span class="small muted">{banker} becomes each banker's name</span></div>
+    <textarea id="bk_draft" rows="${forCase ? 14 : 7}" maxlength="2000">${esc(draft)}</textarea>
+    <p class="small muted" style="margin:6px 0 0">Edit if needed, then press the green WhatsApp button next to a banker. The customer's mobile number is never included.</p></div>` : '';
+  return modal(`${bank} · bankers`, list.length ? box + `<div class="list">${list.map(b => `<div class="li"><span class="avatar" style="background:var(--avatar-bg);color:var(--avatar-fg)">${esc(initials(b.name || bank))}</span><div class="grow"><b>${esc(b.name || 'Unnamed')}</b> ${b.verified ? '<span class="badge b-ok">Verified</span>' : ''}<div class="small muted">${esc([b.designation, b.product, b.city].filter(Boolean).join(' · ') || '—')}</div><div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>${locChips(b.locations, 8)}</div><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')}</a><button class="btn sm wa" data-action="bk-wa" data-id="${esc(b.id)}" title="Send the draft on WhatsApp">${ic('msg')} Send draft</button></div>`).join('')}</div>` : '<div class="empty">No contacts for this lender yet.</div>');
 }
 
 // ---- Bankers
@@ -2118,7 +2147,7 @@ function bkCard(b) {
     <div class="row">${b.verified ? '<span class="badge b-ok">Verified</span>' : '<span class="badge">Unverified</span>'}${b.dnc ? '<span class="badge b-bad">Do not contact</span>' : ''}${b.sourceGroup ? `<span class="badge b-info">${esc(b.sourceGroup)}</span>` : ''}</div>
     ${b.locations?.length || b.geo ? `<div><div class="small muted" style="margin-bottom:4px">Operates in${b.geo ? ` · ${esc(b.geo)}` : ''}</div>${locChips(b.locations)}</div>` : ''}
     <div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>
-    ${b.dnc ? '' : `<div class="row"><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')} Call</a><a class="btn sm wa" href="${esc(waLink(b.phone))}" target="_blank" rel="noopener">${ic('msg')} WhatsApp</a></div>`}</div>`;
+    ${b.dnc ? '' : `<div class="row"><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')} Call</a><button class="btn sm wa" data-action="bk-wa" data-id="${esc(b.id)}" data-generic="1">${ic('msg')} WhatsApp</button></div>`}</div>`;
 }
 function vBankers() {
   const f = state.f.bk, q = f.q.toLowerCase(), can = CAN.editBankers(state.user.role);
@@ -2134,7 +2163,7 @@ function vBankers() {
     const map = new Map();
     for (const b of rows) { const l = uniq([...(b.locations || []), b.city]); (l.length ? l : ['Location not known']).forEach(x => { if (f.loc && x !== f.loc) return; if (!map.has(x)) map.set(x, []); map.get(x).push(b); }); }
     const groups = [...map.entries()].sort((a,b) => (a[0] === 'Location not known') - (b[0] === 'Location not known') || b[1].length - a[1].length || a[0].localeCompare(b[0]));
-    body = `<div class="cards">${groups.map(([loc, list]) => `<div class="card"><h3>${esc(loc)} <span class="badge b-info">${list.length}</span><span class="small muted" style="margin-left:auto;font-weight:500">${uniq(list.map(b => b.bank)).length} lenders</span></h3><div class="list">${list.map(b => `<div class="li"><div class="grow"><b>${esc(b.bank || 'Unknown lender')}</b><div class="small muted">${esc([b.name, b.designation, b.product].filter(Boolean).join(' · ') || '—')}${b.geo ? ` · ${esc(b.geo)}` : ''}</div></div>${b.dnc ? '<span class="badge b-bad">DNC</span>' : `<a class="btn sm" href="${esc(telLink(b.phone))}" title="Call ${esc(showPhone(b.phone))}">${ic('phone')}</a><a class="btn sm wa" href="${esc(waLink(b.phone))}" target="_blank" rel="noopener" title="WhatsApp">${ic('msg')}</a>`}</div>`).join('')}</div></div>`).join('')}</div>`;
+    body = `<div class="cards">${groups.map(([loc, list]) => `<div class="card"><h3>${esc(loc)} <span class="badge b-info">${list.length}</span><span class="small muted" style="margin-left:auto;font-weight:500">${uniq(list.map(b => b.bank)).length} lenders</span></h3><div class="list">${list.map(b => `<div class="li"><div class="grow"><b>${esc(b.bank || 'Unknown lender')}</b><div class="small muted">${esc([b.name, b.designation, b.product].filter(Boolean).join(' · ') || '—')}${b.geo ? ` · ${esc(b.geo)}` : ''}</div></div>${b.dnc ? '<span class="badge b-bad">DNC</span>' : `<a class="btn sm" href="${esc(telLink(b.phone))}" title="Call ${esc(showPhone(b.phone))}">${ic('phone')}</a><button class="btn sm wa" data-action="bk-wa" data-id="${esc(b.id)}" data-generic="1" title="WhatsApp with a policy-request draft">${ic('msg')}</button>`}</div>`).join('')}</div></div>`).join('')}</div>`;
   } else body = `<div class="cards">${rows.map(bkCard).join('')}</div>`;
   return header('Banker Directory', `${rows.length} contacts · ${banks.length} lenders · ${locs.length} locations`, can ? `<a class="btn" href="#/import">${ic('upload')} Import chat</a><button class="btn primary" data-action="bk-new">${ic('plus')} Add contact</button>${state.user.role === 'Admin' ? `<button class="btn" data-action="bk-dedupe">Remove duplicates</button>` : ''}` : '') +
   `<div class="notice info">${ic('shield')}<div>Business contacts shared in professional DSA groups. Use them only for loan work, and mark <b>Do not contact</b> if someone asks to be removed.</div></div>
@@ -2333,6 +2362,12 @@ const actions = {
     toast('Eligibility check saved', 'ok');
   }),
   'show-bankers': el => openModal(bankersModal(el.dataset.bank)),
+  'bk-wa': el => { const b = byId('bankers', el.dataset.id); if (!b) return;
+    const first = String(b.name || '').trim().split(/\s+/)[0], greet = b.name && !/^unnamed$/i.test(b.name) ? `${first} ji` : 'Sir/Madam';
+    const text = ((!el.dataset.generic && $('#bk_draft')?.value) || bankerDraft(b.bank, !!el.dataset.generic)).replace(/\{banker\}/g, greet);
+    window.open(waLink(b.phone, text), '_blank', 'noopener');
+    if (['Admin','Operations'].includes(state.user?.role)) guard(() => S.update('bankers', b.id, {lastMsgAt: nowISO(), lastMsgBy: state.user?.name || ''}));
+    toast(`Opened WhatsApp for ${b.name || b.bank}. Press send there.`, 'ok'); },
 
   'policy-view': el => openModal(policyView(byId('policies', el.dataset.id))),
   'policy-new': () => openModal(policyForm()),
