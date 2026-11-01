@@ -381,16 +381,21 @@ const FIELD_LABEL = Object.fromEntries([...POLICY_FIELDS.map(([k,l])=>[k,l]), ['
 
 const BANKS = [
   ['HDFC Bank',/\bhdfc\b/],['ICICI Bank',/\bicici\b/],['Axis Bank',/\baxis\b/],['Kotak Mahindra Bank',/\bkotak\b/],
-  ['State Bank of India',/\bsbi\b|state\s*bank/],['Bajaj Finserv',/\bbajaj\b/],['Tata Capital',/\btata\s*(?:capital|cap)\b/],
-  ['IDFC First Bank',/\bidfc\b/],['Yes Bank',/\byes\s*bank\b/],['IndusInd Bank',/\bindusind\b/],
+  ['State Bank of India',/\bsbi\b|state\s*bank/],['Bajaj Housing Finance',/\bbajaj\s*housing\b|bajajhousing/],['Bajaj Finserv',/\bbajaj\b(?!\s*housing)/],['Tata Capital',/\btata\s*(?:capital|cap)\b/],
+  ['IDFC First Bank',/\bidfc\b/],['Yes Bank',/\byes\s*bank\b/],['IndusInd Bank',/\bindus[il]nd\b/],
   ['Aditya Birla Capital',/\baditya\s*birla\b|\babfl\b/],['Lendingkart',/\blending\s*kart\b/],['NeoGrowth',/\bneo\s*growth\b/],
   ['FlexiLoans',/\bflexi\s*loans?\b/],['UGRO Capital',/\bu\s*gro\b/],['Hero FinCorp',/\bhero\s*fin\s*corp\b/],
   ['Poonawalla Fincorp',/\bpoonawalla\b/],['L&T Finance',/\bl\s*&\s*t\s*fin|\bltfs\b/],['Piramal Finance',/\bpiramal\b/],
   ['Chola',/\bchola(?:mandalam)?\b/],['Shriram Finance',/\bshriram\b/],['AU Small Finance Bank',/\bau\s*(?:small\s*finance|sfb|bank)\b/],
   ['Federal Bank',/\bfederal\s*bank\b/],['Bandhan Bank',/\bbandhan\b/],['Equitas SFB',/\bequitas\b/],['Ujjivan SFB',/\bujjivan\b/],
   ['Canara Bank',/\bcanara\b/],['Union Bank of India',/\bunion\s*bank\b/],['Bank of Baroda',/\bbank\s*of\s*baroda\b/],
-  ['Punjab National Bank',/\bpnb\b|punjab\s*national/],['Indian Bank',/\bindian\s*bank\b/],['Godrej Capital',/\bgodrej\s*cap/],
-  ['Protium',/\bprotium\b/],['Muthoot Finance',/\bmuthoot\b/],['Mahindra Finance',/\bmahindra\s*finance\b/],
+  ['Punjab National Bank',/\bpnb\b(?!\s*housing)|punjab\s*national/],['Indian Bank',/\bindian\s*bank\b/],['Godrej Capital',/\bgodrej\s*cap/],
+  ['Protium',/\bprotium\b/],['Muthoot Fincorp',/\bmuthoot\s*fin\s*corp\b/],['Muthoot Finance',/\bmuthoot\b(?!\s*fin\s*corp)/],['Mahindra Finance',/\bmahindra\s*(?:&\s*mahindra\s*)?(?:finance|financial)\b/],
+  ['Can Fin Homes',/\bcan\s*fin\b|canfinhomes/],['Aadhar Housing Finance',/\baadh?aa?r\s*housing\b|aadharhousing/],['PNB Housing Finance',/\bpnb\s*housing\b|pnbhousing/],
+  ['LIC Housing Finance',/\blic\s*(?:housing|hfl)\b/],['Truhome Finance',/\btru\s*home\b/],['Aavas Financiers',/\baavas\b/],['Home First Finance',/\bhome\s*first\b/],
+  ['IIFL Finance',/\biifl\b/],['Sundaram Finance',/\bsundaram\b/],['Godrej Housing Finance',/\bgodrej\s*housing\b/],['Shubham Housing',/\bshubham\b/],
+  ['Vastu Housing',/\bvastu\b/],['Sammaan Capital',/\bsammaan\b|\bindiabulls\b/],['SMFG India Credit',/\bsmfg\b|\bfullerton\b/],['Hinduja Housing',/\bhinduja\b/],
+  ['Capri Global',/\bcapri\b/],['HDB Financial Services',/\bhdb\b/],['DCB Bank',/\bdcb\b/],['ESAF SFB',/\besaf\b/],['InCred Finance',/\bincred\b/],['Veritas Finance',/\bveritas\b/],['India Shelter',/\bindia\s*shelter\b/],['Five Star',/\bfive\s*star\b/],['Jana SFB',/\bjana\s*(?:small|sfb|bank)\b/],['Utkarsh SFB',/\butkarsh\b/],['ICICI Home Finance',/\bicici\s*(?:home|hfc)\b/],
 ];
 const PRODUCT_RX = [
   ['STBL',/\bstbl\b|short[\s-]*term\s*(?:business\s*)?loan/],
@@ -409,7 +414,7 @@ const DESIG = [
   ['Team Leader',/\btl\b|team\s*lead(?:er)?/],
 ];
 const CITIES = [
-  ['Visakhapatnam',/\b(?:vizag|visakhapatnam|vsp)\b/],['Gajuwaka',/\bgajuwaka\b/],['Anakapalle',/\banakapall[ie]\b/],['Narsipatnam',/\bnarsipatnam\b/],
+  ['Visakhapatnam',/\b(?:vizag|visakhapatnam|vsp|dwaraka\s*nagar|mvp\s*colony|madhurawada|pendurthi|seethammadhara|asilmetta|siripuram|maddilapalem|kancharapalem|nad\s*junction)\b/],['Gajuwaka',/\bgajuwaka\b/],['Anakapalle',/\banakapall[ie]\b/],['Narsipatnam',/\bnarsipatnam\b/],
   ['Vizianagaram',/\b(?:vizianagaram|vijayanagaram|vijayanagram)\b/],['Srikakulam',/\bsrikakulam\b/],['Palasa',/\bpalasa\b/],['Rajam',/\brajam\b/],
   ['Bobbili',/\bbobbili\b/],['Parvathipuram',/\bparvathipuram\b/],['Salur',/\bsalur\b/],['Tekkali',/\btekkali\b/],['Tuni',/\btuni\b/],
   ['Kakinada',/\bkakinada\b/],['Rajahmundry',/\b(?:rajahmundry|rajamundry|rajamahendravaram)\b/],['Amalapuram',/\bamalapuram\b/],
@@ -419,12 +424,23 @@ const CITIES = [
   ['Chirala',/\bchirala\b/],['Ongole',/\bongole\b/],['Nellore',/\bnellore\b/],['Kavali',/\bkavali\b/],['Tirupati',/\btirupati\b/],
   ['Srikalahasti',/\bsrikalahasti\b/],['Chittoor',/\bchittoor\b/],['Kadapa',/\b(?:kadapa|cuddapah)\b/],['Rajampet',/\brajampet\b/],
   ['Kurnool',/\bkurnool\b/],['Nandyal',/\bnandyal\b/],['Anantapur',/\banantapur\b/],['Hindupur',/\bhindupur\b/],
-  ['Hyderabad',/\b(?:hyderabad|hydrabad|hyd|secunderabad)\b/],['Warangal',/\bwarangal\b/],['Khammam',/\bkhammam\b/],['Kothagudem',/\bkothagudem\b/],
+  ['Hyderabad',/\b(?:hyderabad|hydrabad|hyd|secunderabad|begumpet|ameerpet|l\s*\.?\s*b\s*\.?\s*nagar|attapur|kukatpally|madhapur|gachibowli|hitech\s*city|kondapur|dilsukh\s*nagar|uppal|miyapur|banjara\s*hills|jubilee\s*hills|som?a?jiguda|rasoolpura|ranigunj|sainikpuri|chaitanyapuri|kavadiguda|habsiguda|attapur|himayat\s*nagar|abids|mehdipatnam|kompally|shamshabad|nampally|koti|tarnaka|ecil|malkajgiri|kphb|chandanagar|manikonda|nizampet|vanasthalipuram|saroornagar|medchal|patancheru|panjagutta|punjagutta|khairatabad|lakdikapul|sr\s*nagar|erragadda|bowenpally|alwal|boduppal|nagole|kothapet|hayathnagar|bachupally|financial\s*district|narsingi|tolichowki|rajendranagar)\b/],['Warangal',/\bwarangal\b/],['Khammam',/\bkhammam\b/],['Kothagudem',/\bkothagudem\b/],
   ['Karimnagar',/\bkarimnagar\b/],['Nizamabad',/\bnizamabad\b/],['Mahabubnagar',/\bmahabubnagar\b/],['Nalgonda',/\bnalgonda\b/],
   ['Siddipet',/\bsiddipet\b/],['Suryapet',/\bsuryapet\b/],['Sangareddy',/\bsangareddy\b/],['Kamareddy',/\bkamareddy\b/],
   ['Mancherial',/\bmancherial\b/],['Ramagundam',/\bramagundam\b/],['Chennai',/\bchennai\b/],['Bengaluru',/\b(?:bangalore|bengaluru)\b/],['Delhi',/\bdelhi\b/],
 ];
 const CITY_NAMES = CITIES.map(([n]) => n);
+// Approximate city centres, used only to rank the nearest bankers when none is recorded in the customer's city.
+const CITY_LL = {Visakhapatnam:[17.69,83.22],Gajuwaka:[17.68,83.20],Anakapalle:[17.69,83.00],Narsipatnam:[17.67,82.61],Vizianagaram:[18.11,83.40],Srikakulam:[18.30,83.90],
+  Palasa:[18.77,84.41],Rajam:[18.46,83.66],Bobbili:[18.57,83.36],Parvathipuram:[18.78,83.43],Salur:[18.52,83.21],Tekkali:[18.61,84.23],Tuni:[17.36,82.55],Kakinada:[16.99,82.25],
+  Rajahmundry:[17.00,81.80],Amalapuram:[16.58,82.01],Bhimavaram:[16.54,81.52],Tanuku:[16.75,81.68],Palakollu:[16.52,81.73],Tadepalligudem:[16.81,81.53],Eluru:[16.71,81.10],
+  Jangareddygudem:[17.12,81.30],Vijayawada:[16.51,80.65],Machilipatnam:[16.19,81.14],Gudivada:[16.43,80.99],Guntur:[16.31,80.44],Tenali:[16.24,80.64],Narasaraopet:[16.24,80.05],
+  Chilakaluripet:[16.09,80.17],Chirala:[15.82,80.35],Ongole:[15.50,80.05],Nellore:[14.44,79.99],Kavali:[14.91,79.99],Tirupati:[13.63,79.42],Srikalahasti:[13.75,79.70],
+  Chittoor:[13.22,79.10],Kadapa:[14.47,78.82],Rajampet:[14.19,79.16],Kurnool:[15.83,78.04],Nandyal:[15.48,78.48],Anantapur:[14.68,77.60],Hindupur:[13.83,77.49],
+  Hyderabad:[17.39,78.49],Warangal:[17.97,79.59],Khammam:[17.25,80.15],Kothagudem:[17.55,80.62],Karimnagar:[18.44,79.13],Nizamabad:[18.67,78.09],Mahabubnagar:[16.74,78.00],
+  Nalgonda:[17.05,79.27],Siddipet:[18.10,78.85],Suryapet:[17.14,79.62],Sangareddy:[17.62,78.09],Kamareddy:[18.32,78.34],Mancherial:[18.87,79.46],Ramagundam:[18.76,79.48],
+  Chennai:[13.08,80.27],Bengaluru:[12.97,77.59],Delhi:[28.61,77.21]};
+const kmBetween = ([a1,o1],[a2,o2]) => { const R = 6371, r = x => x*Math.PI/180, dA = r(a2-a1), dO = r(o2-o1); const h = Math.sin(dA/2)**2 + Math.cos(r(a1))*Math.cos(r(a2))*Math.sin(dO/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
 
 const ICONS = {
   download:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
@@ -565,7 +581,7 @@ class LocalStore {
     try { const raw = localStorage.getItem(this.key); if (raw) return JSON.parse(raw); } catch (e) {}
     this.db = seedData(); this.persist(false); return this.db;
   }
-  persist(emit = true){ try { localStorage.setItem(this.key, JSON.stringify(this.db)); } catch (e) {} if (emit) this.listeners.forEach(f => f()); }
+  persist(emit = true){ if (this.hold) { this.dirty = true; return; } this.dirty = false; try { localStorage.setItem(this.key, JSON.stringify(this.db)); } catch (e) {} if (emit) this.listeners.forEach(f => f()); }
   onChange(f){ this.listeners.add(f); }
   start(user){ this.user = user; }
   stop(){ this.user = null; }
@@ -818,7 +834,8 @@ function selfName(text) {
   const words = []; for (const w of m[1].split(/\s+/)) { if (NAME_STOP.test(w)) break; words.push(w.replace(/\.$/,'')); }
   return words.length ? titleCase(words.join(' ')) : '';
 }
-function guessName(ctx) {
+function guessName(ctx) { const n = guessName0(ctx); return goodName(n) ? n : ''; }
+function guessName0(ctx) {
   const self = selfName(ctx); if (self) return self;
   const parts = ctx.split(/\s[-–|]\s|[|,:;()\/\n]|\s{2,}/).map(s => s.replace(/[*_~]/g,'').trim()).filter(Boolean);
   for (const p of parts) {
@@ -839,24 +856,86 @@ function guessName(ctx) {
   return '';
 }
 
+// Words that turn up next to a number but are never a person's name
+const BAD_NAME = /^(?:login|logins?\s*\/?\s*disbursement|phno|ph|mob|mobile|cell|call|call me|contact|number|no|sir|madam|team|dear|hi|hello|regards|thanks?|thank you|whatsapp|wa|email|mail|name|full name|disbursement|details|reporting manager|office|support|helpline|customer care|urgent|urgent requirement|requirement|interested|note|share|plz|pls|for|any|issues?|queries|query|ok|okay|yes|sm|rm|asm|bm|tel|tele|phn|phone|cont|cnt|me|to|mob no|cell no|contact no|ph no|whatsapp no|mobile no|call on|reach|reach me|at|on|ae|ee|fo|dm|msg|text|send|mail id|id|loan|loans|bank|nbfc|finance|manager|sales|credit|branch|area|executive|officer)$/i;
+const goodName = n => { const t = String(n || '').replace(/\./g, ' ').replace(/\s+/g, ' ').trim(); return !!t && !BAD_NAME.test(t) && !/\d/.test(t) && t.replace(/[^a-z]/gi, '').length >= 3 && /[a-z]{3,}/i.test(t) && !t.split(' ').every(w => BAD_NAME.test(w) || w.length < 2) && !t.split(' ').some(w => w.length > 14) && !/\b(?:login|fee|payout|structure|colony|road|nagar|telangana|grow|together|wishes|now|more|reset|fast|build|mobilenumbe?r?|w[h]?ats?app|watsapp|image|omitted|interested|candidates?|cluster|forwarded|password|near|complex|insurance|clarification|admin|immediately|us|location|company|trading|thnq|thanks|abh|manager)\b/i.test(t) && !/\b(?:app|send|resume|add|this|https?|www|com|in|share|details|please|plz|solution|business|your|our|group|join|link|apply|hiring|job|jobs|vacancy|offer|scheme|rate|roi|cibil|policy|product|customer|client|lead|case|file|bbm|hap)\b/i.test(t); };
+const normLender = v => {
+  if (!v) return '';
+  const b = detectBanks(String(v).toLowerCase())[0]; if (b) return b;
+  const t = String(v).replace(/\b(?:pvt\.?|private|ltd\.?|limited|co\.?)\b/gi, ' ').replace(/[.,;:\-]+$/,'').replace(/\s+/g,' ').trim();
+  return t.length >= 3 && /[a-z]/i.test(t) ? titleCase(t).slice(0,60) : '';
+};
+const normCity = v => { if (!v) return ''; const c = detectCity(String(v).toLowerCase()); if (c) return c; const f = String(v).split(/[\/,(|]| - /)[0].replace(/\s+/g,' ').trim(); return f.length >= 3 && /[a-z]/i.test(f) && !/\b(?:telangana|andhra|pradesh|india)\b/i.test(f) ? titleCase(f).slice(0,40) : ''; };
+// Bankers often answer a fixed format: "1. Full Name: … 2. Mobile Number: … 3. Bank / NBFC Name: … 4. Designation: …"
+const FORM_LINE = /^\s*(?:\d{1,2}\s*[.)]\s*)?[^A-Za-z0-9]{0,4}([A-Za-z][A-Za-z0-9 &\/'’.()#-]{1,48}?)\s*[*_]*\s*[:=]\s*(.*)$/;
+function formField(k) {
+  k = k.toLowerCase().replace(/[’']s\b/g, '').replace(/[^a-z\/ ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const mgr = /\breport|\bsupervisor|\bsenior s name/.test(k);
+  let f = '';
+  if (/e\s*-?\s*mail|mail id/.test(k)) f = 'email';
+  else if (/\b(?:bank|nbfc|company|lender|institution|organi[sz]ation|financier|employer|hfc|firm)\b/.test(k) && !/\bbranch\b/.test(k)) f = 'bank';
+  else if (/\b(?:branch|location|city|place|area|base|region|town)\b/.test(k)) f = 'city';
+  else if (/\b(?:designation|role|position|post|title)\b/.test(k)) f = 'designation';
+  else if (/\bname\b/.test(k)) f = 'name';
+  else if (/\b(?:mobile|phone|contact|cell|whatsapp|number|ph|mob|no)\b/.test(k)) f = 'phone';
+  else if (/\b(?:product|segment|loan type)\b/.test(k)) f = 'product';
+  return f ? {f, mgr} : null;
+}
+function parseForm(text) {
+  const me = {}, mgr = {}; let hits = 0;
+  for (const line of String(text || '').split('\n')) {
+    const m = line.match(FORM_LINE); if (!m) continue;
+    const key = formField(m[1]); if (!key) continue;
+    const v = m[2].replace(/<this message was edited>/i, '').replace(/[*_~]/g, '').replace(/\s+/g, ' ').trim();
+    if (!v || /^(?:n\/?a|nil|none|-+|\.+)$/i.test(v) || /^\(?personal gmail/i.test(v)) continue;
+    const o = key.mgr ? mgr : me;
+    if (o[key.f]) continue;
+    if (key.f === 'phone') { const d = digits10(v); if (!d || !/^[6-9]/.test(d)) continue; o.phone = '+91' + d; }
+    else if (key.f === 'email') { const em = v.match(/[\w.+-]+@[\w-]+\.[\w.]+/); if (!em) continue; o.email = em[0].toLowerCase(); }
+    else if (key.f === 'name') { const n = v.replace(/[^A-Za-z .']/g, ' ').replace(/\s+/g, ' ').trim(); if (!goodName(n) || n.split(' ').length > 5) continue; o.name = titleCase(n).replace(/\b([A-Z])\.(?=[A-Za-z])/g, '$1. ').replace(/\s+/g,' ').slice(0,80); }
+    else if (key.f === 'bank') { const b = normLender(v); if (!b) continue; o.bank = b; }
+    else if (key.f === 'city') { o.branch = v.slice(0,80); o.city = normCity(v); }
+    else if (key.f === 'designation') { o.designation = (detectDesig(v.toLowerCase()) && v.length > 40 ? detectDesig(v.toLowerCase()) : titleCase(v)).slice(0,60); }
+    else if (key.f === 'product') { o.product = detectProduct(v.toLowerCase()) || ''; }
+    hits++;
+  }
+  if (!me.bank && me.email) me.bank = detectBanks(me.email.split('@')[1].replace(/\./g, ' '))[0] || '';
+  const core = ['name','phone','bank','designation'].filter(k => me[k]).length;
+  return hits >= 2 && core >= 2 ? {...me, mgr: mgr.name || mgr.phone ? mgr : null} : null;
+}
+
 const PHONE_RX = /(?:\+?91[\s-]?|\b0)?([6-9]\d{4}[\s-]?\d{5}|[6-9]\d{2}[\s-]?\d{3}[\s-]?\d{4})\b/g;
 function extractContacts(m, msgBanks) {
-  const out = [], low = m.text.toLowerCase();
+  const out = [], low = m.text.toLowerCase(), seen = new Set();
+  const form = parseForm(m.text), sd0 = /^[+\d\s\-()]+$/.test(m.sender) ? digits10(m.sender) : '';
+  if (form) {
+    const geo = detectGeo(low), excerpt = m.text.trim().slice(0, 600);
+    const people = [[form, false], [form.mgr, true]];
+    if (!form.phone && sd0 && form.name) form.phone = '+91' + sd0;     // the banker filled the form but left the number blank
+    for (const [p, isMgr] of people) {
+      if (!p?.phone || seen.has(digits10(p.phone))) continue;
+      const name = p.name || '', bank = form.bank || (msgBanks.length === 1 ? msgBanks[0] : ''), designation = isMgr ? (p.designation || 'Reporting Manager') : (form.designation || '');
+      seen.add(digits10(p.phone));
+      out.push({phone: p.phone, name, bank, designation, product: form.product || detectProduct(low) || '', city: form.city || '', branch: isMgr ? '' : (form.branch || ''), email: isMgr ? '' : (form.email || ''),
+        locations: uniq([form.city, ...detectCities(low)]), geo, form: true, managerOf: isMgr ? (form.name || '') : '',
+        conf: Math.min(.97, .35 + (name ? .25 : 0) + (bank ? .25 : 0) + (designation ? .1 : 0) + (form.city ? .05 : 0)), dt: m.dt, excerpt});
+    }
+  }
   for (const line of m.text.split('\n')) {
     PHONE_RX.lastIndex = 0; let mm;
     while ((mm = PHONE_RX.exec(line))) {
-      const ph = digits10(mm[1]); if (!ph) continue;
+      const ph = digits10(mm[1]); if (!ph || seen.has(ph)) continue;
       const ctx = line.replace(mm[0], ' '), lctx = ctx.toLowerCase();
       const bank = detectBanks(lctx)[0] || (msgBanks.length === 1 ? msgBanks[0] : '');
       const desig = detectDesig(lctx) || detectDesig(low);
-      const name = guessName(ctx);
+      const name = /^\s{2}/.test(line) ? '' : guessName(ctx);   // screenshot text (indented) is too noisy for names
       out.push({phone:'+91'+ph, name, bank, designation: desig, product: detectProduct(lctx) || '', city: detectCity(lctx) || detectCity(low), locations: detectCities(low), geo: detectGeo(low),
         conf: Math.min(.95, .2 + (name ? .3 : 0) + (bank ? .3 : 0) + (desig ? .15 : 0)), dt: m.dt, excerpt: line.trim().slice(0,200)});
     }
   }
-  // Sender saved only as a number who introduces themselves as a banker
-  const sd = digits10(m.sender);
-  if (sd && /^[+\d\s\-()]+$/.test(m.sender)) {
+  // Sender saved only as a number who introduces themselves as a banker (not when they forwarded someone else's form)
+  const sd = sd0;
+  if (sd && !form && !seen.has(sd) && !out.some(c => digits10(c.phone) === sd)) {
     const bank = msgBanks[0] || '', desig = detectDesig(low);
     if (bank || desig) {
       const name = selfName(m.text);
@@ -890,10 +969,23 @@ function parseChat(text) {
   return msgs.filter(m => { const t = m.text.trim(); return t && !/^<media omitted>$|omitted>?$|^this message was deleted$|^you deleted this message$|^null$/i.test(t); });
 }
 
+function refineContact(c) {
+  const out = {...c}; if (!goodName(out.name)) out.name = '';
+  const f = c.excerpt && parseForm(c.excerpt);
+  if (f) {
+    const isMgr = !(f.phone && digits10(f.phone) === digits10(c.phone)) && !!(f.mgr?.phone && digits10(f.mgr.phone) === digits10(c.phone));
+    const p = isMgr ? f.mgr : f.phone && digits10(f.phone) === digits10(c.phone) ? f : null;
+    if (p) { Object.assign(out, {form: true, name: p.name || out.name, bank: f.bank || out.bank, designation: isMgr ? (p.designation || 'Reporting Manager') : (f.designation || out.designation),
+      city: f.city || out.city, branch: isMgr ? '' : (f.branch || ''), email: isMgr ? '' : (f.email || ''), managerOf: isMgr ? (f.name || '') : ''});
+      out.conf = Math.max(out.conf || 0, Math.min(.97, .35 + (out.name ? .25 : 0) + (out.bank ? .25 : 0) + (out.designation ? .1 : 0) + (out.city ? .05 : 0))); }
+  }
+  if (out.city && !(out.locations || []).includes(out.city) && CITY_NAMES.includes(out.city)) out.locations = uniq([out.city, ...(out.locations || [])]);
+  return out;
+}
 function mergeContact(a, b) {
-  const [hi, lo] = a.conf >= b.conf ? [a, b] : [b, a];
+  const [hi, lo] = !!a.form !== !!b.form ? (a.form ? [a, b] : [b, a]) : a.conf >= b.conf ? [a, b] : [b, a];
   const out = {...hi};
-  for (const k of ['name','bank','designation','product','city','geo']) if (!out[k] && lo[k]) out[k] = lo[k];
+  for (const k of ['name','bank','designation','product','city','geo','branch','email']) if (!out[k] && lo[k]) out[k] = lo[k];
   out.locations = uniq([...(a.locations || []), ...(b.locations || [])]);
   out.dt = a.dt > b.dt ? a.dt : b.dt;
   return out;
@@ -932,12 +1024,30 @@ function analyseChat(text, sinceISO) {
   };
 }
 
-async function applyDraft(onlyHigh = false) {
+const contactData = c => { const d = {name: goodName(c.name) ? clip(c.name,80) : '', bank: clip(c.bank,60), designation: clip(c.designation,60), product: c.product || '', city: clip(c.city,40)};
+  if (c.email) d.email = clip(c.email,120); if (c.branch) d.branch = clip(c.branch,80); if (c.managerOf) d.notes = `Reporting manager of ${clip(c.managerOf,80)}`; if (c.excerpt) d.srcText = clip(c.excerpt,600); return d; };
+// What an import would change on a saved card: blanks and junk names always; labelled-form values replace guesses unless the card is verified.
+function contactFills(ex, c) {
+  const data = contactData(c), patch = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (!v || k === 'notes' && ex.notes || k === 'srcText' && ex.srcText) continue;
+    const cur = ex[k], junk = k === 'name' && cur && !goodName(cur);
+    if (!cur || junk || (c.form && !ex.verified && ['name','bank','designation','city','branch','email'].includes(k) && String(cur).toLowerCase() !== String(v).toLowerCase())) patch[k] = v;
+  }
+  return patch;
+}
+async function applyDraft(onlyHigh = false, onStep) {
+  S.hold = true;   // demo store: write once at the end instead of after every row
+  try { return await applyDraft0(onlyHigh, onStep); } finally { S.hold = false; if (S.dirty) S.persist(); }
+}
+async function applyDraft0(onlyHigh, onStep) {
   const d = state.imp.draft, st = settings();
   const group = clip(state.imp.group, 80) || 'Unnamed group';
   const pick = x => !x.applied && (onlyHigh ? x.conf >= st.autoApplyMin : x.sel);
-  const r = {pc:0, pu:0, ps:0, cn:0, cu:0};
+  const r = {pc:0, pu:0, ps:0, cn:0, cu:0}, total = d.policies.filter(pick).length + d.contacts.filter(pick).length; let done = 0;
+  const tick = async () => { if (++done % 20 === 0) { onStep?.(done, total); await new Promise(res => setTimeout(res, 0)); } };
   for (const p of d.policies.filter(pick)) {
+    await tick();
     const ex = findPolicy(p.bank, p.product);
     if (ex && ex.asOf && p.dt < ex.asOf) { r.ps++; p.applied = true; continue; }   // never overwrite newer info with an older message
     const res = await upsertPolicy({bank: p.bank, product: p.product, fields: {...p.fields, ...(p.locations?.length ? {locations: uniq(p.locations)} : {}), ...(p.geo ? {geo: p.geo} : {})}, notes: p.notes}, {source:'WhatsApp', sourceGroup: p.group || group, excerpt: String(p.excerpt || '').slice(0,400), asOf: p.dt});
@@ -945,17 +1055,18 @@ async function applyDraft(onlyHigh = false) {
     p.applied = true;
   }
   for (const c of d.contacts.filter(pick)) {
+    await tick();
     const ex = S.all('bankers').find(b => digits10(b.phone) === digits10(c.phone));
-    const data = {name: clip(c.name,80), bank: clip(c.bank,60), designation: clip(c.designation,60), product: c.product || '', city: clip(c.city,40)};
+    const data = contactData(c);
     if (ex) {
       const patch = {lastSeen: c.dt > (ex.lastSeen || '') ? c.dt : ex.lastSeen, sourceGroup: ex.sourceGroup || c.group || group};
-      for (const k of Object.keys(data)) if (!ex[k] && data[k]) patch[k] = data[k];
+      Object.assign(patch, contactFills(ex, c));
       const locs = uniq([...(ex.locations || []), ...(c.locations || [])]);
       if (locs.length !== (ex.locations || []).length) patch.locations = locs;
       if (!ex.geo && c.geo) patch.geo = c.geo;
       await S.update('bankers', ex.id, patch); r.cu++;
     } else {
-      await S.add('bankers', {...data, locations: uniq(c.locations), geo: c.geo || '', phone: e164(c.phone), email:'', notes: c.notes || '', sourceGroup: c.group || group, verified:false, dnc:false, firstSeen: c.dt, lastSeen: c.dt, createdAt: nowISO()}); r.cn++;
+      await S.add('bankers', {email:'', ...data, locations: uniq(c.locations), geo: c.geo || '', phone: e164(c.phone), notes: c.notes || '', sourceGroup: c.group || group, verified:false, dnc:false, firstSeen: c.dt, lastSeen: c.dt, createdAt: nowISO()}); r.cn++;
     }
     c.applied = true;
   }
@@ -1054,7 +1165,32 @@ const stageBadge = s => `<span class="badge ${s === 'Disbursed' ? 'b-ok' : s ===
 const statusBadge = s => `<span class="badge ${s === 'Approved' ? 'b-ok' : s === 'Rejected' ? 'b-bad' : 'b-warn'}">${esc(s || '—')}</span>`;
 const locChips = (list, max = 6) => { const l = list || []; return l.length ? `<div class="chips">${l.slice(0,max).map(x => `<span class="chip">${esc(x)}</span>`).join('')}${l.length > max ? `<span class="chip">+${l.length - max} more</span>` : ''}</div>` : ''; };
 const bankerCount = bank => S.all('bankers').filter(b => b.bank === bank && !b.dnc).length;
-const bankerBtn = bank => { const n = bankerCount(bank); return n ? `<button class="btn sm" data-action="show-bankers" data-bank="${esc(bank)}">${ic('phone')} ${n} banker${n > 1 ? 's' : ''}</button>` : '<span class="small muted">No banker contact yet</span>'; };
+const cityOf = v => { const t = String(v || '').trim(); if (!t) return ''; return CITY_NAMES.find(c => c.toLowerCase() === t.toLowerCase()) || detectCity(t.toLowerCase()) || ''; };
+const bankerPlaces = b => uniq([b.city, b.branch, ...(b.locations || [])].map(cityOf).filter(Boolean));
+// Splits a lender's bankers into: in the customer's city, nearby (sorted by distance), and location not known / far away.
+function bankersFor(bank, city) {
+  const all = S.all('bankers').filter(b => b.bank === bank && !b.dnc).sort((a,b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
+  const raw = String(city || '').trim().toLowerCase(), c = cityOf(city);
+  if (!raw) return {city:'', here: all, near: [], rest: [], all};
+  const here = [], near = [], rest = [];
+  for (const b of all) {
+    const pl = bankerPlaces(b), text = [b.city, b.branch, ...(b.locations || [])].join(' ').toLowerCase();
+    if ((c && pl.includes(c)) || (!c && text.includes(raw))) { here.push(b); continue; }
+    const ds = c && CITY_LL[c] ? pl.filter(p => CITY_LL[p]).map(p => kmBetween(CITY_LL[c], CITY_LL[p])) : [];
+    if (ds.length) near.push({b, km: Math.round(Math.min(...ds))}); else rest.push(b);
+  }
+  near.sort((x,y) => x.km - y.km);
+  return {city: c || String(city).trim(), here, near, rest, all};
+}
+const bankerBtn = (bank, city) => {
+  const n = bankerCount(bank); if (!n) return '<span class="small muted">No banker contact yet</span>';
+  const btn = label => `<button class="btn sm" data-action="show-bankers" data-bank="${esc(bank)}" data-city="${esc(city || '')}">${ic('phone')} ${label}</button>`;
+  if (!city) return btn(`${n} banker${n > 1 ? 's' : ''}`);
+  const r = bankersFor(bank, city);
+  if (r.here.length) return btn(`${r.here.length} in ${esc(r.city)}`);
+  if (r.near.length) return `<div class="small" style="color:var(--warn);margin-bottom:4px">No banker in ${esc(r.city)}</div>` + btn(`${r.near.length} nearby · ${esc(r.near[0].km)} km`);
+  return btn(`${n} banker${n > 1 ? 's' : ''} · location not known`);
+};
 
 // Bound inputs keep their value in `state`, so re-renders never lose typing.
 function inp(label, path, o = {}) {
@@ -2007,7 +2143,7 @@ function resCard(i) {
     <div class="small">EMI ≈ <b>${fmtINR(i.emi)}</b>${num(p.pfPct) ? ` · PF ${esc(p.pfPct)}%` : ''}</div>
     <div class="small">${freshBadge(p)} <span class="muted">policy v${esc(p.version || 1)}</span></div>
     ${locBadge(p, i.city)}
-    <div class="no-print">${bankerBtn(p.bank)}</div></div>`;
+    <div class="no-print">${bankerBtn(p.bank, i.city)}</div></div>`;
 }
 function recentChecks() {
   const cs = S.all('checks').slice().sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,8);
@@ -2129,13 +2265,23 @@ function bankerDraft(bank, generic = false) {
     `Please share your latest policy: product-wise minimum CIBIL, ROI, vintage, turnover/ABB norms, loan range and serviceable locations.`,
     `We have customers ready for login this week.`, '', sign].join('\n');
 }
-function bankersModal(bank) {
-  const list = S.all('bankers').filter(b => b.bank === bank && !b.dnc).sort((a,b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
+function bankersModal(bank, city = '') {
+  const r = bankersFor(bank, city), list = r.all;
   const draft = bankerDraft(bank), forCase = !!(state.elig?.results?.items?.some(i => i.p.bank === bank));
   const box = list.length ? `<div class="card" style="box-shadow:none;background:var(--surface-2);margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><b style="flex:1">${forCase ? 'Case intimation draft' : 'Policy request draft'}</b><span class="small muted">{banker} becomes each banker's name</span></div>
     <textarea id="bk_draft" rows="${forCase ? 14 : 7}" maxlength="2000">${esc(draft)}</textarea>
     <p class="small muted" style="margin:6px 0 0">Edit if needed, then press the green WhatsApp button next to a banker. The customer's mobile number is never included.</p></div>` : '';
-  return modal(`${bank} · bankers`, list.length ? box + `<div class="list">${list.map(b => `<div class="li"><span class="avatar" style="background:var(--avatar-bg);color:var(--avatar-fg)">${esc(initials(b.name || bank))}</span><div class="grow"><b>${esc(b.name || 'Unnamed')}</b> ${b.verified ? '<span class="badge b-ok">Verified</span>' : ''}<div class="small muted">${esc([b.designation, b.product, b.city].filter(Boolean).join(' · ') || '—')}</div><div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>${locChips(b.locations, 8)}</div><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')}</a><button class="btn sm wa" data-action="bk-wa" data-id="${esc(b.id)}" title="Send the draft on WhatsApp">${ic('msg')} Send draft</button></div>`).join('')}</div>` : '<div class="empty">No contacts for this lender yet.</div>');
+  const row = (b, km) => `<div class="li"><span class="avatar" style="background:var(--avatar-bg);color:var(--avatar-fg)">${esc(initials(b.name || bank))}</span><div class="grow"><b>${esc(b.name || 'Unnamed')}</b> ${b.verified ? '<span class="badge b-ok">Verified</span>' : ''}${km != null ? ` <span class="badge b-warn">${esc(km)} km away</span>` : ''}<div class="small muted">${esc([b.designation, b.product, b.branch || b.city].filter(Boolean).join(' · ') || '—')}</div><div class="small muted">${esc(showPhone(b.phone))} · seen ${esc(ago(b.lastSeen))}</div>${locChips(b.locations, 8)}</div><a class="btn sm" href="${esc(telLink(b.phone))}">${ic('phone')}</a><button class="btn sm wa" data-action="bk-wa" data-id="${esc(b.id)}" title="Send the draft on WhatsApp">${ic('msg')} Send draft</button></div>`;
+  let body;
+  if (!r.city) body = `<div class="list">${list.map(b => row(b)).join('')}</div>`;
+  else {
+    const others = [...(r.here.length ? r.near.map(x => x.b) : []), ...r.rest];
+    body = (r.here.length ? `<h3 style="margin:4px 0 8px">In ${esc(r.city)} <span class="badge b-ok">${r.here.length}</span></h3><div class="list">${r.here.map(b => row(b)).join('')}</div>`
+      : `<div class="notice warn">${ic('alert')}<div>No ${esc(bank)} banker recorded in <b>${esc(r.city)}</b>.${r.near.length ? ' Nearest bankers are shown first.' : ''}</div></div>`
+        + (r.near.length ? `<h3 style="margin:10px 0 8px">Nearby <span class="badge b-warn">${r.near.length}</span></h3><div class="list">${r.near.map(x => row(x.b, x.km)).join('')}</div>` : ''))
+      + (others.length ? `<details style="margin-top:12px"><summary class="small" style="cursor:pointer">${r.here.length ? 'Other' : 'Location not known'} · ${others.length} more ${esc(bank)} banker${others.length > 1 ? 's' : ''}</summary><div class="list" style="margin-top:8px">${others.map(b => row(b)).join('')}</div></details>` : '');
+  }
+  return modal(`${bank} · bankers${r.city ? ` · ${r.city}` : ''}`, list.length ? box + body : '<div class="empty">No contacts for this lender yet.</div>');
 }
 
 // ---- Bankers
@@ -2208,8 +2354,9 @@ function vGroups() {
 function draftView(d) {
   const pol = d.policies, con = d.contacts, bankers = S.all('bankers');
   return `<div class="card" style="margin-top:16px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">3 · Review what was found</h3>
-    <button class="btn sm" data-action="imp-select-high">Select high confidence</button><button class="btn sm" data-action="imp-select-none">Clear selection</button>
-    <button class="btn primary" data-action="imp-apply" ${!state.imp.saving && (pol.some(p => p.sel) || con.some(c => c.sel)) ? '' : 'disabled'}>${state.imp.saving ? 'Saving… please wait' : `${ic('check')} Apply selected`}</button></div>
+    <button class="btn sm" data-action="imp-select-all">Select all</button><button class="btn sm" data-action="imp-select-new">New contacts only</button><button class="btn sm" data-action="imp-select-gaps">Fill missing details</button><button class="btn sm" data-action="imp-select-high">High confidence</button><button class="btn sm" data-action="imp-select-none">Clear</button>
+    <button class="btn primary" data-action="imp-apply" ${!state.imp.saving && (pol.some(p => p.sel) || con.some(c => c.sel)) ? '' : 'disabled'}>${state.imp.saving ? 'Saving… please wait' : `${ic('check')} Apply selected (${pol.filter(p => p.sel).length + con.filter(c => c.sel).length})`}</button></div>
+    <p class="small muted" style="margin:6px 0 0">${con.filter(c => !bankers.some(b => digits10(b.phone) === digits10(c.phone))).length} new contacts · ${con.filter(c => { const ex = bankers.find(b => digits10(b.phone) === digits10(c.phone)); return ex && Object.keys(contactFills(ex, c)).some(k => k !== 'srcText'); }).length} saved contacts with details to add · Apply saves the selected contacts and policies together.</p>
     <p class="small muted">${esc(d.stats.messages)} messages from ${esc(d.stats.senders)} people · ${fmtDate(d.stats.fromISO)} – ${fmtDate(d.stats.toISO)}${d.stats.skipped ? ` · ${esc(d.stats.skipped)} older messages skipped` : ''}</p>
     <h3 style="margin-top:16px">Policy updates <span class="badge b-info">${pol.length}</span></h3>
     ${pol.length ? `<div class="tw"><table><thead><tr><th></th><th>Lender</th><th>Product</th><th>What changes</th><th>Confidence</th></tr></thead><tbody>${pol.map((p,i) => {
@@ -2224,10 +2371,10 @@ function draftView(d) {
         <td>${confBadge(p.conf)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty small">No policy messages found.</div>'}
     <h3 style="margin-top:18px">Banker contacts <span class="badge b-info">${con.length}</span></h3>
     ${con.length ? `<div class="tw"><table><thead><tr><th></th><th>Name</th><th>Mobile</th><th>Lender</th><th>Designation</th><th>City</th><th>Confidence</th></tr></thead><tbody>${con.map((c,i) => {
-      const ex = bankers.find(b => digits10(b.phone) === digits10(c.phone));
+      const ex = bankers.find(b => digits10(b.phone) === digits10(c.phone)), fills = ex ? Object.keys(contactFills(ex, c)).filter(k => k !== 'srcText') : [];
       return `<tr><td><input type="checkbox" id="imp_c_${i}" data-bind="imp.draft.contacts.${i}.sel" data-rerender ${c.sel ? 'checked' : ''} aria-label="Select"></td>
         <td><input id="imp_cn_${i}" data-bind="imp.draft.contacts.${i}.name" value="${esc(c.name)}" placeholder="Name" style="min-width:130px"></td>
-        <td class="nowrap">${esc(showPhone(c.phone))}<div>${ex ? '<span class="badge">Saved · will refresh</span>' : '<span class="badge b-ok">New</span>'}</div></td>
+        <td class="nowrap">${esc(showPhone(c.phone))}<div>${ex ? (fills.length ? `<span class="badge b-warn" title="Will update: ${esc(fills.join(', '))}">Saved · adds ${esc(fills.map(k => ({bank:'lender', designation:'designation', branch:'branch'})[k] || k).slice(0,3).join(', '))}</span>` : '<span class="badge">Saved · up to date</span>') : '<span class="badge b-ok">New</span>'}${c.managerOf ? `<div class="small muted">Manager of ${esc(c.managerOf)}</div>` : ''}${c.email ? `<div class="small muted">${esc(c.email)}</div>` : ''}</div></td>
         <td><input id="imp_cb_${i}" data-bind="imp.draft.contacts.${i}.bank" value="${esc(c.bank)}" list="dl-bn3" style="min-width:140px"></td>
         <td><input id="imp_cd_${i}" data-bind="imp.draft.contacts.${i}.designation" value="${esc(c.designation)}" style="min-width:120px"></td>
         <td><input id="imp_cc_${i}" data-bind="imp.draft.contacts.${i}.city" value="${esc(c.city)}" style="min-width:100px"></td>
@@ -2361,7 +2508,7 @@ const actions = {
     if (l && ['New','Contacted','Docs Pending'].includes(l.stage)) await S.update('leads', l.id, {stage: 'Eligibility Done', updatedAt: nowISO(), stageHistory: [...(l.stageHistory || []), {stage: 'Eligibility Done', at: nowISO(), by: u.phone}]});
     toast('Eligibility check saved', 'ok');
   }),
-  'show-bankers': el => openModal(bankersModal(el.dataset.bank)),
+  'show-bankers': el => openModal(bankersModal(el.dataset.bank, el.dataset.city || '')),
   'bk-wa': el => { const b = byId('bankers', el.dataset.id); if (!b) return;
     const first = String(b.name || '').trim().split(/\s+/)[0], greet = b.name && !/^unnamed$/i.test(b.name) ? `${first} ji` : 'Sir/Madam';
     const text = ((!el.dataset.generic && $('#bk_draft')?.value) || bankerDraft(b.bank, !!el.dataset.generic)).replace(/\{banker\}/g, greet);
@@ -2563,11 +2710,14 @@ const actions = {
     render();
   }),
   'imp-select-high': () => { const m = settings().autoApplyMin, d = state.imp.draft; d.policies.forEach(p => p.sel = p.conf >= m); d.contacts.forEach(c => c.sel = c.conf >= m); render(); },
+  'imp-select-all': () => { const d = state.imp.draft; d.policies.forEach(p => p.sel = true); d.contacts.forEach(c => c.sel = true); render(); },
+  'imp-select-new': () => { const d = state.imp.draft, bk = S.all('bankers'); d.contacts.forEach(c => c.sel = !bk.some(b => digits10(b.phone) === digits10(c.phone))); render(); },
+  'imp-select-gaps': () => { const d = state.imp.draft, bk = S.all('bankers'); d.contacts.forEach(c => { const ex = bk.find(b => digits10(b.phone) === digits10(c.phone)); c.sel = !!ex && Object.keys(contactFills(ex, c)).some(k => k !== 'srcText'); }); render(); },
   'imp-select-none': () => { const d = state.imp.draft; d.policies.forEach(p => p.sel = false); d.contacts.forEach(c => c.sel = false); render(); },
   'imp-apply': el => guard(async () => {
     if (state.imp.saving) return;
     state.imp.saving = true; el.disabled = true; el.textContent = 'Saving… please wait';
-    let r; try { r = await applyDraft(false); } finally { state.imp.saving = false; }
+    let r; try { r = await applyDraft(false, (i, n) => { el.textContent = `Saving ${i} of ${n}… please wait`; }); } finally { state.imp.saving = false; }
     toast(`Policies: ${r.pc} new, ${r.pu} updated${r.ps ? `, ${r.ps} skipped (older)` : ''} · Contacts: ${r.cn} new, ${r.cu} refreshed`, 'ok');
     if (!state.imp.draft.policies.length && !state.imp.draft.contacts.length) { state.imp.draft = null; state.imp.text = ''; state.imp.fileName = ''; }
     render();
@@ -2794,7 +2944,7 @@ const changes = {
         if (!Array.isArray(j.policies) && !Array.isArray(j.contacts)) throw new Error('This JSON is not a DSA Command Center import file');
         const I = state.imp; I.fileName = file.name; I.text = ''; I.group = I.group || j.source || 'WhatsApp groups';
         const sel = x => ({...x, conf: x.conf ?? .9, sel: x.sel ?? true, excerpt: x.excerpt || '', sender: x.sender || '', warn: x.warn || ''});
-        I.draft = {policies: (j.policies || []).map(sel), contacts: (j.contacts || []).map(sel), groups: j.groups || [],
+        I.draft = {policies: (j.policies || []).map(sel), contacts: (j.contacts || []).map(sel).map(refineContact), groups: j.groups || [],
           stats: {total: j.messages || 0, messages: j.messages || 0, skipped: 0, senders: j.senders || 0, fromISO: j.from || '', toISO: j.to || ''}};
         toast(`Loaded ${I.draft.policies.length} policy updates and ${I.draft.contacts.length} contacts for review`, 'ok');
         return render();
