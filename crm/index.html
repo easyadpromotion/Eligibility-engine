@@ -594,7 +594,7 @@ class LocalStore {
       if (r === 'Sales Executive') return rows.filter(x => x.assignedTo === u.phone);
       return [];
     }
-    if (c === 'checks' || c === 'calls') {
+    if (c === 'checks' || c === 'calls' || c === 'outreach') {
       if (['Admin','Operations'].includes(r)) return rows;
       if (r === 'Branch Manager') return rows.filter(x => x.branch === u.branch);
       return rows.filter(x => x.createdBy === u.phone);
@@ -654,10 +654,10 @@ class FireStoreAdapter {
     const {db, F} = this.fb; const col = n => F.collection(db, n); const r = u.role;
     const q = (n, field, val) => F.query(col(n), F.where(field, '==', val));
     const subs = {policies: col('policies'), bankers: col('bankers'), settings: col('settings')};
-    if (['Admin','Operations'].includes(r)) Object.assign(subs, {leads:col('leads'), followups:col('followups'), documents:col('documents'), checks:col('checks'), calls:col('calls'), groups:col('groups'), imports:col('imports'), staff:col('staff')});
-    else if (r === 'Branch Manager') Object.assign(subs, {leads:q('leads','branch',u.branch), followups:q('followups','branch',u.branch), documents:q('documents','branch',u.branch), checks:q('checks','branch',u.branch), calls:q('calls','branch',u.branch), staff:q('staff','branch',u.branch)});
-    else if (r === 'Sales Executive') Object.assign(subs, {leads:q('leads','assignedTo',u.phone), followups:q('followups','assignedTo',u.phone), documents:q('documents','assignedTo',u.phone), checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
-    else Object.assign(subs, {checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone)});
+    if (['Admin','Operations'].includes(r)) Object.assign(subs, {leads:col('leads'), followups:col('followups'), documents:col('documents'), checks:col('checks'), calls:col('calls'), outreach:col('outreach'), groups:col('groups'), imports:col('imports'), staff:col('staff')});
+    else if (r === 'Branch Manager') Object.assign(subs, {leads:q('leads','branch',u.branch), followups:q('followups','branch',u.branch), documents:q('documents','branch',u.branch), checks:q('checks','branch',u.branch), calls:q('calls','branch',u.branch), outreach:q('outreach','branch',u.branch), staff:q('staff','branch',u.branch)});
+    else if (r === 'Sales Executive') Object.assign(subs, {leads:q('leads','assignedTo',u.phone), followups:q('followups','assignedTo',u.phone), documents:q('documents','assignedTo',u.phone), checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone), outreach:q('outreach','createdBy',u.phone)});
+    else Object.assign(subs, {checks:q('checks','createdBy',u.phone), calls:q('calls','createdBy',u.phone), outreach:q('outreach','createdBy',u.phone)});
     this.subs = subs; this.tries = {};
     for (const [name, ref] of Object.entries(subs)) this.listen(name, ref);
   }
@@ -1810,7 +1810,41 @@ function vWaNumbers(w, tpls, modeBtns, log, canEditTpl) {
   `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><h3 style="margin:0;flex:1">Send to numbers</h3><div class="chips">${modeBtns}</div></div>
     <div class="grid g2" style="align-items:start">${left}<div><label>Live preview${list[0] ? ` (${esc(list[0].name || showPhone(list[0].phone))})` : ''}</label><div class="wa-wrap"><div class="wa-bubble">${esc(prev)}<span class="tm">now ✓</span></div></div>
       <button class="btn wa" style="width:100%;margin-top:12px" data-action="wa-nums-start" ${list.length ? '' : 'disabled'}>${ic('send')} Start sending (${list.length})</button>
-      <p class="small muted" style="margin:8px 0 0">One by one: each opens in your WhatsApp with the message ready, you press Send, then come back for the next. Use it for old disbursed customers and any number not yet in the CRM.</p></div></div></div>`;
+      <p class="small muted" style="margin:8px 0 0">One by one: each opens in your WhatsApp with the message ready, you press Send, then come back for the next. Use it for old disbursed customers and any number not yet in the CRM.</p></div></div></div>${outreachCard()}`;
+}
+// ---- WhatsApp outreach register: every number messaged from "Enter numbers", and what came back.
+// Replies cannot be read from personal WhatsApp, so the team marks them here in one tap.
+const OR_ST = {sent: ['b-info', 'Waiting for reply'], no_reply: ['', 'No reply'], interested: ['b-ok', 'Interested'], not_interested: ['b-bad', 'Not interested'], lead: ['b-ok', 'Converted to lead']};
+const orStatus = o => o.leadId ? 'lead' : (o.status || 'sent');
+function recordOutreach(x, text, tpl) {
+  const u = state.user, d = digits10(x.phone), ex = S.all('outreach').find(o => digits10(o.phone) === d && o.createdBy === u.phone), at = nowISO();
+  const sends = [...(ex?.sends || []), {at, tpl: tpl || 'custom', text: String(text).slice(0, 300)}].slice(-10);
+  guard(() => ex
+    ? S.update('outreach', ex.id, {sends, sentAt: at, text: String(text).slice(0, 300), tpl: tpl || 'custom', name: ex.name || x.name || '', status: ex.leadId ? ex.status : 'sent'})
+    : S.add('outreach', {phone: '+91' + d, name: clip(x.name, 80), lender: clip(x.lender, 60), amount: x.amount || '', text: String(text).slice(0, 300), tpl: tpl || 'custom', sends, sentAt: at,
+        status: 'sent', note: '', leadId: '', createdAt: at, createdBy: u.phone, createdByName: u.name, branch: u.branch}));
+}
+function outreachCard() {
+  const f = state.f.or || (state.f.or = {show: 'open', q: ''}), all = S.all('outreach').slice().sort((a, b) => String(b.sentAt).localeCompare(String(a.sentAt)));
+  const cnt = k => all.filter(o => k === 'open' ? ['sent', 'interested'].includes(orStatus(o)) : orStatus(o) === k).length;
+  const q = f.q.toLowerCase().trim();
+  const rows = all.filter(o => (f.show === 'all' || (f.show === 'open' ? ['sent', 'interested'].includes(orStatus(o)) : orStatus(o) === f.show)) && (!q || `${o.name} ${o.phone}`.toLowerCase().includes(q))).slice(0, 200);
+  const tabs = [['open', 'To act on'], ['sent', 'Waiting'], ['interested', 'Interested'], ['not_interested', 'Not interested'], ['no_reply', 'No reply'], ['lead', 'Converted'], ['all', 'All']];
+  return `<div class="card" style="margin-bottom:16px" id="outreach"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">Sent messages &amp; replies <span class="badge">${all.length}</span></h3>
+      <div class="search" style="max-width:220px">${ic('search')}<input id="or_q" data-bind="f.or.q" data-rerender value="${esc(f.q)}" placeholder="Name or mobile" aria-label="Search sent messages"></div></div>
+    <div class="chips" style="margin-bottom:10px">${tabs.map(([v, l]) => `<button class="btn sm ${f.show === v ? 'primary' : ''}" data-action="or-show" data-v="${v}">${l} ${v === 'all' ? all.length : cnt(v)}</button>`).join('')}</div>
+    ${rows.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Sent</th><th>Reply</th><th></th></tr></thead><tbody>${rows.map(o => { const st = orStatus(o), b = OR_ST[st], lead = o.leadId && byId('leads', o.leadId);
+      return `<tr><td><b>${esc(o.name || showPhone(o.phone))}</b><div class="small muted">${esc(showPhone(o.phone))}${o.lender ? ' · ' + esc(o.lender) : ''}${o.amount ? ' · ' + fmtL(o.amount) : ''}</div></td>
+        <td class="small"><div>${esc(fmtDT(o.sentAt))}</div><div class="muted">${esc(o.createdByName || '')} · ${esc(tplById(o.tpl)?.name || 'Custom message')}${(o.sends || []).length > 1 ? ` · sent ${o.sends.length} times` : ''}</div></td>
+        <td><span class="badge ${b[0]}">${b[1]}</span>${o.statusAt && st !== 'sent' ? `<div class="small muted">${esc(fmtDT(o.statusAt))}${o.statusByName ? ' · ' + esc(o.statusByName) : ''}</div>` : ''}${o.note ? `<div class="small">${esc(o.note)}</div>` : ''}${lead ? `<div class="small">${stageBadge(lead.stage)}</div>` : ''}</td>
+        <td class="right nowrap">${st === 'lead' ? `<button class="btn sm" data-action="lead-edit" data-id="${esc(o.leadId)}">Open lead</button>` : `
+          <button class="btn sm ${st === 'interested' ? 'primary' : ''}" data-action="or-status" data-id="${esc(o.id)}" data-v="interested">Interested</button>
+          <button class="btn sm" data-action="or-status" data-id="${esc(o.id)}" data-v="not_interested">Not interested</button>
+          <button class="btn sm" data-action="or-status" data-id="${esc(o.id)}" data-v="no_reply">No reply</button>
+          ${st === 'interested' ? `<button class="btn sm primary" data-action="or-lead" data-id="${esc(o.id)}">${ic('plus')} Convert to lead</button>` : ''}
+          <a class="btn sm wa" href="${esc(waLink(o.phone))}" target="_blank" rel="noopener" title="Open chat to read the reply">${ic('msg')}</a>`}</td></tr>`; }).join('')}</tbody></table></div>`
+      : `<div class="empty small">${all.length ? 'Nothing in this view.' : 'Messages sent from "Enter numbers" appear here.'}</div>`}
+    <p class="small muted" style="margin:8px 0 0">WhatsApp does not let any app read replies on a personal number, so open the chat (green button), then mark the reply here. Interested replies get a Convert to lead button; the new lead keeps the link.</p></div>`;
 }
 function tplForm(t = {}) {
   return modal(t.id ? `Edit template · ${t.name}` : 'New template', `<form id="tpl-form" data-form="tpl-save" class="fg" style="grid-template-columns:1fr 1fr"><input type="hidden" name="id" value="${esc(t.id || '')}">
@@ -1999,7 +2033,9 @@ function vLeads() {
   const rows = S.all('leads').filter(l => (!f.stage || l.stage === f.stage) && (!q || [l.name, l.phone, l.bizName, l.city, l.bank, l.assignedName].join(' ').toLowerCase().includes(q)))
     .sort((a,b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
   const overTat = rows.filter(l => leadTat(l)?.over).length;
+  const orInt = S.all('outreach').filter(o => orStatus(o) === 'interested');
   return header('Leads', `${rows.length} shown${overTat ? ` · ${overTat} over TAT (${num(settings().tatDays) || 2} days)` : ''}`, canEdit ? `<button class="btn primary" data-action="lead-new">${ic('plus')} Add lead</button>` : '') +
+  (orInt.length ? `<div class="card" style="margin-bottom:16px"><h3>WhatsApp replies · interested <span class="badge b-ok">${orInt.length}</span></h3><div class="list">${orInt.slice(0, 20).map(o => `<div class="li"><div class="grow"><b>${esc(o.name || showPhone(o.phone))}</b><div class="small muted">${esc(showPhone(o.phone))} · replied ${esc(ago(o.statusAt || o.sentAt))}${o.note ? ' · ' + esc(o.note) : ''}</div></div><button class="btn sm primary" data-action="or-lead" data-id="${esc(o.id)}">${ic('plus')} Convert to lead</button></div>`).join('')}</div></div>` : '') +
   `<div class="card"><div class="toolbar"><div class="search">${ic('search')}<input id="leads_q" data-bind="f.leads.q" data-rerender value="${esc(f.q)}" placeholder="Search name, phone, business, bank…" aria-label="Search leads"></div>
     <select id="leads_stage" data-bind="f.leads.stage" data-rerender aria-label="Stage"><option value="">All stages</option>${STAGES.map(s => `<option ${s === f.stage ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
   ${rows.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Requirement</th><th>Stage · TAT</th><th>Handler</th><th></th></tr></thead><tbody>${rows.map(l => { const T = leadTat(l); return `<tr ${T?.over ? 'style="background:var(--warn-bg)"' : ''}>
@@ -2157,7 +2193,7 @@ function leadForm(l = {}) {
     ${branchFixed ? `<div><label>Branch</label><input value="${esc(branch)}" disabled><input type="hidden" name="branch" value="${esc(branch)}"></div>` : fs('Branch','branch',[...new Set([...st.branches, branch])],branch)}
     ${role === 'Sales Executive' ? `<div><label>Handler</label><input value="${esc(u.name)}" disabled></div>` : `<div><label>Handler</label><select name="assignedTo">${assignableStaff().map(s => `<option value="${esc(s.id)}" ${s.id === (l.assignedTo || u.phone) ? 'selected' : ''}>${esc(s.name)} · ${esc(s.role)}</option>`).join('')}</select></div>`}
     ${fi('Bank login / reference ID','loginId',l.loginId,'maxlength="40"')}
-    <input type="hidden" name="fromCall" value="${esc(l.fromCall || '')}">
+    <input type="hidden" name="fromCall" value="${esc(l.fromCall || '')}"><input type="hidden" name="fromOutreach" value="${esc(l.fromOutreach || '')}">
     ${(() => { const D = l.disbursal || {}, de = emiInfo(D), R = l.rejection || {}, show = st => (l.stage || 'New') === st ? '' : 'style="display:none"';
       const LG = leadLogins(l);
       return `<div class="sec-h">Bank logins &amp; disbursement (one row per lender · EMI reminders and top-up offers use each disbursed loan)</div>
@@ -2791,7 +2827,7 @@ const actions = {
   'fu-queue': () => { const t = todayStr(); startQueue('Due follow-ups', S.all('followups').filter(f => !f.done && f.date <= t).sort(byDate).filter(f => byId('leads', f.leadId)).map(f => ({leadId: f.leadId, fuId: f.id, remarks: f.remarks}))); },
   'q-send': () => {
     const Q = state.waQueue; if (!Q) return; const it = Q.items[Q.i], text = $('#q_text')?.value || '';
-    if (it.adhoc) { if (text.trim()) { window.open(waLink(it.adhoc.phone, text), '_blank', 'noopener'); it.sent = true; } Q.i++; const h = queueModal(); if (h) openModal(h); else closeModal(); return; }
+    if (it.adhoc) { if (text.trim()) { window.open(waLink(it.adhoc.phone, text), '_blank', 'noopener'); it.sent = true; recordOutreach(it.adhoc, text, it.tpl); } Q.i++; const h = queueModal(); if (h) openModal(h); else closeModal(); return; }
     const l = byId('leads', it.leadId);
     const t = tplById(it.tpl) || tplForStage(l?.stage);
     if (l && text.trim() && openWhatsApp(l, text, t?.id, it.fuId, it.kind ? careExtra(it.kind, l, it.li) : {})) { it.sent = true; const done = $('#q_done'); if (it.fuId && done?.checked) guard(() => S.update('followups', it.fuId, {done: true, doneAt: nowISO(), doneBy: state.user.phone})); if (done) Q.markDone = done.checked; }
@@ -2800,11 +2836,20 @@ const actions = {
   'q-skip': () => { const Q = state.waQueue; if (!Q) return; Q.i++; const html = queueModal(); if (html) openModal(html); else closeModal(); },
   'q-stop': () => { const Q = state.waQueue; if (Q) toast(`Stopped: ${Q.items.filter(x => x.sent).length} sent`, ''); state.waQueue = null; closeModal(); },
   'wa-mode': el => { state.wa.mode = el.dataset.v; render(); },
+  'or-show': el => { (state.f.or ||= {show: 'open', q: ''}).show = el.dataset.v; render(); },
+  'or-status': el => { const o = byId('outreach', el.dataset.id); if (!o) return;
+    const v = el.dataset.v, note = v === 'no_reply' ? '' : (prompt(v === 'interested' ? 'What did they say? (optional, e.g. needs 10 L top-up)' : 'Reason (optional)', o.note || '') ?? o.note ?? '');
+    guard(async () => { await S.update('outreach', o.id, {status: v, note: clip(note, 200), statusAt: nowISO(), statusBy: state.user.phone, statusByName: state.user.name}); toast(`${o.name || showPhone(o.phone)}: ${OR_ST[v][1]}`, 'ok'); }); },
+  'or-lead': el => { const o = byId('outreach', el.dataset.id); if (!o) return;
+    const ex = S.all('leads').find(l => digits10(l.phone) === digits10(o.phone));
+    if (ex) { guard(() => S.update('outreach', o.id, {leadId: ex.id})); toast(`${ex.name} is already a lead (${ex.stage}). Linked.`, ''); return openModal(leadForm(ex)); }
+    openModal(leadForm({name: o.name || '', phone: o.phone, product: 'Business Loan', amountLakh: o.amount || '', bank: o.lender || '', source: 'WhatsApp', stage: 'New',
+      notes: `Replied to WhatsApp message${o.note ? ': ' + o.note : ''}`, fromOutreach: o.id})); },
   'wa-nums-start': () => {
     const w = state.wa, {list} = parseNumList(w.nums), body = $('#wa_body')?.value || w.body;
     if (!list.length) return toast('Enter at least one valid mobile number', 'bad');
     if (!String(body).trim()) return toast('Type the message first', 'bad');
-    startQueue(`Numbers · ${tplById(w.tpl)?.name || 'Message'}`, list.map(x => ({adhoc: x, body})), false);
+    startQueue(`Numbers · ${tplById(w.tpl)?.name || 'Message'}`, list.map(x => ({adhoc: x, body, tpl: w.tpl})), false);
   },
   'wa-send-single': () => { const l = byId('leads', state.wa.leadId); const text = $('#wa_text')?.value || state.wa.text; if (l && openWhatsApp(l, text, state.wa.tpl)) toast('Opened in WhatsApp. Press send there.', 'ok'); },
   'wa-broadcast': () => { const t = tplById(state.wa.tpl); startQueue(`Broadcast · ${t?.name || ''}`, waAudience().map(l => ({leadId: l.id, tpl: state.wa.tpl})), false); },
@@ -3153,6 +3198,7 @@ const forms = {
     else {
       const created = await S.add('leads', {...data, stageHistory: [{stage: data.stage, at: nowISO(), by: u.phone}], createdAt: nowISO(), createdBy: u.phone});
       const fc = fd.get('fromCall'); if (fc && byId('calls', fc)) await S.update('calls', fc, {leadId: created.id});
+      const fo = fd.get('fromOutreach'); if (fo && byId('outreach', fo)) await S.update('outreach', fo, {leadId: created.id, status: 'interested'});
       toast('Lead added', 'ok');
     }
     closeModal();

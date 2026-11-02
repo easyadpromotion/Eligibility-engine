@@ -107,6 +107,19 @@ service cloud.firestore {
       allow delete: if hasRole(['Admin', 'Branch Manager']);
     }
 
+    // WhatsApp outreach register (numbers messaged from "Enter numbers" and the replies): same access as the call register.
+    match /outreach/{id} {
+      allow read: if isOps()
+        || (hasRole(['Branch Manager']) && resource.data.branch == me().branch)
+        || (approved() && resource.data.createdBy == myPhone());
+      allow create: if approved() && request.resource.data.createdBy == myPhone()
+        && request.resource.data.branch == me().branch;
+      allow update: if approved()
+        && (resource.data.createdBy == myPhone() || isOps() || (hasRole(['Branch Manager']) && resource.data.branch == me().branch))
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if hasRole(['Admin', 'Branch Manager']);
+    }
+
     // Anything not listed above (including the old dsa_users / dsa_requests) is closed.
     match /{document=**} {
       allow read, write: if false;
