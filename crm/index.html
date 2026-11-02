@@ -208,7 +208,7 @@ input[type=file]{padding:6px;background:var(--surface-2)}
 .cal button.today{border-color:var(--brand)}
 .cal button.sel{background:var(--brand);color:#fff;border-color:var(--brand)}
 .cal button .n{font-family:var(--font-num);font-size:11px;padding:0 6px;border-radius:99px;background:var(--brand-soft);color:var(--brand)}
-.cal button.future .n{background:var(--warn-bg);color:var(--warn)}
+.cal button.future .n,.cal button .n.p{background:var(--warn-bg);color:var(--warn)}
 .cal button.sel .n{background:rgba(255,255,255,.25);color:#fff}
 [data-hov]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
 #hov-card{position:fixed;z-index:200;max-width:440px;width:calc(100vw - 32px);max-height:60vh;overflow:auto;background:var(--card);border:1px solid var(--line-2);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:10px 12px;font-size:12.5px}
@@ -1525,10 +1525,9 @@ function callLookup(phone) {
 function hovRows(who, date, kind) {
   const ppl = byId('staff', who);
   if (kind === 'plan') {
-    const rc = S.all('calls').filter(c => callDone(c) && c.createdBy === who && c.recallDate === date && !c.recallDone && !c.leadId);
-    const fu = S.all('followups').filter(f => !f.done && f.assignedTo === who && f.date === date);
-    return `<b>${esc(ppl?.name || '')} · ${esc(fmtDate(date))}</b><div class="small muted" style="margin-bottom:6px">${rc.length} recall(s) · ${fu.length} follow-up(s)</div>
-      ${rc.length || fu.length ? `<table><thead><tr><th>Customer</th><th>Type</th><th>Remarks</th></tr></thead><tbody>${rc.map(c => { const o = outcomeById(c.outcome); return `<tr><td>${esc(c.name || 'Unknown')}<div class="muted">${esc(showPhone(c.phone))}</div></td><td><span class="badge ${o?.cls || ''}">Recall · ${esc(o?.label || c.outcome)}</span></td><td>${esc(c.notes || '—')}</td></tr>`; }).join('')}${fu.map(f => `<tr><td>${esc(f.leadName)}<div class="muted">${esc(f.time || '')}</div></td><td><span class="badge b-info">Follow-up</span></td><td>${esc(f.remarks || '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Nothing planned.</div>'}`;
+    const xs = planItems(date).filter(x => x.who === who);
+    return `<b>${esc(ppl?.name || '')} · ${esc(fmtDate(date))}</b><div class="small muted" style="margin-bottom:6px">${xs.length} planned · ${xs.filter(x => x.status === 'done').length} called/done · ${xs.filter(x => x.status !== 'done').length} not yet</div>
+      ${xs.length ? `<table><thead><tr><th>Customer</th><th>Why</th><th>Status</th><th>Result</th><th>Client</th></tr></thead><tbody>${xs.map(x => planRow(x, false)).join('')}</tbody></table>` : '<div class="muted">Nothing planned.</div>'}`;
   }
   const cs = S.all('calls').filter(c => callDone(c) && c.createdBy === who && dayOf(c.calledAt) === date).sort((a,b) => String(a.calledAt).localeCompare(String(b.calledAt)));
   return `<b>${esc(ppl?.name || '')} · ${esc(fmtDate(date))}</b><div class="small muted" style="margin-bottom:6px">${cs.length} call(s) · ${cs.filter(c => c.outcome === 'interested').length} interested</div>
@@ -1548,39 +1547,77 @@ document.addEventListener('mouseover', e => { const el = e.target.closest?.('[da
 document.addEventListener('mouseout', e => { const el = e.target.closest?.('[data-hov]'); if (el && !el.contains(e.relatedTarget)) hideHov(); });
 document.addEventListener('focusin', e => { const el = e.target.closest?.('[data-hov]'); if (el) showHov(el); else hideHov(); });
 // ---- Calendar for Admin / Branch Manager: past days = calls done, future days = recalls + follow-ups planned
+// Everything planned for a date (recalls by last result + lead follow-ups) and what actually happened to each.
+function planItems(date) {
+  const t = todayStr(), calls = S.all('calls').filter(callDone), leads = S.all('leads'), byPhone = new Map();
+  calls.forEach(c => { const k = digits10(c.phone); if (!byPhone.has(k)) byPhone.set(k, []); byPhone.get(k).push(c); });
+  const out = [];
+  for (const c of calls) {
+    if (c.recallDate !== date || c.leadId) continue;
+    const k = digits10(c.phone);
+    const next = (byPhone.get(k) || []).filter(x => x.id !== c.id && String(x.calledAt) > String(c.calledAt) && dayOf(x.calledAt) >= addDays(date, -1)).sort((x,y) => String(y.calledAt).localeCompare(String(x.calledAt)))[0];
+    const lead = leads.find(l => digits10(l.phone) === k);
+    out.push({type: 'recall', who: c.assignedTo || c.createdBy, name: c.name || next?.name || 'Unknown', phone: c.phone, was: c, next, lead,
+      status: next || c.recallDone ? 'done' : date < t ? 'missed' : 'pending'});
+  }
+  for (const f of S.all('followups')) {
+    if (f.date !== date) continue;
+    const lead = byId('leads', f.leadId);
+    out.push({type: 'fu', who: f.assignedTo, name: f.leadName || lead?.name || 'Unknown', phone: f.leadPhone || lead?.phone || '', f, lead, status: f.done ? 'done' : date < t ? 'missed' : 'pending'});
+  }
+  return out;
+}
+const PLAN_ST = {done: ['b-ok', 'Called'], pending: ['b-warn', 'Not yet called'], missed: ['b-bad', 'Missed']};
+function planRow(x, showWho) {
+  const staff = showWho ? byId('staff', x.who) : null, o = x.type === 'recall' ? outcomeById(x.was.outcome) : null, no = x.next ? outcomeById(x.next.outcome) : null;
+  const st = x.type === 'fu' ? (x.status === 'done' ? ['b-ok', 'Done'] : x.status === 'missed' ? ['b-bad', 'Missed'] : ['b-warn', 'Not done yet']) : PLAN_ST[x.status];
+  const what = x.type === 'recall' ? `<span class="badge ${o?.cls || ''}">Recall · last: ${esc(o?.label || x.was.outcome)}</span><div class="small muted">${esc(x.was.notes || '')}</div>` : `<span class="badge b-info">Follow-up${x.f.time ? ' · ' + esc(x.f.time) : ''}</span><div class="small muted">${esc(x.f.remarks || '')}</div>`;
+  const res = x.next ? `<span class="badge ${no?.cls || ''}">${esc(no?.label || x.next.outcome)}</span><div class="small muted">${esc(fmtDT(x.next.calledAt))}${x.next.createdByName ? ' · ' + esc(x.next.createdByName) : ''}</div>${x.next.notes ? `<div class="small">${esc(x.next.notes)}</div>` : ''}${x.next.recallDate ? `<div class="small muted">Next call ${esc(fmtDate(x.next.recallDate))}</div>` : ''}`
+    : x.type === 'fu' && x.f.done ? `<div class="small muted">${esc(fmtDT(x.f.doneAt))}</div>${x.f.note ? `<div class="small">${esc(x.f.note)}</div>` : ''}` : '—';
+  const client = x.lead ? `${stageBadge(x.lead.stage)}${x.lead.logins?.length ? `<div class="small muted">${x.lead.logins.map(g => esc(g.lender) + ': ' + esc(g.status)).join(', ')}</div>` : ''}` : x.next?.outcome === 'interested' ? '<span class="badge b-ok">Interested</span>' : '<span class="small muted">Not a lead</span>';
+  return `<tr>${showWho ? `<td class="nowrap">${esc(staff?.name || x.was?.createdByName || x.f?.assignedName || '—')}</td>` : ''}<td><b>${esc(x.name)}</b><div class="small muted">${esc(showPhone(x.phone))}</div></td><td>${what}</td><td><span class="badge ${st[0]}">${st[1]}</span></td><td>${res}</td><td>${client}</td></tr>`;
+}
 function callsCalendar(all, ppl) {
-  const t = todayStr(), F = state.f.callsCal, month = F.month || t.slice(0, 7), sel = F.date || t;
+  const t = todayStr(), F = state.f.callsCal, month = F.month || t.slice(0, 7), sel = F.date || t, show = F.show || 'all';
   const [y, m] = month.split('-').map(Number), first = new Date(y, m - 1, 1), startPad = (first.getDay() + 6) % 7, dim = new Date(y, m, 0).getDate();
   const done = {}, plan = {};
-  all.forEach(c => { if (callDone(c)) { const d = dayOf(c.calledAt); if (d) done[d] = (done[d] || 0) + 1; if (c.recallDate && !c.recallDone && !c.leadId) plan[c.recallDate] = (plan[c.recallDate] || 0) + 1; } });
-  S.all('followups').forEach(f => { if (!f.done && f.date) plan[f.date] = (plan[f.date] || 0) + 1; });
+  all.forEach(c => { if (callDone(c)) { const d = dayOf(c.calledAt); if (d) done[d] = (done[d] || 0) + 1; if (c.recallDate && !c.leadId) plan[c.recallDate] = (plan[c.recallDate] || 0) + 1; } });
+  S.all('followups').forEach(f => { if (f.date) plan[f.date] = (plan[f.date] || 0) + 1; });
   const cells = [];
   for (let i = 0; i < startPad; i++) cells.push('<span></span>');
   for (let d = 1; d <= dim; d++) {
-    const ds = `${month}-${String(d).padStart(2, '0')}`, fut = ds > t, n = fut ? plan[ds] : done[ds];
-    cells.push(`<button type="button" class="${fut ? 'future' : ''} ${ds === t ? 'today' : ''} ${ds === sel ? 'sel' : ''}" data-action="cal-pick" data-v="${ds}" aria-label="${esc(fmtDate(ds))}"><span>${d}</span>${n ? `<span class="n">${n}</span>` : ''}</button>`);
+    const ds = `${month}-${String(d).padStart(2, '0')}`, fut = ds > t;
+    const nd = !fut && done[ds] ? `<span class="n" title="calls done">${done[ds]}</span>` : '', np = (fut || ds === t) && plan[ds] ? `<span class="n p" title="planned">${plan[ds]}</span>` : '';
+    cells.push(`<button type="button" class="${fut ? 'future' : ''} ${ds === t ? 'today' : ''} ${ds === sel ? 'sel' : ''}" data-action="cal-pick" data-v="${ds}" aria-label="${esc(fmtDate(ds))}"><span>${d}</span>${nd}${np}</button>`);
   }
-  const fut = sel > t, kind = fut ? 'plan' : 'done';
-  let cols, rowsHtml;
+  const fut = sel > t;
+  // 1) Planned for the date: who had to call whom, and what happened
+  const items = planItems(sel).filter(x => ppl.some(p => p.id === x.who) || !ppl.length);
+  const cnt = k => items.filter(x => x.status === k).length;
+  const planTable = ppl.map(p => { const xs = items.filter(x => x.who === p.id); if (!xs.length) return '';
+    const d = xs.filter(x => x.status === 'done').length, pe = xs.filter(x => x.status === 'pending').length, mi = xs.filter(x => x.status === 'missed').length;
+    return `<tr><td><span data-hov tabindex="0" data-who="${esc(p.id)}" data-date="${sel}" data-kind="plan"><b>${esc(p.name)}</b></span></td><td><b>${xs.length}</b></td><td>${xs.filter(x => x.type === 'recall').length}</td><td>${xs.filter(x => x.type === 'fu').length}</td><td>${d ? `<span class="badge b-ok">${d}</span>` : '·'}</td><td>${pe ? `<span class="badge b-warn">${pe}</span>` : '·'}</td><td>${mi ? `<span class="badge b-bad">${mi}</span>` : '·'}</td></tr>`; }).join('');
+  const shown = items.filter(x => show === 'all' || (show === 'open' ? x.status !== 'done' : x.status === 'done')).sort((a,b) => ({missed:0,pending:1,done:2})[a.status] - ({missed:0,pending:1,done:2})[b.status] || String(a.who).localeCompare(String(b.who)));
+  const planHtml = items.length ? `<div class="tw"><table><thead><tr><th>Team member</th><th>Planned</th><th>Recalls</th><th>Follow-ups</th><th>Called / done</th><th>Not yet</th><th>Missed</th></tr></thead><tbody>${planTable}</tbody></table></div>` : `<div class="empty small">Nothing was planned for this date.</div>`;
+  // 2) Calls actually logged that day, by result
+  let doneHtml = '';
   if (!fut) {
-    const day = all.filter(c => callDone(c) && dayOf(c.calledAt) === sel);
-    cols = CALL_OUTCOMES.filter(o => day.some(c => c.outcome === o.id));
-    rowsHtml = ppl.map(x => { const cs = day.filter(c => c.createdBy === x.id); if (!cs.length) return '';
+    const day = all.filter(c => callDone(c) && dayOf(c.calledAt) === sel), cols = CALL_OUTCOMES.filter(o => day.some(c => c.outcome === o.id));
+    const rows = ppl.map(x => { const cs = day.filter(c => c.createdBy === x.id); if (!cs.length) return '';
       return `<tr><td><span data-hov tabindex="0" data-who="${esc(x.id)}" data-date="${sel}" data-kind="done"><b>${esc(x.name)}</b></span></td><td><b>${cs.length}</b></td>${cols.map(o => { const n = cs.filter(c => c.outcome === o.id).length; return `<td>${n ? `<span class="badge ${o.cls}">${n}</span>` : '·'}</td>`; }).join('')}</tr>`; }).join('');
-  } else {
-    const rc = all.filter(c => callDone(c) && c.recallDate === sel && !c.recallDone && !c.leadId), fu = S.all('followups').filter(f => !f.done && f.date === sel);
-    cols = CALL_OUTCOMES.filter(o => rc.some(c => c.outcome === o.id));
-    rowsHtml = ppl.map(x => { const cs = rc.filter(c => c.createdBy === x.id), fs = fu.filter(f => f.assignedTo === x.id); if (!cs.length && !fs.length) return '';
-      return `<tr><td><span data-hov tabindex="0" data-who="${esc(x.id)}" data-date="${sel}" data-kind="plan"><b>${esc(x.name)}</b></span></td><td><b>${cs.length + fs.length}</b></td>${cols.map(o => { const n = cs.filter(c => c.outcome === o.id).length; return `<td>${n ? `<span class="badge ${o.cls}">${n}</span>` : '·'}</td>`; }).join('')}<td>${fs.length ? `<span class="badge b-info">${fs.length}</span>` : '·'}</td></tr>`; }).join('');
+    doneHtml = `<h3 style="font-size:14px;margin:16px 0 8px">All calls logged ${sel === t ? 'today' : 'on ' + esc(fmtDate(sel))} · by result</h3>${rows ? `<div class="tw"><table><thead><tr><th>Team member</th><th>Total</th>${cols.map(o => `<th>${esc(o.label)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty small">No calls logged on this date yet.</div>'}`;
   }
   const mName = first.toLocaleDateString('en-IN', {month: 'long', year: 'numeric'});
+  const list = items.length ? `<div style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0;flex:1;font-size:15px">Customer status · ${esc(fmtDate(sel))}</h3>
+      ${[['all', `All ${items.length}`], ['open', `${fut ? 'Planned' : 'Not called'} ${cnt('pending') + cnt('missed')}`], ['done', `Called ${cnt('done')}`]].map(([v, l]) => `<button class="btn sm ${show === v ? 'primary' : ''}" data-action="cal-show" data-v="${v}">${l}</button>`).join('')}</div>
+    ${shown.length ? `<div class="tw"><table><thead><tr><th>Team member</th><th>Customer</th><th>Why planned</th><th>Status</th><th>Latest result &amp; remarks</th><th>Client status</th></tr></thead><tbody>${shown.map(x => planRow(x, true)).join('')}</tbody></table></div>` : '<div class="empty small">None in this view.</div>'}</div>` : '';
   return `<div class="card" style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">Team calendar</h3>
       <button class="btn sm" data-action="cal-month" data-v="-1" aria-label="Previous month">‹</button><b>${esc(mName)}</b><button class="btn sm" data-action="cal-month" data-v="1" aria-label="Next month">›</button>
-      <button class="btn sm" data-action="cal-pick" data-v="${t}">Today</button><button class="btn sm" data-action="cal-pick" data-v="${addDays(t, 1)}">Tomorrow</button></div>
+      <button class="btn sm" data-action="cal-pick" data-v="${addDays(t, -1)}">Yesterday</button><button class="btn sm" data-action="cal-pick" data-v="${t}">Today</button><button class="btn sm" data-action="cal-pick" data-v="${addDays(t, 1)}">Tomorrow</button></div>
     <div class="grid g2" style="align-items:start"><div><div class="cal">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<span class="dh">${d}</span>`).join('')}${cells.join('')}</div>
-      <p class="small muted" style="margin:8px 0 0">Blue = calls done that day · amber = recalls and follow-ups planned. Click a date.</p></div>
-    <div><h3 style="font-size:14px;margin:0 0 8px">${esc(fmtDate(sel))} · ${fut ? 'planned (recalls by last result, follow-ups)' : sel === t ? 'calls today by result' : 'calls by result'}</h3>
-      ${rowsHtml ? `<div class="tw"><table><thead><tr><th>Team member</th><th>Total</th>${cols.map(o => `<th>${esc(o.label)}</th>`).join('')}${fut ? '<th>Follow-ups</th>' : ''}</tr></thead><tbody>${rowsHtml}</tbody></table></div><p class="small muted" style="margin:6px 0 0">Point at a name to see each customer.</p>` : `<div class="empty small">${fut ? 'Nothing planned for this date.' : 'No calls logged on this date.'}</div>`}</div></div></div>`;
+      <p class="small muted" style="margin:8px 0 0">Blue = calls done · amber = recalls and follow-ups planned. Click any date, including today and past days.</p></div>
+    <div><h3 style="font-size:14px;margin:0 0 8px">${esc(fmtDate(sel))} · planned ${fut ? '(recalls by last result, follow-ups)' : '· called or not'}</h3>
+      ${planHtml}${items.length ? '<p class="small muted" style="margin:6px 0 0">Point at a name to see each customer. Full list with results is below.</p>' : ''}${doneHtml}</div></div>${list}</div>`;
 }
 function vCalls() {
   const u = state.user, C = state.calls, st = settings(), target = num(st.callTarget) || 50, t = todayStr();
@@ -2548,6 +2585,7 @@ const actions = {
   'tpl-del': el => guard(async () => { if (!confirm('Delete this template?')) return; await saveSettings({templates: templates().filter(t => t.id !== el.dataset.id)}); closeModal(); toast('Template deleted'); }),
   'tpl-reset': () => guard(async () => { if (confirm('Go back to the default templates? Your edits will be lost.')) { await saveSettings({templates: null}); toast('Default templates restored'); } }),
   'cal-pick': el => { const v = el.dataset.v; state.f.callsCal.date = v; state.f.callsCal.month = v.slice(0, 7); hideHov(); render(); },
+  'cal-show': el => { state.f.callsCal.show = el.dataset.v; render(); },
   'cal-month': el => { const F = state.f.callsCal, cur = F.month || todayStr().slice(0, 7), [y, m] = cur.split('-').map(Number), d = new Date(y, m - 1 + Number(el.dataset.v), 1);
     F.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; hideHov(); render(); },
   'calls-who': el => { state.f.callsView.who = el.dataset.v; render(); },
