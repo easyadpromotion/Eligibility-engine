@@ -558,7 +558,7 @@ const state = {
   mode: FIREBASE_CONFIG && !FORCE_DEMO ? 'live' : 'demo',
   user: null, route: 'dashboard', menu: false,
   login: {step: FIREBASE_CONFIG && !FORCE_DEMO ? 'loading' : 'phone', phone:'', err:'', busy:false, status:'', session:'', resendIn:0},
-  f: {care:{tab:'emi'}, callsView:{who:'me'}, callsCal:{month:'', date:''}, rep:{period:'month', offset:0}, leads:{q:'',stage:''}, pol:{q:'',product:'',stale:false}, bk:{q:'',bank:'',loc:'',view:'cards'}},
+  f: {care:{tab:'emi'}, callsView:{who:'me'}, callsCal:{month:'', date:''}, eod:{date:''}, rep:{period:'month', offset:0}, leads:{q:'',stage:''}, pol:{q:'',product:'',stale:false}, bk:{q:'',bank:'',loc:'',view:'cards'}},
   elig: {form: defaultElig(), results: null},
   imp: {group:'', onlyNew:true, fileName:'', text:'', draft:null},
   calls: {phone:'', name:'', product:'Business Loan', city:'', outcome:'', recall:'', notes:'', paste:'', editId:'', fromId:''},
@@ -1455,6 +1455,7 @@ function vDash() {
     ${kp('Active policies', pols.length, stale.length ? `<span style="color:var(--warn)">${stale.length} need refresh</span>` : 'all fresh')}
     ${kp('Banker contacts', bks.length, `${new Set(bks.map(b => b.bank).filter(Boolean)).size} lenders`)}
   </div>
+  ${['Admin','Branch Manager'].includes(u.role) ? teamEodCard() : ''}${canSee('calls') && u.role !== 'Admin' ? myTargetsCard() : ''}
   <div class="grid g2">
     <div class="card"><h3>Latest policy changes</h3>${upd.length ? `<div class="list">${upd.map(h => `<div class="li"><div class="grow"><div class="strong">${esc(h.bank)} · ${esc(h.product)} <span class="badge b-info">v${esc(h.version)}</span></div><div class="chips" style="margin-top:5px">${diffChips(h.changes)}</div><div class="small muted" style="margin-top:4px">${esc(h.source || '')}${h.sourceGroup ? ` · ${esc(h.sourceGroup)}` : ''} · ${esc(ago(h.at))}</div></div><button class="btn sm" data-action="policy-view" data-id="${esc(h.pid)}">View</button></div>`).join('')}</div>` : '<div class="empty">No changes yet. Import a DSA group chat to pick up updates.</div>'}</div>
     ${showLeads ? `<div class="card"><h3>Pipeline by stage</h3><div class="bars">${STAGES.map(s => { const c = leads.filter(l => l.stage === s).length; return `<div class="bar"><span>${esc(s)}</span><span class="t"><i style="width:${c/maxS*100}%"></i></span><b>${c}</b></div>`; }).join('')}</div></div>` : ''}
@@ -1821,6 +1822,72 @@ function teamStats(r) {
   for (const c of S.all('calls')) if (callDone(c) && inR(c.calledAt)) { const x = row(c.createdBy); x.calls++; if (c.outcome === 'interested') x.interested++; }
   return [...rows.values()].filter(x => x.p.status !== 'Rejected' || x.leads.length)
     .sort((a,b) => b.disbursedAmt - a.disbursedAmt || b.added - a.added || String(a.p.name).localeCompare(String(b.p.name)));
+}
+// ---- Daily targets vs achievement (EOD)
+const TARGET_KEYS = [['calls','Calls'],['interested','Interested'],['added','New leads'],['logged','Logins'],['fuDone','Follow-ups done'],['disbursedAmt','Disbursed (₹ L)']];
+const DEFAULT_TARGETS = {calls:50, interested:3, added:1, logged:1, fuDone:5, disbursedAmt:0};
+const targetsFor = id => { const st = settings(), T = st.targets || {}; return {...DEFAULT_TARGETS, calls: num(st.callTarget) || 50, ...(T.default || {}), ...((T.people || {})[digits10(id)] || {})}; };
+const dayRange = d => { const a = new Date(d + 'T00:00:00'), b = new Date(a); b.setDate(a.getDate() + 1); return {s: a.toISOString(), e: b.toISOString()}; };
+const fmtTgt = (k, v) => k === 'disbursedAmt' ? (num(v) ? fmtL(v) : '₹0') : String(Math.round(num(v) * 100) / 100);
+function scoreRow(x) {
+  const T = targetsFor(x.p.id), items = TARGET_KEYS.map(([k, l]) => { const t = num(T[k]), a = num(x[k]); return {k, l, t, a, pct: t > 0 ? Math.min(100, Math.round(a / t * 100)) : null}; });
+  const scored = items.filter(i => i.pct != null), overall = scored.length ? Math.round(scored.reduce((a, i) => a + i.pct, 0) / scored.length) : null;
+  return {...x, T, items, overall};
+}
+function eodRows(date) {
+  return teamStats(dayRange(date)).filter(x => x.p.role && x.p.role !== 'Admin' && x.p.status === 'Approved').map(scoreRow);
+}
+const pctCls = v => v == null ? '' : v >= 100 ? 'b-ok' : v >= 60 ? 'b-warn' : 'b-bad';
+function eodText(x, date) {
+  const t = todayStr(), nextDay = addDays(date, 1);
+  const rc = S.all('calls').filter(c => callDone(c) && c.createdBy === x.p.id && c.recallDate === nextDay && !c.leadId).length;
+  const fu = S.all('followups').filter(f => !f.done && f.assignedTo === x.p.id && f.date === nextDay).length;
+  const lines = x.items.filter(i => i.t > 0 || i.a > 0).map(i => `${i.pct != null && i.pct >= 100 ? '✅' : '▫️'} ${i.l}: ${fmtTgt(i.k, i.a)} / ${fmtTgt(i.k, i.t)}${i.pct != null ? ` (${i.pct}%)` : ''}`);
+  return `*EOD Report · ${fmtDate(date)}*\n${x.p.name}${x.p.branch ? ` · ${x.p.branch}` : ''}\n\n${lines.join('\n')}\n\n*Overall: ${x.overall ?? '—'}%*\nPlanned for ${nextDay === addDays(t, 1) ? 'tomorrow' : fmtDate(nextDay)}: ${rc} recalls · ${fu} follow-ups\n— ${settings().company}`;
+}
+function teamEodText(rows, date, branch) {
+  const tot = TARGET_KEYS.map(([k, l]) => { const a = rows.reduce((s, x) => s + num(x[k]), 0), t = rows.reduce((s, x) => s + num(x.T[k]), 0); return `${l}: ${fmtTgt(k, a)} / ${fmtTgt(k, t)}`; });
+  return `*Team EOD · ${fmtDate(date)}${branch ? ' · ' + branch : ''}*\n\n${rows.map(x => `${x.overall != null && x.overall >= 100 ? '✅' : x.overall != null && x.overall >= 60 ? '🟡' : '🔴'} ${x.p.name}: ${x.overall ?? '—'}% · calls ${x.calls}/${num(x.T.calls)} · leads ${x.added} · logins ${x.logged}`).join('\n')}\n\n*Team total*\n${tot.join('\n')}\n— ${settings().company}`;
+}
+// Who an EOD report goes to: the branch manager(s) and the admin(s), never the sender. Kept in settings so every role can read it.
+function eodRecipients(fromId, branch) {
+  const R = settings().eod || {}, me = digits10(fromId);
+  const mgr = ((R.managers || {})[branch] || []).filter(x => digits10(x.phone) !== me).map(x => ({...x, label: 'Manager'}));
+  const adm = (R.admins || []).filter(x => digits10(x.phone) !== me).map(x => ({...x, label: 'Admin'}));
+  return [...mgr, ...adm];
+}
+function computeEodRecipients() {
+  const staff = S.all('staff').filter(x => x.status === 'Approved'), managers = {};
+  staff.filter(x => x.role === 'Branch Manager').forEach(x => { (managers[x.branch] ||= []).push({name: x.name, phone: x.phone || x.id}); });
+  return {admins: staff.filter(x => x.role === 'Admin').map(x => ({name: x.name, phone: x.phone || x.id})), managers, updatedAt: nowISO()};
+}
+const sendBtns = (fromId, branch, kind, date) => { const to = eodRecipients(fromId, branch);
+  return to.length ? to.map(r => `<button class="btn sm wa" data-action="eod-send" data-kind="${kind}" data-who="${esc(fromId)}" data-date="${esc(date)}" data-to="${esc(r.phone)}" data-name="${esc(r.name)}">${ic('msg')} Send to ${esc(r.label)} · ${esc(r.name)}</button>`).join('')
+    : '<span class="small muted">No manager/admin number set yet. Admin: open Staff &amp; Settings → Daily targets → Save.</span>'; };
+function myTargetsCard() {
+  const u = state.user, t = todayStr();
+  const x = scoreRow(teamStats(dayRange(t)).find(r => r.p.id === u.phone) || {p: {id: u.phone, name: u.name, branch: u.branch}, calls:0, interested:0, added:0, logged:0, fuDone:0, disbursedAmt:0});
+  x.p = {...x.p, name: u.name, branch: u.branch};
+  const late = new Date().getHours() >= 18;
+  return `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0;flex:1">My targets today</h3>${x.overall != null ? `<span class="badge ${pctCls(x.overall)}">Overall ${x.overall}%</span>` : ''}</div>
+    <div class="bars" style="margin-top:10px">${x.items.filter(i => i.t > 0 || i.a > 0).map(i => `<div class="bar"><span>${esc(i.l)}</span><span class="t"><i style="width:${i.pct ?? (i.a ? 100 : 0)}%;${i.pct != null && i.pct >= 100 ? 'background:var(--ok-strong)' : ''}"></i></span><b class="nowrap">${esc(fmtTgt(i.k, i.a))} / ${esc(fmtTgt(i.k, i.t))}</b></div>`).join('')}</div>
+    ${late ? `<div class="notice warn" style="margin:10px 0 0">${ic('alert')}<div>End of day: send your EOD report to your manager and admin.</div></div>` : ''}
+    <div class="row" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${sendBtns(u.phone, u.branch, 'me', t)}</div>
+    <p class="small muted" style="margin:6px 0 0">The report is filled from your calls, leads, logins, follow-ups and disbursals. WhatsApp opens with the message ready; press Send.</p></div>`;
+}
+function teamEodCard() {
+  const u = state.user, t = todayStr(), date = state.f.eod.date || t;
+  let rows = eodRows(date); if (u.role === 'Branch Manager') rows = rows.filter(x => x.p.branch === u.branch);
+  rows = rows.filter(x => x.overall != null || x.calls || x.added).sort((a, b) => (b.overall ?? -1) - (a.overall ?? -1));
+  const avg = rows.filter(x => x.overall != null), team = avg.length ? Math.round(avg.reduce((a, x) => a + x.overall, 0) / avg.length) : null;
+  const cell = i => `<td class="nowrap"><b>${esc(fmtTgt(i.k, i.a))}</b><span class="muted"> / ${esc(fmtTgt(i.k, i.t))}</span>${i.pct != null ? `<div><span class="badge ${pctCls(i.pct)}">${i.pct}%</span></div>` : ''}</td>`;
+  return `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">Team targets vs achievement ${team != null ? `<span class="badge ${pctCls(team)}">Team ${team}%</span>` : ''}</h3>
+      <button class="btn sm ${date === addDays(t, -1) ? 'primary' : ''}" data-action="eod-date" data-v="${addDays(t, -1)}">Yesterday</button><button class="btn sm ${date === t ? 'primary' : ''}" data-action="eod-date" data-v="${t}">Today</button>
+      <input type="date" id="eod_date" data-bind="f.eod.date" data-rerender value="${esc(date)}" max="${t}" style="width:auto" aria-label="Date"></div>
+    ${rows.length ? `<div class="tw"><table><thead><tr><th>Team member</th>${TARGET_KEYS.map(([, l]) => `<th>${esc(l)}</th>`).join('')}<th>Overall</th></tr></thead><tbody>${rows.map(x => `<tr><td><b>${esc(x.p.name)}</b><div class="small muted">${esc(x.p.role || '')}${x.p.branch ? ' · ' + esc(x.p.branch) : ''}</div></td>${x.items.map(cell).join('')}<td><span class="badge ${pctCls(x.overall)}">${x.overall ?? '—'}%</span></td></tr>`).join('')}</tbody></table></div>`
+      : '<div class="empty small">No targets or activity for this date.</div>'}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center"><span class="small muted" style="margin-right:4px">Team summary on WhatsApp:</span>${u.role === 'Branch Manager' ? sendBtns(u.phone, u.branch, 'team', date) : `<button class="btn sm wa" data-action="eod-send" data-kind="team" data-who="${esc(u.phone)}" data-date="${esc(date)}" data-to="">${ic('msg')} Share team summary</button>`}</div>
+    <p class="small muted" style="margin:6px 0 0">Live from the team's work: calls logged, interested, new leads, files logged in, follow-ups done and amount disbursed that day. Targets are set in Staff &amp; Settings.</p></div>`;
 }
 function vReports() {
   const f = state.f.rep, r = periodRange(f.period, f.offset), rows = teamStats(r);
@@ -2461,8 +2528,22 @@ function vAdmin() {
       <div><label>Auto-apply at confidence (%)</label><input type="number" name="autoApplyMin" min="50" max="99" value="${Math.round(st.autoApplyMin*100)}"></div>
       <label class="check full"><input type="checkbox" name="autoApply" ${st.autoApply ? 'checked' : ''}> Auto-apply high-confidence WhatsApp updates (every change is still versioned)</label>
       <div class="full"><button class="btn primary">Save settings</button></div></form></div>
+    ${targetsCard()}
     ${state.mode === 'demo' ? '<div class="card"><h3>Demo data</h3><p class="small muted">Everything lives in this browser only.</p><button class="btn danger" data-action="demo-reset">Reset demo data</button></div>' : ''}
   </div></div>`;
+}
+function targetsCard() {
+  const st = settings(), T = st.targets || {}, D = {...DEFAULT_TARGETS, calls: num(st.callTarget) || 50, ...(T.default || {})};
+  const people = S.all('staff').filter(x => x.status === 'Approved' && x.role && x.role !== 'Admin').sort((a, b) => String(a.branch).localeCompare(String(b.branch)) || String(a.name).localeCompare(String(b.name)));
+  const R = st.eod || {}, rec = [...(R.admins || []).map(x => `${x.name} (Admin)`), ...Object.entries(R.managers || {}).flatMap(([b, l]) => l.map(x => `${x.name} (Manager · ${b})`))];
+  const inp = (name, v, ph) => `<input type="number" name="${name}" min="0" max="${name.endsWith('disbursedAmt') ? 1000 : 500}" step="${name.endsWith('disbursedAmt') ? '0.5' : '1'}" value="${v ?? ''}" ${ph != null ? `placeholder="${esc(ph)}"` : ''} style="width:78px">`;
+  return `<div class="card"><h3>Daily targets</h3><p class="small muted" style="margin:-4px 0 10px">Default applies to everyone; fill a person's box only to give them a different target. Disbursed is in lakhs.</p>
+    <form data-form="targets-save"><div class="tw"><table><thead><tr><th>Who</th>${TARGET_KEYS.map(([, l]) => `<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>
+      <tr><td><b>Default</b></td>${TARGET_KEYS.map(([k]) => `<td>${inp('d_' + k, D[k])}</td>`).join('')}</tr>
+      ${people.map(x => { const o = (T.people || {})[digits10(x.id)] || {}; return `<tr><td>${esc(x.name)}<div class="small muted">${esc(x.role)} · ${esc(x.branch || '')}</div></td>${TARGET_KEYS.map(([k]) => `<td>${inp(`p_${digits10(x.id)}_${k}`, o[k], D[k])}</td>`).join('')}</tr>`; }).join('')}
+    </tbody></table></div>
+    <p class="small muted" style="margin:10px 0 6px">EOD reports go on WhatsApp to: <b>${rec.length ? esc(rec.join(', ')) : 'not set yet'}</b>. Saving refreshes this list from the approved Admins and Branch Managers.</p>
+    <button class="btn primary">Save targets</button></form></div>`;
 }
 function staffForm(s = {}) {
   const st = settings(), isNew = !s.id, self = s.id === state.user.phone;
@@ -2585,6 +2666,16 @@ const actions = {
   'tpl-del': el => guard(async () => { if (!confirm('Delete this template?')) return; await saveSettings({templates: templates().filter(t => t.id !== el.dataset.id)}); closeModal(); toast('Template deleted'); }),
   'tpl-reset': () => guard(async () => { if (confirm('Go back to the default templates? Your edits will be lost.')) { await saveSettings({templates: null}); toast('Default templates restored'); } }),
   'cal-pick': el => { const v = el.dataset.v; state.f.callsCal.date = v; state.f.callsCal.month = v.slice(0, 7); hideHov(); render(); },
+  'eod-date': el => { state.f.eod.date = el.dataset.v; render(); },
+  'eod-send': el => {
+    const date = el.dataset.date || todayStr(), u = state.user;
+    let text;
+    if (el.dataset.kind === 'team') { let rows = eodRows(date); if (u.role === 'Branch Manager') rows = rows.filter(x => x.p.branch === u.branch); rows = rows.filter(x => x.overall != null || x.calls || x.added); text = teamEodText(rows, date, u.role === 'Branch Manager' ? u.branch : ''); }
+    else { const x = scoreRow(teamStats(dayRange(date)).find(r => r.p.id === el.dataset.who) || {p: {id: u.phone}, calls:0, interested:0, added:0, logged:0, fuDone:0, disbursedAmt:0}); x.p = {...x.p, name: u.name, branch: u.branch}; text = eodText(x, date); }
+    const url = el.dataset.to ? waLink(el.dataset.to, text) : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener');
+    toast(el.dataset.to ? `WhatsApp opened for ${el.dataset.name}. Press Send.` : 'WhatsApp opened. Choose the chat and press Send.', 'ok');
+  },
   'cal-show': el => { state.f.callsCal.show = el.dataset.v; render(); },
   'cal-month': el => { const F = state.f.callsCal, cur = F.month || todayStr().slice(0, 7), [y, m] = cur.split('-').map(Number), d = new Date(y, m - 1 + Number(el.dataset.v), 1);
     F.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; hideHov(); render(); },
@@ -2946,6 +3037,18 @@ const forms = {
     toast('Saved', 'ok'); closeModal(); render();
   }),
   'branch-add': (f, fd) => guard(async () => { const b = clip(fd.get('b'),60); const cur = settings().branches; if (b && !cur.includes(b)) await saveSettings({branches: [...cur, b]}); f.reset(); }),
+  'targets-save': (f, fd) => guard(async () => {
+    const val = (k, v) => { if (v === null || String(v).trim() === '') return null; const n = Math.max(0, Math.min(k === 'disbursedAmt' ? 1000 : 500, num(v))); return k === 'disbursedAmt' ? Math.round(n * 2) / 2 : Math.round(n); };
+    const def = {}; for (const [k] of TARGET_KEYS) { const v = val(k, fd.get('d_' + k)); def[k] = v ?? 0; }
+    const people = {};
+    for (const x of S.all('staff').filter(x => x.status === 'Approved' && x.role && x.role !== 'Admin')) {
+      const id = digits10(x.id), o = {};
+      for (const [k] of TARGET_KEYS) { const v = val(k, fd.get(`p_${id}_${k}`)); if (v != null && v !== def[k]) o[k] = v; }
+      if (Object.keys(o).length) people[id] = o;
+    }
+    await saveSettings({targets: {default: def, people}, callTarget: def.calls || 50, eod: computeEodRecipients()});
+    toast('Daily targets saved', 'ok');
+  }),
   'settings-save': (f, fd) => guard(async () => {
     await saveSettings({staleDays: Math.min(365, Math.max(7, num(fd.get('staleDays')) || 30)), autoApplyMin: Math.min(.99, Math.max(.5, num(fd.get('autoApplyMin'))/100 || .8)), autoApply: fd.get('autoApply') === 'on', company: clip(fd.get('company'),80) || DEFAULT_SETTINGS.company, callTarget: Math.min(300, Math.max(1, num(fd.get('callTarget')) || 50)), emiWindow: Math.min(15, Math.max(1, num(fd.get('emiWindow')) || 7))});
     toast('Settings saved', 'ok');
