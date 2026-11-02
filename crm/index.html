@@ -563,12 +563,12 @@ const state = {
   imp: {group:'', onlyNew:true, fileName:'', text:'', draft:null},
   calls: {phone:'', name:'', product:'Business Loan', city:'', outcome:'', recall:'', notes:'', paste:'', editId:'', fromId:''},
   docUp: {type:'Aadhaar', files:[], consent:false, busy:false, lead:''},
-  wa: {mode:'single', leadId:'', tpl:'', text:'', stage:'', product:''}, waQueue: null,
+  wa: {mode:'single', leadId:'', tpl:'', text:'', stage:'', product:'', nums:'', body:''}, waQueue: null,
 };
 let S = null;   // data store (LocalStore in demo, FireStoreAdapter live)
 let FB = null;  // firebase handles
 
-const DEFAULT_SETTINGS = {branches:['Main Branch'], staleDays:30, autoApply:false, autoApplyMin:0.8, company:'Cheyutha Multiway Services', templates:null, callTarget:50, emiWindow:7};
+const DEFAULT_SETTINGS = {branches:['Main Branch'], staleDays:30, autoApply:false, autoApplyMin:0.8, company:'Cheyutha Multiway Services', templates:null, callTarget:50, emiWindow:7, tatDays:2};
 const settings = () => ({...DEFAULT_SETTINGS, ...(S?.all('settings').find(s => s.id === 'app') || {})});
 async function saveSettings(patch) { const next = {...settings(), ...patch}; delete next.id; await S.set('settings','app',next); }
 
@@ -1280,10 +1280,10 @@ function composerModal(leadId, fuId = '', tplId = '', li) {
 function queueModal() {
   const Q = state.waQueue; if (!Q) return '';
   if (Q.i >= Q.items.length) { const sent = Q.items.filter(x => x.sent).length; state.waQueue = null; toast(`Queue finished: ${sent} opened in WhatsApp, ${Q.items.length - sent} skipped`, 'ok'); return ''; }
-  const it = Q.items[Q.i], l = withLoan(byId('leads', it.leadId), it.li), t = tplById(it.tpl) || tplForStage(l?.stage);
+  const it = Q.items[Q.i], l = it.adhoc ? adhocLead(it.adhoc) : withLoan(byId('leads', it.leadId), it.li), t = it.body ? {name: 'Your message', body: it.body} : (tplById(it.tpl) || tplForStage(l?.stage));
   if (!l) { Q.i++; return queueModal(); }
   const text = fillTpl(t.body, l);
-  return modal(`${Q.title} · ${Q.i + 1} of ${Q.items.length}`, `<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span class="avatar">${esc(initials(l.name))}</span><div style="flex:1"><b>${esc(l.name)}</b><div class="small muted">${esc(showPhone(l.phone))} · ${esc(l.product)} · ${esc(l.assignedName || '')}</div>${it.remarks ? `<div class="small">Follow-up: ${esc(it.remarks)}</div>` : ''}</div>${stageBadge(l.stage)}</div>
+  return modal(`${Q.title} · ${Q.i + 1} of ${Q.items.length}`, `<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span class="avatar">${esc(initials(l.name || '#'))}</span><div style="flex:1"><b>${esc(l.name || showPhone(l.phone))}</b><div class="small muted">${esc(showPhone(l.phone))} · ${esc(l.product)} · ${esc(l.assignedName || '')}</div>${it.remarks ? `<div class="small">Follow-up: ${esc(it.remarks)}</div>` : ''}</div>${stageBadge(l.stage)}</div>
     <div class="small muted" style="margin-bottom:4px">${esc(t.name)}</div><textarea id="q_text" rows="10">${esc(text)}</textarea>
     ${it.fuId ? `<label class="check small" style="margin-top:10px"><input type="checkbox" id="q_done" ${Q.markDone ? 'checked' : ''}> Mark this follow-up done after sending</label>` : ''}
     <div style="height:6px;background:var(--track);border-radius:99px;margin-top:12px;overflow:hidden"><i style="display:block;height:100%;width:${Q.i / Q.items.length * 100}%;background:var(--wa)"></i></div>`,
@@ -1751,7 +1751,8 @@ function vWhatsApp() {
   const previewText = w.mode === 'single' && lead ? w.text : fillTpl(t.body, sample);
   const aud = waAudience(), canEditTpl = ['Admin','Branch Manager'].includes(state.user.role);
   const log = S.all('leads').flatMap(l => (l.waLog || []).map(x => ({...x, lead: l}))).sort((a,b) => String(b.at).localeCompare(String(a.at))).slice(0, 12);
-  const modeBtns = [['single','Single customer'],['broadcast','Broadcast']].map(([v,lab]) => `<button class="btn sm ${w.mode === v ? 'primary' : ''}" data-action="wa-mode" data-v="${v}">${lab}</button>`).join('');
+  const modeBtns = [['single','Single customer'],['broadcast','Broadcast'],['numbers','Enter numbers']].map(([v,lab]) => `<button class="btn sm ${w.mode === v ? 'primary' : ''}" data-action="wa-mode" data-v="${v}">${lab}</button>`).join('');
+  if (w.mode === 'numbers') return vWaNumbers(w, tpls, modeBtns, log, canEditTpl);
   const left = w.mode === 'single'
     ? `<div><label for="wa_lead">Select customer</label><select id="wa_lead" data-change="wa-pick"><option value="">— Choose a lead —</option>${leads.map(l => `<option value="${esc(l.id)}" ${l.id === w.leadId ? 'selected' : ''}>${esc(l.name)} (${esc(l.product)} · ${esc(l.stage)})</option>`).join('')}</select></div>
        <div style="margin-top:12px"><label for="wa_tpl">Message template</label><select id="wa_tpl" data-change="wa-tpl">${tpls.map(x => `<option value="${esc(x.id)}" ${x.id === w.tpl ? 'selected' : ''}>${esc(x.name)}${x.stage ? ` · ${esc(x.stage)}` : ''}</option>`).join('')}</select>${lead ? `<p class="small muted" style="margin:6px 0 0">Suggested for "${esc(lead.stage)}": <b>${esc(tplForStage(lead.stage).name)}</b></p>` : ''}</div>
@@ -1775,6 +1776,42 @@ function vWhatsApp() {
       <p class="small muted" style="margin:10px 0 0">Messages open in your WhatsApp with the text ready; WhatsApp sends them only when you press send. Fully automatic bulk sending needs the WhatsApp Business API.</p></div>
   </div>`;
 }
+// Numbers typed or pasted (e.g. old disbursed customers who are not in the CRM yet).
+// One per line: "9876543210" or "Name, 9876543210, Lender, Amount (L)". Columns pasted from Excel work too.
+function parseNumList(text) {
+  const seen = new Set(), out = [], bad = [];
+  for (const raw of String(text || '').split(/\n+/)) {
+    const line = raw.trim(); if (!line) continue;
+    const m = line.match(/(?:\+?91[\s-]?|\b0)?([6-9]\d{4}[\s-]?\d{5}|[6-9]\d{2}[\s-]?\d{3}[\s-]?\d{4})(?!\d)/);
+    if (!m) { bad.push(line.slice(0, 40)); continue; }
+    const ph = digits10(m[1]); if (seen.has(ph)) continue; seen.add(ph);
+    const before = line.slice(0, m.index).replace(/[,\t;|:-]+$/,'').replace(/[,\t;|]+/g, ' ').trim();
+    const after = line.slice(m.index + m[0].length).split(/[,\t;|]+/).map(x => x.trim()).filter(Boolean);
+    const amt = after.find(x => /^₹?\s*\d+(\.\d+)?\s*(l|lakh|lakhs)?$/i.test(x)), lender = after.find(x => x !== amt && /[a-z]/i.test(x)) || '';
+    const name = before && /[a-z]/i.test(before) ? titleCase(before.replace(/[^A-Za-z .']/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 80) : (!lender && after[0] && /^[a-z .']+$/i.test(after[0]) ? titleCase(after[0]) : '');
+    out.push({phone: '+91' + ph, name, lender: name === titleCase(after[0] || '') ? '' : lender, amount: amt ? num(String(amt).replace(/[^\d.]/g, '')) : ''});
+    if (out.length >= 500) break;
+  }
+  return {list: out, bad};
+}
+const adhocLead = x => ({name: x.name || '', phone: x.phone, bank: x.lender || '', amountLakh: x.amount || '', product: 'loan', _adhoc: true, _loan: {lender: x.lender || ''}});
+function vWaNumbers(w, tpls, modeBtns, log, canEditTpl) {
+  const t = tplById(w.tpl) || tpls[0];
+  if (!w.body) w.body = t.body;
+  const {list, bad} = parseNumList(w.nums), leads = S.all('leads'), known = list.filter(x => leads.some(l => digits10(l.phone) === digits10(x.phone)));
+  const prev = fillTpl(w.body, adhocLead(list[0] || {name: 'Ramesh', phone: ''}));
+  const left = `<div><label for="wa_nums">Mobile numbers (one per line)</label>
+      <textarea id="wa_nums" rows="8" data-bind="wa.nums" data-rerender placeholder="9876543210&#10;Ramesh Kumar, 9876543210&#10;Lakshmi, 9123456780, HDFC Bank, 10&#10;(paste from Excel: Name · Mobile · Lender · Amount)">${esc(w.nums)}</textarea>
+      <p class="small" style="margin:6px 0 0"><b>${list.length}</b> number${list.length === 1 ? '' : 's'} ready${known.length ? ` · ${known.length} already in Leads` : ''}${bad.length ? ` · <span style="color:var(--bad)">${bad.length} line${bad.length > 1 ? 's' : ''} without a valid mobile: ${esc(bad.slice(0, 3).join(' | '))}</span>` : ''}</p>
+    <div style="margin-top:12px"><label for="wa_tpl">Message template</label><select id="wa_tpl" data-change="wa-tpl">${tpls.map(x => `<option value="${esc(x.id)}" ${x.id === w.tpl ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+    <div style="margin-top:12px"><label for="wa_body">Message (you can edit; {name}, {lender} and {amount} fill per person)</label><textarea id="wa_body" rows="9" data-bind="wa.body" data-rerender>${esc(w.body)}</textarea>
+      <p class="small muted" style="margin:6px 0 0">These customers are not in the CRM, so EMI counts and dates are not known: remove lines such as "{paid} EMIs completed" or type the text yourself.</p></div></div>`;
+  return header('WhatsApp Messages', 'Template messages for every pipeline stage, sent from your own WhatsApp') +
+  `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><h3 style="margin:0;flex:1">Send to numbers</h3><div class="chips">${modeBtns}</div></div>
+    <div class="grid g2" style="align-items:start">${left}<div><label>Live preview${list[0] ? ` (${esc(list[0].name || showPhone(list[0].phone))})` : ''}</label><div class="wa-wrap"><div class="wa-bubble">${esc(prev)}<span class="tm">now ✓</span></div></div>
+      <button class="btn wa" style="width:100%;margin-top:12px" data-action="wa-nums-start" ${list.length ? '' : 'disabled'}>${ic('send')} Start sending (${list.length})</button>
+      <p class="small muted" style="margin:8px 0 0">One by one: each opens in your WhatsApp with the message ready, you press Send, then come back for the next. Use it for old disbursed customers and any number not yet in the CRM.</p></div></div></div>`;
+}
 function tplForm(t = {}) {
   return modal(t.id ? `Edit template · ${t.name}` : 'New template', `<form id="tpl-form" data-form="tpl-save" class="fg" style="grid-template-columns:1fr 1fr"><input type="hidden" name="id" value="${esc(t.id || '')}">
     ${fi('Template name *','name',t.name,'required maxlength="60"')}
@@ -1794,6 +1831,14 @@ function periodRange(kind, offset) {
   else if (kind === 'month') { s = new Date(n.getFullYear(), n.getMonth() + offset, 1); e = new Date(s.getFullYear(), s.getMonth() + 1, 1); label = s.toLocaleDateString('en-IN', {month:'long', year:'numeric'}); }
   else { s = new Date(n.getFullYear() + offset, 0, 1); e = new Date(s.getFullYear() + 1, 0, 1); label = String(s.getFullYear()); }
   return {s: s.toISOString(), e: e.toISOString(), label};
+}
+// TAT: days a file has been open since the lead was created. It stops at Disbursed / Rejected / Lost.
+function leadTat(l) {
+  const start = l.createdAt; if (!start) return null;
+  const end = CLOSED.includes(l.stage) ? ([...stageEvents(l)].reverse().find(h => h.stage === l.stage)?.at || l.updatedAt) : null;
+  const days = Math.max(0, Math.floor(((end ? new Date(end) : new Date()) - new Date(start)) / 864e5));
+  const limit = num(settings().tatDays) || 2;
+  return {days, closed: !!end, over: !end && days > limit, limit};
 }
 const stageEvents = l => (l.stageHistory && l.stageHistory.length) ? l.stageHistory : [{stage: l.stage, at: l.updatedAt || l.createdAt}];
 function teamStats(r) {
@@ -1953,19 +1998,20 @@ function vLeads() {
   const canEdit = CAN.editLeads(role), canDel = CAN.deleteLeads(role);
   const rows = S.all('leads').filter(l => (!f.stage || l.stage === f.stage) && (!q || [l.name, l.phone, l.bizName, l.city, l.bank, l.assignedName].join(' ').toLowerCase().includes(q)))
     .sort((a,b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
-  return header('Leads', `${rows.length} shown`, canEdit ? `<button class="btn primary" data-action="lead-new">${ic('plus')} Add lead</button>` : '') +
+  const overTat = rows.filter(l => leadTat(l)?.over).length;
+  return header('Leads', `${rows.length} shown${overTat ? ` · ${overTat} over TAT (${num(settings().tatDays) || 2} days)` : ''}`, canEdit ? `<button class="btn primary" data-action="lead-new">${ic('plus')} Add lead</button>` : '') +
   `<div class="card"><div class="toolbar"><div class="search">${ic('search')}<input id="leads_q" data-bind="f.leads.q" data-rerender value="${esc(f.q)}" placeholder="Search name, phone, business, bank…" aria-label="Search leads"></div>
     <select id="leads_stage" data-bind="f.leads.stage" data-rerender aria-label="Stage"><option value="">All stages</option>${STAGES.map(s => `<option ${s === f.stage ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-  ${rows.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Requirement</th><th>Stage</th><th>Handler</th><th></th></tr></thead><tbody>${rows.map(l => `<tr>
+  ${rows.length ? `<div class="tw"><table><thead><tr><th>Customer</th><th>Requirement</th><th>Stage · TAT</th><th>Handler</th><th></th></tr></thead><tbody>${rows.map(l => { const T = leadTat(l); return `<tr ${T?.over ? 'style="background:var(--warn-bg)"' : ''}>
     <td><div class="strong">${esc(l.name)}${l.cibilCheck?.score ? ` <span class="badge ${cibilBand(l.cibilCheck.score)[0]}" title="CIBIL ${esc(fmtDate(l.cibilCheck.date))}">CIBIL ${esc(l.cibilCheck.score)}</span>` : ''}</div><div class="small muted">${esc(showPhone(l.phone))}${l.bizName ? ` · ${esc(l.bizName)}` : ''}${l.city ? ` · ${esc(l.city)}` : ''}</div>${l.profile && (l.profile.sector || l.profile.bizType || l.profile.vintageYrs) ? `<div class="small muted">${esc([l.profile.sector, l.profile.bizType, l.profile.vintageYrs ? l.profile.vintageYrs + ' yrs' : ''].filter(Boolean).join(' · '))}</div>` : ''}</td>
     <td class="nowrap"><div>${esc(l.product)}</div><div class="small muted">${fmtL(l.amountLakh)}${l.bank && !l.logins?.length ? ` · ${esc(l.bank)}` : ''}</div>${l.logins?.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">${l.logins.map(g => `<span class="badge ${LOGIN_BADGE[g.status] || ''}" title="${esc(g.status)}${g.amountLakh ? ' · ₹' + fmtNumL(g.amountLakh) + ' L' : ''}">${esc(g.lender || 'Bank')}: ${esc(g.status)}</span>`).join('')}</div>` : ''}${l.loans?.length ? `<div class="small muted">${l.loans.length} loans · EMI ${fmtINR(l.profile?.emiTotal)}</div>` : ''}${num(l.profile?.bounces3m) ? `<span class="badge b-bad">${esc(l.profile.bounces3m)} bounce(s) 3m</span>` : ''}</td>
-    <td>${canEdit ? `<select class="small" data-change="lead-stage" data-id="${esc(l.id)}" style="width:auto" aria-label="Stage">${STAGES.map(s => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select>` : stageBadge(l.stage)}</td>
+    <td>${canEdit ? `<select class="small" data-change="lead-stage" data-id="${esc(l.id)}" style="width:auto" aria-label="Stage">${STAGES.map(s => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select>` : stageBadge(l.stage)}<div class="small muted" style="margin-top:4px">Created ${esc(fmtDate(dayOf(l.createdAt)))}</div>${T ? `<span class="badge ${T.closed ? '' : T.over ? 'b-warn' : 'b-ok'}" title="TAT limit ${T.limit} days">${T.closed ? `Closed in ${T.days} day${T.days === 1 ? '' : 's'}` : `TAT ${T.days} day${T.days === 1 ? '' : 's'}${T.over ? ` · over ${T.limit}` : ''}`}</span>` : ''}</td>
     <td><div>${esc(l.assignedName || '—')}</div><div class="small muted">${esc(l.branch || '')}</div></td>
     <td class="nowrap right">${(() => { const pr = docProgress(l); return `<button class="btn sm" data-action="docs-open" data-lead="${esc(l.id)}" title="Documents"><span class="${pr.done === pr.total ? '' : 'muted'}">${ic('file')}</span><span class="num">${pr.done}/${pr.total}</span></button>`; })()}
       <button class="btn sm" data-action="lead-elig" data-id="${esc(l.id)}" title="Check eligibility">${ic('calc')}</button>
       <button class="btn sm wa" data-action="wa-compose" data-lead="${esc(l.id)}" title="WhatsApp with template">${ic('msg')}</button>
       ${canEdit ? `<button class="btn sm" data-action="lead-edit" data-id="${esc(l.id)}">Edit</button>` : ''}
-      ${canDel ? `<button class="icon-btn" data-action="lead-del" data-id="${esc(l.id)}" title="Delete lead" aria-label="Delete lead">${ic('trash')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No leads match.</div>'}</div>`;
+      ${canDel ? `<button class="icon-btn" data-action="lead-del" data-id="${esc(l.id)}" title="Delete lead" aria-label="Delete lead">${ic('trash')}</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">No leads match.</div>'}</div>`;
 }
 function assignableStaff() {
   const u = state.user;
@@ -2615,6 +2661,7 @@ function vAdmin() {
     <div class="card"><h3>Company &amp; automation</h3><form data-form="settings-save" class="fg" style="grid-template-columns:1fr 1fr">
       <div class="full"><label>Company name (used in WhatsApp messages)</label><input name="company" maxlength="80" value="${esc(st.company)}"></div>
       <div><label>Daily call target per person</label><input type="number" name="callTarget" min="1" max="300" value="${esc(st.callTarget)}"></div>
+      <div><label>Lead TAT (days before a file turns orange)</label><input type="number" name="tatDays" min="1" max="60" value="${esc(st.tatDays ?? 2)}"></div>
       <div><label>EMI reminder window (days before EMI)</label><input type="number" name="emiWindow" min="1" max="15" value="${esc(st.emiWindow)}"></div>
       <div><label>Mark policy stale after (days)</label><input type="number" name="staleDays" min="7" max="365" value="${esc(st.staleDays)}"></div>
       <div><label>Auto-apply at confidence (%)</label><input type="number" name="autoApplyMin" min="50" max="99" value="${Math.round(st.autoApplyMin*100)}"></div>
@@ -2743,7 +2790,9 @@ const actions = {
     toast(`Follow-up set for ${l.name}, tomorrow 11:00`, 'ok'); }); },
   'fu-queue': () => { const t = todayStr(); startQueue('Due follow-ups', S.all('followups').filter(f => !f.done && f.date <= t).sort(byDate).filter(f => byId('leads', f.leadId)).map(f => ({leadId: f.leadId, fuId: f.id, remarks: f.remarks}))); },
   'q-send': () => {
-    const Q = state.waQueue; if (!Q) return; const it = Q.items[Q.i], l = byId('leads', it.leadId), text = $('#q_text')?.value || '';
+    const Q = state.waQueue; if (!Q) return; const it = Q.items[Q.i], text = $('#q_text')?.value || '';
+    if (it.adhoc) { if (text.trim()) { window.open(waLink(it.adhoc.phone, text), '_blank', 'noopener'); it.sent = true; } Q.i++; const h = queueModal(); if (h) openModal(h); else closeModal(); return; }
+    const l = byId('leads', it.leadId);
     const t = tplById(it.tpl) || tplForStage(l?.stage);
     if (l && text.trim() && openWhatsApp(l, text, t?.id, it.fuId, it.kind ? careExtra(it.kind, l, it.li) : {})) { it.sent = true; const done = $('#q_done'); if (it.fuId && done?.checked) guard(() => S.update('followups', it.fuId, {done: true, doneAt: nowISO(), doneBy: state.user.phone})); if (done) Q.markDone = done.checked; }
     Q.i++; const html = queueModal(); if (html) openModal(html); else closeModal();
@@ -2751,6 +2800,12 @@ const actions = {
   'q-skip': () => { const Q = state.waQueue; if (!Q) return; Q.i++; const html = queueModal(); if (html) openModal(html); else closeModal(); },
   'q-stop': () => { const Q = state.waQueue; if (Q) toast(`Stopped: ${Q.items.filter(x => x.sent).length} sent`, ''); state.waQueue = null; closeModal(); },
   'wa-mode': el => { state.wa.mode = el.dataset.v; render(); },
+  'wa-nums-start': () => {
+    const w = state.wa, {list} = parseNumList(w.nums), body = $('#wa_body')?.value || w.body;
+    if (!list.length) return toast('Enter at least one valid mobile number', 'bad');
+    if (!String(body).trim()) return toast('Type the message first', 'bad');
+    startQueue(`Numbers · ${tplById(w.tpl)?.name || 'Message'}`, list.map(x => ({adhoc: x, body})), false);
+  },
   'wa-send-single': () => { const l = byId('leads', state.wa.leadId); const text = $('#wa_text')?.value || state.wa.text; if (l && openWhatsApp(l, text, state.wa.tpl)) toast('Opened in WhatsApp. Press send there.', 'ok'); },
   'wa-broadcast': () => { const t = tplById(state.wa.tpl); startQueue(`Broadcast · ${t?.name || ''}`, waAudience().map(l => ({leadId: l.id, tpl: state.wa.tpl})), false); },
   'tpl-new': () => openModal(tplForm()),
@@ -3157,7 +3212,7 @@ const forms = {
     toast('Daily targets saved', 'ok');
   }),
   'settings-save': (f, fd) => guard(async () => {
-    await saveSettings({staleDays: Math.min(365, Math.max(7, num(fd.get('staleDays')) || 30)), autoApplyMin: Math.min(.99, Math.max(.5, num(fd.get('autoApplyMin'))/100 || .8)), autoApply: fd.get('autoApply') === 'on', company: clip(fd.get('company'),80) || DEFAULT_SETTINGS.company, callTarget: Math.min(300, Math.max(1, num(fd.get('callTarget')) || 50)), emiWindow: Math.min(15, Math.max(1, num(fd.get('emiWindow')) || 7))});
+    await saveSettings({staleDays: Math.min(365, Math.max(7, num(fd.get('staleDays')) || 30)), autoApplyMin: Math.min(.99, Math.max(.5, num(fd.get('autoApplyMin'))/100 || .8)), autoApply: fd.get('autoApply') === 'on', company: clip(fd.get('company'),80) || DEFAULT_SETTINGS.company, callTarget: Math.min(300, Math.max(1, num(fd.get('callTarget')) || 50)), emiWindow: Math.min(15, Math.max(1, num(fd.get('emiWindow')) || 7)), tatDays: Math.min(60, Math.max(1, num(fd.get('tatDays')) || 2))});
     toast('Settings saved', 'ok');
   }),
 };
@@ -3174,7 +3229,7 @@ const changes = {
   'lf-stage': el => { el.form.querySelectorAll('[data-when]').forEach(x => { x.style.display = x.dataset.when === el.value ? '' : 'none'; }); syncDisb(el.form); },
   'cmp-tpl': el => { const l = byId('leads', el.dataset.lead), t = tplById(el.value); if (l && t) { const v = fillTpl(t.body, l); $('#cmp_text').value = v; $('#cmp_prev').firstChild.nodeValue = v; } },
   'wa-pick': el => { state.wa.leadId = el.value; const l = byId('leads', el.value); if (l) { state.wa.tpl = tplForStage(l.stage).id; state.wa.text = fillTpl(tplById(state.wa.tpl).body, l); } else state.wa.text = ''; render(); },
-  'wa-tpl': el => { state.wa.tpl = el.value; const l = byId('leads', state.wa.leadId); state.wa.text = l ? fillTpl(tplById(el.value).body, l) : ''; render(); },
+  'wa-tpl': el => { if (state.wa.mode === 'numbers') { state.wa.tpl = el.value; state.wa.body = tplById(el.value)?.body || ''; return render(); } state.wa.tpl = el.value; const l = byId('leads', state.wa.leadId); state.wa.text = l ? fillTpl(tplById(el.value).body, l) : ''; render(); },
   'lead-stage': el => guard(() => { const l = byId('leads', el.dataset.id);
     if (l && ['Disbursed','Rejected'].includes(el.value)) { const st = el.value; render(); openModal(leadForm({...l, stage: st})); toast(st === 'Disbursed' ? 'Add the disbursement and EMI details, then save' : 'Select the rejection reasons, then save', ''); return; } return S.update('leads', el.dataset.id, {stage: el.value, updatedAt: nowISO(), stageHistory: [...(l?.stageHistory || []), {stage: el.value, at: nowISO(), by: state.user.phone}]}); }),
   'elig-lead': el => {
