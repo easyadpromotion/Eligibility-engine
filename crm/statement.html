@@ -3530,7 +3530,7 @@ function renderConsolidated(){
   accounts.forEach(acc => {
     const A = acc.analysis;
     grandCredit += A.totalCredit; grandDebit += A.totalDebit;
-    grandBounces += A.bounces.length; grandEmi += A.emiTxns.length;
+    grandBounces += A.bounces.length; grandEmi += A.emiTxns.filter(t => t.debit > 0).length;
     A.monthly.forEach(m => {
       if (!allMonthly.has(m.key)) allMonthly.set(m.key, {key:m.key, label:m.label, credit:0, debit:0, abbSum:0, abbN:0});
       const e = allMonthly.get(m.key);
@@ -3657,7 +3657,8 @@ function buildAccountWorkbook(acc){
     ['Total Debit Turnover', A.totalDebit],
     ['Average Bank Balance (ABB)', A.overallAbb],
     ['Bounces / Charges', A.bounces.length],
-    ['EMI-tagged Debits', A.emiTxns.length],
+    ['EMI-tagged Debits', A.emiTxns.filter(t => t.debit > 0).length],
+    ['Loan amounts credited', A.emiTxns.filter(t => t.credit > 0).length],
     ['Same-day Pass-through Volume', A.passthrough.vol],
     [],
     ['Business Transaction Threshold (Rs.)', A.businessThreshold],
@@ -3767,12 +3768,23 @@ function crmSummary(){
     .map(e => ({ lender: e.lender, count: e.count, lastAmount: Math.round(e.lastAmount), avgAmount: Math.round(e.total / e.count), lastDate: e.lastDate, recent: dateSortable(e.lastDate) > monthsBack(2) }));
   const totalCredit = accs.reduce((s,a) => s + a.analysis.totalCredit, 0), totalDebit = accs.reduce((s,a) => s + a.analysis.totalDebit, 0);
   const pass = accs.reduce((s,a) => s + a.analysis.passthrough.vol, 0);
+  // Period in days (inclusive). A statement of about 6 months (01 May to 04 Nov) is used whole, exactly as the report shows it;
+  // only a longer statement (over 7 months) is scaled down to 6 months for the 6-month turnover.
+  const toUTC = dmy => { const [dd,mm,yyyy] = String(dmy).split('/').map(Number); return Date.UTC(yyyy, mm-1, dd); };
+  const periodDays = start && end ? Math.max(1, Math.round((toUTC(end) - toUTC(start)) / 864e5) + 1) : monthly.length * 30;
+  const long = periodDays > 213;
+  // ABB: the same full-period figure as the report (accounts added together when combined); for long statements, the last 6 months.
+  const overallAbb = accs.reduce((s,a) => s + (a.analysis.overallAbb || 0), 0);
+  const abbUsed = long ? (last6.length ? last6.reduce((s,m) => s + m.abb, 0) / last6.length : overallAbb) : overallAbb;
+  const turnover6m = long ? totalCredit * 182.5 / periodDays : totalCredit;
+  const emiDebitCount = accs.reduce((s,a) => s + a.analysis.emiTxns.filter(t => t.debit > 0).length, 0);
   return {
-    source: 'Ledger Lens', accounts: accs.map(a => a.label), periodStart: start, periodEnd: end, monthsCount: monthly.length,
+    source: 'Ledger Lens', accounts: accs.map(a => a.label), periodStart: start, periodEnd: end, monthsCount: Math.round(periodDays / 30.44 * 10) / 10, periodDays,
+    turnoverPeriodLakh: Math.round(totalCredit / 1e3) / 100, abbPeriod: Math.round(overallAbb), scaledTo6m: long, emiDebitCount, overdrawn: overallAbb < 0,
     monthly: monthly.map(m => ({ label: m.label, credit: Math.round(m.credit), debit: Math.round(m.debit), abb: Math.round(m.abb), crCount: m.crCount, drCount: m.drCount })),
-    turnover6mLakh: Math.round(last6.reduce((s,m) => s + m.credit, 0) / 1e3) / 100,
-    abb6m: Math.round(last6.length ? last6.reduce((s,m) => s + m.abb, 0) / last6.length : 0),
-    avgMonthlyCredit: Math.round(monthly.length ? totalCredit / monthly.length : 0),
+    turnover6mLakh: Math.round(turnover6m / 1e3) / 100,
+    abb6m: Math.round(abbUsed),
+    avgMonthlyCredit: Math.round(monthly.length ? totalCredit / monthly.length : 0),   // same as the report's 'avg /mo'
     totalCredit: Math.round(totalCredit), totalDebit: Math.round(totalDebit),
     bounces6m: b6, bounces3m: b3, bouncesTotal: allBounces.length,
     emis, monthlyEmiRecent: emis.filter(e => e.recent).reduce((s,e) => s + e.lastAmount, 0),
@@ -3787,7 +3799,7 @@ function crmSummary(){
   bar.className = 'panel'; bar.style.cssText = 'margin-bottom:18px;border-left:4px solid var(--accent);';
   bar.innerHTML = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div><h2 style="font-size:17px">Linked to CRM lead: ${escapeHtml(CRM.name || 'customer')}</h2>
-    <p class="sub" style="margin:2px 0 0">Add this customer's statements below, check the figures, then send. ABB, 6-month turnover and bounces fill into the lead; the statement itself stays on this device.</p></div>
+    <p class="sub" style="margin:2px 0 0">Add this customer's statements below, check the figures, then send. ABB, credit turnover and bounces go to the lead exactly as shown in this report; the statement itself stays on this device.</p></div>
     <button class="btn btn-primary" id="crm-send" type="button">Send to CRM</button></div><div class="status-msg" id="crm-status"></div>`;
   document.querySelector('.wrap').insertBefore(bar, document.getElementById('intake-panel'));
   const status = (kind, msg) => { const el = bar.querySelector('#crm-status'); el.className = 'status-msg show ' + kind; el.innerHTML = `<span class="status-text">${escapeHtml(msg)}</span>`; };
@@ -3800,7 +3812,7 @@ function crmSummary(){
   });
   window.addEventListener('message', e => {
     if (e.origin !== location.origin || !e.data || e.data.type !== 'ledgerlens-saved' || e.data.leadId !== CRM.lead) return;
-    if (e.data.ok) status('ok', `Saved to ${CRM.name || 'the lead'}: ABB ₹${fmt0(e.data.abb)}, 6-month turnover ₹${e.data.turnover} L, bounces ${e.data.b6} (6 m) / ${e.data.b3} (3 m). You can close this tab.`);
+    if (e.data.ok) status('ok', `Saved to ${CRM.name || 'the lead'}: ABB ₹${fmt0(e.data.abb)}, credit turnover ₹${e.data.turnover} L, bounces ${e.data.b6} (6 m) / ${e.data.b3} (3 m). You can close this tab.`);
     else status('err', e.data.error || 'The CRM could not save this. Check that you are still signed in.');
   });
 })();

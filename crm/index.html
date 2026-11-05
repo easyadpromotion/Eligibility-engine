@@ -2308,7 +2308,15 @@ function parseCibilText(raw) {
   const t = String(raw || '').replace(/ /g, ' ').replace(/[ \t]+/g, ' '), out = {};
   const sc = [/CIBIL\s*(?:TRANSUNION\s*)?SCORE\s*(?:\(\s*V\s*\d(?:\.\d)?\s*\))?\s*[:\-]?\s*(\d{3})\b/i, /CREDIT\s*VISION\W{0,3}\s*SCORE\s*[:\-]?\s*(\d{3})\b/i, /YOUR\s*(?:CIBIL\s*)?SCORE\s*(?:IS)?\s*[:\-]?\s*(\d{3})\b/i, /\bSCORE\s*[:\-]?\s*(\d{3})\b/i];
   for (const rx of sc) { const m = t.match(rx); if (m && +m[1] >= 300 && +m[1] <= 900) { out.score = +m[1]; break; } }
-  const dm = t.match(/(?:REPORT\s*DATE|DATE\s*OF\s*REPORT|DATE\s*:|DATE\s*OF\s*ISSUE|GENERATED\s*ON)\s*[:\-]?\s*(\d{1,2})[\-\/\s.]([A-Za-z]{3,9}|\d{1,2})[\-\/\s.,]*(\d{2,4})/i);
+  // Score printed a few words after the heading ("CIBIL Score  as on 05 Nov 2026  742"), or with spaced digits ("7 4 2")
+  if (out.score == null) {
+    const flat = t.replace(/\b(\d)\s(\d)\s(\d)\b/g, '$1$2$3');
+    for (const m of flat.matchAll(/(?:CIBIL|CREDIT\s*VISION|CREDIT)\s*SCORE([\s\S]{0,160})/gi)) {
+      const cand = [...m[1].replace(/\d{1,2}[\/\-.\s](?:\d{1,2}|[A-Za-z]{3,9})[\/\-.\s,]*\d{2,4}/g, ' ').matchAll(/(?<![\d.,])(\d{3})(?![\d.,%])/g)].map(x => +x[1]).find(v => v >= 300 && v <= 900);
+      if (cand) { out.score = cand; break; }
+    }
+  }
+  const dm = t.match(/(?:REPORT\s*DATE|DATE\s*OF\s*REPORT|DATE\s*:|DATE\s*OF\s*ISSUE|GENERATED\s*ON|AS\s*(?:ON|OF)|DATED)\s*[:\-]?\s*(\d{1,2})(?:st|nd|rd|th)?[\-\/\s.]([A-Za-z]{3,9}|\d{1,2})[\-\/\s.,]*(\d{2,4})/i);
   if (dm) out.date = toISODate(dm[1], dm[2], dm[3]);
   const am = t.match(/TOTAL\s*[:\-]?\s*(\d{1,3})\s*OVERDUE\s*[:\-]?\s*(\d{1,3})/i) || t.match(/(?:TOTAL\s*ACCOUNTS|NO\.?\s*OF\s*ACCOUNTS)\s*[:\-]?\s*(\d{1,3})[\s\S]{0,80}?OVERDUE\s*(?:ACCOUNTS)?\s*[:\-]?\s*(\d{1,3})/i);
   if (am) { out.accounts = +am[1]; out.overdueAccts = +am[2]; }
@@ -2321,6 +2329,24 @@ function parseCibilText(raw) {
   }
   return out;
 }
+let cibilLastText = '';
+async function pdfOcr(file, password) {
+  const lib = await loadPdfJs(), T = await loadTesseract();
+  const doc = await lib.getDocument({data: new Uint8Array(await file.arrayBuffer()), password: password || undefined}).promise;
+  const worker = await T.createWorker('eng'); let out = '';
+  try {
+    const shot = async (i, scale) => { const pg = await doc.getPage(i), vp = pg.getViewport({scale}), cv = document.createElement('canvas');
+      cv.width = vp.width; cv.height = vp.height; const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); await pg.render({canvasContext: cx, viewport: vp}).promise; return cv; };
+    const pages = Math.min(doc.numPages, 2);
+    for (let i = 1; i <= pages; i++) { const {data} = await worker.recognize(await shot(i, 2)); out += (data.text || '') + '\n'; }
+    // Big score digits in a gauge are often missed in page mode: second pass reads scattered text
+    if (parseCibilText(out).score == null) {
+      await worker.setParameters({tessedit_pageseg_mode: '11'});
+      for (let i = 1; i <= pages; i++) for (const sc of [1.2, 0.8]) { const {data} = await worker.recognize(await shot(i, sc)); out += (data.text || '') + '\n'; if (parseCibilText(out).score != null) break; }
+    }
+  } finally { await worker.terminate(); }
+  return out;
+}
 async function cibilFromPdf(input) {
   const file = input.files?.[0]; if (!file) return;
   const form = input.closest('form'), msg = form?.querySelector('#cb_msg'), say = (x, bad) => { if (msg) { msg.textContent = x; msg.style.color = bad ? 'var(--bad)' : ''; } };
@@ -2330,10 +2356,17 @@ async function cibilFromPdf(input) {
   let text;
   try { text = await pdfText(file, form.querySelector('#cb_pw')?.value || ''); }
   catch (e) { input.value = ''; return say(/password/i.test(e?.name + e?.message) ? 'This PDF is password protected. Type the password in the box and choose the file again.' : (e.message || 'Could not read this PDF.'), true); }
-  const r = parseCibilText(text), set = (k, v) => { const el = form.querySelector(`[name="${k}"]`); if (el && v != null && v !== '') el.value = v; };
+  let r = parseCibilText(text), how = 'text';
+  if (r.score == null) {   // score drawn as a picture (common on the score page): read the first pages like a screenshot
+    try { say('Score not in the PDF text, reading the pages as images… (about 10 seconds)'); const o = await pdfOcr(file, form.querySelector('#cb_pw')?.value || ''); const r2 = parseCibilText(o); if (r2.score != null) { r = {...r2, ...Object.fromEntries(Object.entries(r).filter(([, v]) => v != null && v !== ''))}; r.score = r2.score; how = 'image'; } text += '\n' + o; }
+    catch (e) { console.warn('CIBIL OCR', e); }
+  }
+  cibilLastText = text;
+  const set = (k, v) => { const el = form.querySelector(`[name="${k}"]`); if (el && v != null && v !== '') el.value = v; };
   set('cb_score', r.score); set('cb_date', r.date || todayStr()); set('cb_accounts', r.accounts); set('cb_overdue', r.overdueAccts); set('cb_enq', r.enquiries6m);
   const found = [r.score != null && `score ${r.score}`, r.date && `date ${fmtDate(r.date)}`, r.accounts != null && `${r.accounts} accounts (${r.overdueAccts} overdue)`, r.enquiries6m != null && `${r.enquiries6m} enquiries in 6 months`].filter(Boolean);
-  say(found.length ? `Found ${found.join(', ')}. Check the late-payment and written-off boxes against the report, then press Save lead.` : 'Could not find the score in this PDF. Type the figures from the report, then press Save lead.', !found.length);
+  say(found.length ? `Found ${found.join(', ')}${how === 'image' ? ' (read from the page image, please confirm)' : ''}. Check the late-payment and written-off boxes against the report, then press Save lead.` : 'Could not find the score in this PDF. Type the figures from the report, then press Save lead.', !found.length);
+  if (r.score == null && msg) { msg.insertAdjacentHTML('beforeend', ' <button type="button" class="btn sm" data-action="cibil-text">Show what was read</button>'); }
   const leadId = input.dataset.lead, l = leadId && byId('leads', leadId), u = state.user;
   if (l) {
     try {
@@ -2353,17 +2386,17 @@ function bsaCard(l) {
   const btn = l.id ? `<button type="button" class="btn ${A ? '' : 'primary'}" data-action="bsa-open" data-lead="${esc(l.id)}">${ic('file')} ${A ? 'Re-analyse statements' : 'Analyse bank statement'}</button>` : '<span class="small muted">Save the lead first, then open it again to analyse its bank statements.</span>';
   if (!A) return `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${btn}<span class="small muted">Upload the customer's PDF statements; ABB, 6-month turnover and bounces fill in automatically.</span></div>`;
   return `<div class="card" style="box-shadow:none;background:var(--surface-2)">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><b style="flex:1">${esc((A.accounts || []).join(', ') || 'Statement')}${A.combined ? ' (combined)' : ''} · ${esc(A.periodStart || '')} – ${esc(A.periodEnd || '')} · ${num(A.monthsCount)} months</b>${btn}</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><b style="flex:1">${esc((A.accounts || []).join(', ') || 'Statement')}${A.combined ? ' (combined)' : ''} · ${esc(A.periodStart || '')} – ${esc(A.periodEnd || '')} · ${A.periodDays ? esc(A.periodDays) + ' days' : num(A.monthsCount) + ' months'}</b>${btn}</div>
     <div class="kpis" style="margin:0 0 10px">
-      <div class="card kpi"><div class="l">ABB (last 6 m)</div><div class="v">${inr(A.abb6m)}</div></div>
-      <div class="card kpi"><div class="l">Turnover (last 6 m)</div><div class="v">₹${esc(A.turnover6mLakh)} L</div><div class="h">avg ${inr(A.avgMonthlyCredit)}/month</div></div>
+      <div class="card kpi"><div class="l">${A.periodDays ? (A.scaledTo6m ? 'ABB (last 6 m)' : 'Average bank balance') : 'ABB (last 6 m)'}</div><div class="v ${num(A.abb6m) < 0 ? 'neg' : ''}">${inr(A.abb6m)}</div>${num(A.abb6m) < 0 ? '<div class="h" style="color:var(--warn)">Overdrawn on average (OD / CC account)</div>' : ''}</div>
+      <div class="card kpi"><div class="l">Credit turnover</div><div class="v">₹${esc(A.turnoverPeriodLakh ?? A.turnover6mLakh)} L</div><div class="h">${A.periodDays ? `whole statement · ${esc(A.monthsCount)} months` : 'last 6 months'} · avg ${inr(A.avgMonthlyCredit)}/month${A.scaledTo6m ? ` · ≈ ₹${esc(A.turnover6mLakh)} L per 6 months` : ''}</div></div>
       <div class="card kpi"><div class="l">Bounces</div><div class="v ${num(A.bounces6m) ? 'neg' : ''}">${num(A.bounces6m)} / ${num(A.bounces3m)}</div><div class="h">6 months / 3 months</div></div>
       <div class="card kpi"><div class="l">EMIs seen (recent)</div><div class="v">${inr(A.monthlyEmiRecent)}</div><div class="h">${(A.emis || []).length} lender(s) · pass-through ${num(A.passthroughPct)}%</div></div>
     </div>
     ${(A.emis || []).length ? `<div class="tw"><table><thead><tr><th>EMI to</th><th>Last EMI</th><th>Last date</th><th>Times</th></tr></thead><tbody>${A.emis.map(e => `<tr><td>${esc(e.lender)}${e.recent ? '' : ' <span class="badge">old</span>'}</td><td>${inr(e.lastAmount)}</td><td>${esc(e.lastDate)}</td><td>${num(e.count)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="small muted">No EMI / NACH debits found in the statement.</div>'}
     ${(A.loanCredits || []).length ? `<div class="small" style="margin-top:6px"><b>Loans credited:</b> ${A.loanCredits.map(c => `${esc(c.lender)} ${inr(c.amount)} (${esc(c.date)})`).join(' · ')}</div>` : ''}
     <details style="margin-top:8px"><summary class="small">Month-wise credit, debit and ABB</summary><div class="tw"><table><thead><tr><th>Month</th><th>Credit</th><th>Debit</th><th>ABB</th></tr></thead><tbody>${(A.monthly || []).map(m => `<tr><td>${esc(m.label)}</td><td>${inr(m.credit)}</td><td>${inr(m.debit)}</td><td>${inr(m.abb)}</td></tr>`).join('')}</tbody></table></div></details>
-    <div class="small muted" style="margin-top:6px">Analysed ${esc(fmtDate(String(A.analysedAt || '').slice(0, 10)))}${A.by ? ' by ' + esc(A.by) : ''}. The statement itself is not stored, only these figures.</div></div>`;
+    <div class="small muted" style="margin-top:6px">Analysed ${esc(fmtDate(String(A.analysedAt || '').slice(0, 10)))}${A.by ? ' by ' + esc(A.by) : ''}. ${A.periodDays ? 'Figures match the Ledger Lens report for the same statement.' : 'Analysed with the older method; press Re-analyse statements to match the Ledger Lens report.'} The statement itself is not stored, only these figures.</div></div>`;
 }
 window.addEventListener('message', e => {
   if (e.origin !== location.origin || !e.data || e.data.type !== 'ledgerlens-result') return;
@@ -2868,6 +2901,7 @@ const actions = {
   'tpl-del': el => guard(async () => { if (!confirm('Delete this template?')) return; await saveSettings({templates: templates().filter(t => t.id !== el.dataset.id)}); closeModal(); toast('Template deleted'); }),
   'tpl-reset': () => guard(async () => { if (confirm('Go back to the default templates? Your edits will be lost.')) { await saveSettings({templates: null}); toast('Default templates restored'); } }),
   'cal-pick': el => { const v = el.dataset.v; state.f.callsCal.date = v; state.f.callsCal.month = v.slice(0, 7); hideHov(); render(); },
+  'cibil-text': () => openModal(modal('Text read from the CIBIL PDF', `<p class="small muted">If the score is visible here but was not picked up, send this to support. Nothing here leaves your computer.</p><textarea rows="18" readonly style="font-family:var(--font-num);font-size:12px">${esc(cibilLastText.slice(0, 6000) || '(no text in this PDF)')}</textarea>`)),
   'cibil-open': () => {
     if (!$('#cb_consent')?.checked) return toast('Tick the customer consent box first', 'bad');
     window.open(CIBIL_URL, 'cibil', 'noopener');
