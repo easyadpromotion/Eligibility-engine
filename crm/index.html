@@ -2273,6 +2273,7 @@ function cibilCard(l) {
       <li>Upload that PDF: <input type="file" accept="application/pdf" data-change="cibil-pdf" data-lead="${esc(l.id || '')}" style="width:auto;display:inline-block"> <input id="cb_pw" type="password" placeholder="PDF password, if any" autocomplete="off" style="width:170px;display:inline-block" aria-label="PDF password"></li>
     </ol>
     <div id="cb_msg" class="small muted" style="margin-bottom:8px">${l.id ? 'The PDF is read in this browser and saved under Documents as CIBIL report.' : 'Save the lead first to keep the PDF under Documents; the figures can still be filled now.'}</div>
+    <input type="hidden" name="cb_loans" value="${esc(JSON.stringify(C.loans || []))}">
     <div class="fg" style="grid-template-columns:repeat(4,1fr)">
       ${f('CIBIL score', 'cb_score', C.score, 'type="number" min="300" max="900" placeholder="e.g. 742"')}
       ${f('Report date', 'cb_date', C.date, 'type="date"')}
@@ -2282,7 +2283,7 @@ function cibilCard(l) {
       ${f('Monthly EMIs in report (₹)', 'cb_emi', C.emi, 'type="number" min="0"')}
       ${yn('Late payment (DPD) in last 12 m', 'cb_dpd', C.dpd12m)}
       ${yn('Written-off / settled', 'cb_wo', C.woSettled)}
-    </div></div>`;
+    </div><div id="cb_loans_box">${cibilLoansHtml(C.loans)}</div></div>`;
 }
 let pdfjsPromise = null;
 function loadPdfJs() {
@@ -2330,15 +2331,57 @@ function parseCibilText(raw) {
   return out;
 }
 let cibilLastText = '';
-async function pdfOcr(file, password) {
+const ACCT_TYPES = ['Personal Loan','Business Loan','Credit Card','Auto Loan','Car Loan','Two-wheeler Loan','Two Wheeler Loan','Housing Loan','Home Loan','Property Loan','Loan Against Property','Gold Loan','Consumer Loan','Education Loan','Overdraft','Kisan Credit Card','Microfinance','Commercial Vehicle Loan','Tractor Loan','Business Loan Unsecured','Business Loan Secured','Loan to Professional','Used Car Loan','Construction Equipment Loan','Short Term Personal Loan','Mudra Loan','Other'];
+const cbDate = s => { const m = String(s || '').match(/(\d{1,2})[\-\/\s.]([A-Za-z]{3,9}|\d{1,2})[\-\/\s.,]*(\d{4})/); return m ? toISODate(m[1], m[2], m[3]) : ''; };
+const cbAmt = s => { const m = String(s || '').match(/-?[\d,]+(?:\.\d+)?/); if (!m) return null; const v = Math.round(+m[0].replace(/,/g, '')); return isNaN(v) ? null : v; };
+// Reads the account blocks of a CIBIL report: lender, type, opened/closed, sanctioned, balance, EMI, overdue, late payments.
+function parseCibilAccounts(raw, reportDate) {
+  const t = String(raw || '').replace(/ /g, ' ').replace(/[ \t]+/g, ' ');
+  let parts = t.split(/(?=\bMEMBER\s*NAME\b)/i); if (parts.length < 2) parts = t.split(/(?=\bACCOUNT\s*(?:NUMBER|NO\.?)\b)/i);
+  if (parts.length < 2) return [];
+  const amt = (b, rx) => { const m = b.match(rx); return m ? cbAmt(m[1]) : null; };
+  const date = (b, rx) => { const m = b.match(rx); return m ? cbDate(m[1]) : ''; };
+  const out = [];
+  for (const seg of parts.slice(1)) {
+    const b = seg.slice(0, 3500).split(/\bENQUIR(?:Y|IES)\s*(?:INFORMATION|DETAILS)\b/i)[0];
+    let lender = (b.match(/MEMBER\s*NAME\s*[:\-]?\s*([A-Za-z0-9&.,'()\- ]{3,60}?)(?=\s*(?:\n|ACCOUNT|TYPE|OWNERSHIP|$))/i) || [])[1] || '';
+    lender = lender.replace(/\s+/g, ' ').trim(); const canon = detectBanks(lender.toLowerCase())[0] || detectBanks(b.slice(0, 200).toLowerCase())[0]; if (canon) lender = canon; else if (lender) lender = titleCase(lender);
+    let type = (b.match(/\b(?:ACCOUNT\s*)?TYPE\s*[:\-]?\s*([A-Za-z\- ]{4,40}?)(?=\s*(?:\n|OWNERSHIP|OPENED|DATE|$))/i) || [])[1] || '';
+    const kt = ACCT_TYPES.find(x => new RegExp('\\b' + x.replace(/[\- ]/g, '[\\s\\-]*') + '\\b', 'i').test(type || b.slice(0, 600))); type = kt || (type ? titleCase(type.trim()) : '');
+    const opened = date(b, /(?:DATE\s*)?OPENED(?:\s*\/\s*DISBURSED)?\s*[:\-]?\s*([0-9]{1,2}[\-\/\s.](?:[A-Za-z]{3,9}|[0-9]{1,2})[\-\/\s.,]*[0-9]{4})/i);
+    const closed = date(b, /(?:DATE\s*)?CLOSED\s*[:\-]?\s*([0-9]{1,2}[\-\/\s.](?:[A-Za-z]{3,9}|[0-9]{1,2})[\-\/\s.,]*[0-9]{4})/i);
+    const sanctioned = amt(b, /(?:SANCTIONED(?:\s*AMOUNT)?|HIGH\s*CREDIT|CREDIT\s*LIMIT|DISBURSED\s*AMOUNT)\s*[:\-]?\s*(?:RS\.?|₹|INR)?\s*(-?[\d,]{2,})/i);
+    const balance = amt(b, /CURRENT\s*BALANCE\s*[:\-]?\s*(?:RS\.?|₹|INR)?\s*(-?[\d,]+)/i);
+    const overdue = amt(b, /(?:AMOUNT\s*OVERDUE|OVERDUE\s*AMOUNT)\s*[:\-]?\s*(?:RS\.?|₹|INR)?\s*([\d,]+)/i);
+    const emi = amt(b, /\bEMI(?:\s*AMOUNT)?\s*[:\-]?\s*(?:RS\.?|₹|INR)?\s*([\d,]{3,})/i);
+    const tenure = amt(b, /(?:REPAYMENT\s*)?TENURE\s*[:\-]?\s*(\d{1,3})/i);
+    const hist = (b.match(/DAYS\s*PAST\s*DUE[\s\S]{0,900}/i) || [''])[0];
+    const dpd = /\b(?:0(?:0[1-9]|[1-9]\d)|[1-9]\d\d)\b|\b(?:SMA|SUB|DBT|LSS)\b/.test(hist);
+    const wo = /(?:WRITTEN[\s\-]*OFF\s*(?:AMOUNT)?(?:\s*\(?TOTAL\)?)?|SETTLEMENT\s*AMOUNT)\s*[:\-]?\s*(?:RS\.?|₹)?\s*[1-9][\d,]*/i.test(b) || /\b(?:WRITTEN[\s\-]*OFF|SETTLED|POST\s*\(WO\)\s*SETTLED|SUIT\s*FILED)\s*(?:STATUS)?\s*[:\-]?\s*(?:YES|WRITTEN|SETTLED|RESTRUCTURED)\b/i.test(b);
+    if (!(lender || type) || !(sanctioned != null || balance != null || opened)) continue;
+    out.push({lender: lender.slice(0, 60), type, opened, closed, sanctioned, balance, overdue, emi, tenure, dpd, wo, running: !closed && (balance == null || balance > 0)});
+    if (out.length >= 40) break;
+  }
+  const ref = reportDate ? new Date(reportDate) : new Date(), from = new Date(ref); from.setMonth(from.getMonth() - 6); const fromISO = from.toISOString().slice(0, 10);
+  return out.map(a => ({...a, recent: !!a.opened && a.opened >= fromISO}));
+}
+function cibilLoansHtml(loans) {
+  const L = loans || [], run = L.filter(a => a.running), rec = L.filter(a => a.recent), inr = v => v == null ? '—' : '₹' + Math.round(v).toLocaleString('en-IN');
+  if (!L.length) return '';
+  const tbl = (list, title, cls) => `<h4 style="margin:12px 0 6px;font-size:13px">${title} <span class="badge ${cls}">${list.length}</span></h4>${list.length ? `<div class="tw"><table><thead><tr><th>Lender</th><th>Type</th><th>Opened</th><th>Sanctioned</th><th>Balance</th><th>EMI</th><th>Overdue</th><th></th></tr></thead><tbody>${list.map(a => `<tr><td><b>${esc(a.lender || '—')}</b></td><td>${esc(a.type || '—')}</td><td class="nowrap">${a.opened ? esc(fmtDate(a.opened)) : '—'}${a.closed ? `<div class="small muted">closed ${esc(fmtDate(a.closed))}</div>` : ''}</td><td>${inr(a.sanctioned)}</td><td>${inr(a.balance)}</td><td>${inr(a.emi)}</td><td>${a.overdue ? `<span class="badge b-bad">${inr(a.overdue)}</span>` : '—'}</td><td>${a.dpd ? '<span class="badge b-warn">Late payment</span>' : ''}${a.wo ? ' <span class="badge b-bad">Written-off / settled</span>' : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="small muted">None.</div>'}`;
+  const emi = run.reduce((s, a) => s + num(a.emi), 0), bal = run.reduce((s, a) => s + num(a.balance), 0);
+  return `<div class="small" style="margin-top:10px"><b>${L.length}</b> accounts in the report · <b>${run.length}</b> running · outstanding ${inr(bal)} · running EMIs ${inr(emi)}/month</div>
+    ${tbl(run, 'Running loans', 'b-info')}${tbl(rec, 'Loans taken in the last 6 months', rec.length ? 'b-warn' : '')}`;
+}
+async function pdfOcr(file, password, maxPages = 2, onPage) {
   const lib = await loadPdfJs(), T = await loadTesseract();
   const doc = await lib.getDocument({data: new Uint8Array(await file.arrayBuffer()), password: password || undefined}).promise;
   const worker = await T.createWorker('eng'); let out = '';
   try {
     const shot = async (i, scale) => { const pg = await doc.getPage(i), vp = pg.getViewport({scale}), cv = document.createElement('canvas');
       cv.width = vp.width; cv.height = vp.height; const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); await pg.render({canvasContext: cx, viewport: vp}).promise; return cv; };
-    const pages = Math.min(doc.numPages, 2);
-    for (let i = 1; i <= pages; i++) { const {data} = await worker.recognize(await shot(i, 2)); out += (data.text || '') + '\n'; }
+    const pages = Math.min(doc.numPages, maxPages);
+    for (let i = 1; i <= pages; i++) { onPage?.(i, pages); const {data} = await worker.recognize(await shot(i, 2)); out += (data.text || '') + '\n'; }
     // Big score digits in a gauge are often missed in page mode: second pass reads scattered text
     if (parseCibilText(out).score == null) {
       await worker.setParameters({tessedit_pageseg_mode: '11'});
@@ -2357,16 +2400,30 @@ async function cibilFromPdf(input) {
   try { text = await pdfText(file, form.querySelector('#cb_pw')?.value || ''); }
   catch (e) { input.value = ''; return say(/password/i.test(e?.name + e?.message) ? 'This PDF is password protected. Type the password in the box and choose the file again.' : (e.message || 'Could not read this PDF.'), true); }
   let r = parseCibilText(text), how = 'text';
+  if (text.replace(/\s+/g, '').length < 400) {   // scanned / image-only report: read every page as an image
+    try { say('This report is made of images, reading every page… (a few seconds per page)'); const o = await pdfOcr(file, form.querySelector('#cb_pw')?.value || '', 15, (i, n) => say(`Reading page ${i} of ${n}…`)); text += '\n' + o; r = parseCibilText(text); if (r.score != null) how = 'image'; }
+    catch (e) { console.warn('CIBIL OCR', e); }
+  }
   if (r.score == null) {   // score drawn as a picture (common on the score page): read the first pages like a screenshot
     try { say('Score not in the PDF text, reading the pages as images… (about 10 seconds)'); const o = await pdfOcr(file, form.querySelector('#cb_pw')?.value || ''); const r2 = parseCibilText(o); if (r2.score != null) { r = {...r2, ...Object.fromEntries(Object.entries(r).filter(([, v]) => v != null && v !== ''))}; r.score = r2.score; how = 'image'; } text += '\n' + o; }
     catch (e) { console.warn('CIBIL OCR', e); }
   }
   cibilLastText = text;
+  const loans = parseCibilAccounts(text, r.date || todayStr());
+  if (loans.length) {
+    const run = loans.filter(a => a.running);
+    if (r.accounts == null) r.accounts = loans.length;
+    if (r.overdueAccts == null) r.overdueAccts = loans.filter(a => num(a.overdue) > 0).length;
+    r.emi = run.reduce((s, a) => s + num(a.emi), 0) || null;
+    r.dpd = loans.some(a => a.dpd) ? 'Yes' : 'No'; r.wo = loans.some(a => a.wo) ? 'Yes' : 'No';
+  }
+  const lb = form.querySelector('#cb_loans_box'), lh = form.querySelector('[name="cb_loans"]');
+  if (lb) lb.innerHTML = cibilLoansHtml(loans); if (lh) lh.value = JSON.stringify(loans);
   const set = (k, v) => { const el = form.querySelector(`[name="${k}"]`); if (el && v != null && v !== '') el.value = v; };
-  set('cb_score', r.score); set('cb_date', r.date || todayStr()); set('cb_accounts', r.accounts); set('cb_overdue', r.overdueAccts); set('cb_enq', r.enquiries6m);
-  const found = [r.score != null && `score ${r.score}`, r.date && `date ${fmtDate(r.date)}`, r.accounts != null && `${r.accounts} accounts (${r.overdueAccts} overdue)`, r.enquiries6m != null && `${r.enquiries6m} enquiries in 6 months`].filter(Boolean);
-  say(found.length ? `Found ${found.join(', ')}${how === 'image' ? ' (read from the page image, please confirm)' : ''}. Check the late-payment and written-off boxes against the report, then press Save lead.` : 'Could not find the score in this PDF. Type the figures from the report, then press Save lead.', !found.length);
-  if (r.score == null && msg) { msg.insertAdjacentHTML('beforeend', ' <button type="button" class="btn sm" data-action="cibil-text">Show what was read</button>'); }
+  set('cb_score', r.score); set('cb_date', r.date || todayStr()); set('cb_accounts', r.accounts); set('cb_overdue', r.overdueAccts); set('cb_enq', r.enquiries6m); set('cb_emi', r.emi); set('cb_dpd', r.dpd); set('cb_wo', r.wo);
+  const found = [r.score != null && `score ${r.score}`, r.date && `date ${fmtDate(r.date)}`, r.accounts != null && `${r.accounts} accounts (${r.overdueAccts} overdue)`, r.enquiries6m != null && `${r.enquiries6m} enquiries in 6 months`, loans.length && `${loans.filter(a => a.running).length} running loans, ${loans.filter(a => a.recent).length} taken in the last 6 months`].filter(Boolean);
+  say(found.length ? `Found ${found.join(', ')}${how === 'image' ? ' (read from the page image, please confirm)' : ''}. ${loans.length ? 'Check the figures against the report' : 'Loan accounts could not be read from this report: check the late-payment and written-off boxes yourself'}, then press Save lead.` : 'Could not find the score in this PDF. Type the figures from the report, then press Save lead.', !found.length);
+  if (msg) msg.insertAdjacentHTML('beforeend', ' <button type="button" class="btn sm" data-action="cibil-text">Show what was read</button>');
   const leadId = input.dataset.lead, l = leadId && byId('leads', leadId), u = state.user;
   if (l) {
     try {
@@ -2806,7 +2863,7 @@ function signedIn(u) { state.user = u; state.login.err = ''; S.start(u); state.r
 // ---------------------------------------------------------------------
 const eligFromLead = l => { const P = l.profile || {}; return {leadId: l.id, name: l.name, phone: digits10(l.phone), city: l.city || '', product: l.product, loanLakh: l.amountLakh ?? '',
   cibil: P.cibil ?? l.cibilCheck?.score ?? '', vintage: P.vintageYrs ?? '', turnover: num(P.turnover6m) ? r2(num(P.turnover6m) * 2) : '', abb: P.abb ?? '',
-  existingEmi: P.emiTotal ? Math.max(0, num(P.emiTotal) - num(P.closingEmi)) : ''}; };
+  existingEmi: P.emiTotal ? Math.max(0, num(P.emiTotal) - num(P.closingEmi)) : (num(l.cibilCheck?.emi) || '')}; };
 const actions = {
   'demo-login': el => {
     const s = S.db.staff.find(x => x.id === el.dataset.id); if (!s) return;
@@ -3221,7 +3278,8 @@ const forms = {
       if (sc != null || fd.get('cb_date')) {
         const changed = !oc || oc.score !== sc || oc.date !== (fd.get('cb_date') || '');
         if (changed && fd.get('cb_consent') !== 'on') return toast('Tick "Customer agrees to a CIBIL check" before saving a CIBIL result', 'bad');
-        extra.cibilCheck = {score: sc, date: fd.get('cb_date') || todayStr(), accounts: nOrN('cb_accounts'), overdueAccts: nOrN('cb_overdue'), enquiries6m: nOrN('cb_enq'), emi: nOrN('cb_emi'),
+        let cbLoans = []; try { cbLoans = JSON.parse(fd.get('cb_loans') || '[]').slice(0, 40); } catch (e) { cbLoans = oc?.loans || []; }
+        extra.cibilCheck = {loans: cbLoans, score: sc, date: fd.get('cb_date') || todayStr(), accounts: nOrN('cb_accounts'), overdueAccts: nOrN('cb_overdue'), enquiries6m: nOrN('cb_enq'), emi: nOrN('cb_emi'),
           dpd12m: fd.get('cb_dpd') || '', woSettled: fd.get('cb_wo') || '', consent: true, checkedAt: changed ? nowISO() : (oc.checkedAt || nowISO()), by: changed ? u.name : (oc.by || u.name)};
         profile.cibil = sc;
       } else if (oc) { extra.cibilCheck = oc; profile.cibil = oc.score; }
