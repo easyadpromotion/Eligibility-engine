@@ -390,7 +390,7 @@ const BANKS = [
   ['Federal Bank',/\bfederal\s*bank\b/],['Bandhan Bank',/\bbandhan\b/],['Equitas SFB',/\bequitas\b/],['Ujjivan SFB',/\bujjivan\b/],
   ['Canara Bank',/\bcanara\b/],['Union Bank of India',/\bunion\s*bank\b/],['Bank of Baroda',/\bbank\s*of\s*baroda\b/],
   ['Punjab National Bank',/\bpnb\b(?!\s*housing)|punjab\s*national/],['Indian Bank',/\bindian\s*bank\b/],['Godrej Capital',/\bgodrej\s*cap/],
-  ['Protium',/\bprotium\b/],['Muthoot Fincorp',/\bmuthoot\s*fin\s*corp\b/],['Muthoot Finance',/\bmuthoot\b(?!\s*fin\s*corp)/],['Mahindra Finance',/\bmahindra\s*(?:&\s*mahindra\s*)?(?:finance|financial)\b/],
+  ['Protium',/\bprotium\b/],['Muthoot Fincorp',/\bmuthoot\s*fin\s*corp\b/],['Muthoot Finance',/\bmuthoot(?!\s*fin\s*corp)/],['Kinara Capital',/\bkinara/],['Mahindra Finance',/\bmahindra\s*(?:&\s*mahindra\s*)?(?:finance|financial)\b/],
   ['Can Fin Homes',/\bcan\s*fin\b|canfinhomes/],['Aadhar Housing Finance',/\baadh?aa?r\s*housing\b|aadharhousing/],['PNB Housing Finance',/\bpnb\s*housing\b|pnbhousing/],
   ['LIC Housing Finance',/\blic\s*(?:housing|hfl)\b/],['Truhome Finance',/\btru\s*home\b/],['Aavas Financiers',/\baavas\b/],['Home First Finance',/\bhome\s*first\b/],
   ['IIFL Finance',/\biifl\b/],['Sundaram Finance',/\bsundaram\b/],['Godrej Housing Finance',/\bgodrej\s*housing\b/],['Shubham Housing',/\bshubham\b/],
@@ -2334,13 +2334,13 @@ function parseCibilText(raw) {
 let cibilLastText = '';
 const ACCT_TYPES = ['Personal Loan','Business Loan','Credit Card','Auto Loan','Car Loan','Two-wheeler Loan','Two Wheeler Loan','Housing Loan','Home Loan','Property Loan','Loan Against Property','Gold Loan','Consumer Loan','Education Loan','Overdraft','Kisan Credit Card','Microfinance','Commercial Vehicle Loan','Tractor Loan','Business Loan Unsecured','Business Loan Secured','Loan to Professional','Used Car Loan','Construction Equipment Loan','Short Term Personal Loan','Mudra Loan','Other'];
 const cbDate = s => { const m = String(s || '').match(/(\d{1,2})[\-\/\s.]([A-Za-z]{3,9}|\d{1,2})[\-\/\s.,]*(\d{4})/); return m ? toISODate(m[1], m[2], m[3]) : ''; };
-const cbAmt = s => { const m = String(s || '').match(/-?[\d,]+(?:\.\d+)?/); if (!m) return null; const v = Math.round(+m[0].replace(/,/g, '')); return isNaN(v) ? null : v; };
+const cbAmt = s => { const m = String(s || '').replace(/(\d)\.(\d{3})(?!\d)/g, '$1,$2').match(/-?[\d,]+(?:\.\d+)?/); if (!m) return null; const v = Math.round(+m[0].replace(/,/g, '')); return isNaN(v) ? null : v; };
 // Reads the account blocks of a CIBIL report: lender, type, opened/closed, sanctioned, balance, EMI, overdue, late payments.
 // myscore.cibil.com print layout: one "Label Value" per line (no colon), value sometimes on the next line,
 // page footers/headers in between. Reads label lines in any order; a repeated label starts the next account.
 const CB_LABELS = [
   ['lender', /^(?:member\s*name|lender(?:\s*name)?|institution(?:\s*name)?|bank\s*name|credit\s*grantor)\b/i],
-  ['type', /^(?:account\s*type|loan\s*type|facility\s*type|type\s*of\s*(?:loan|account)|type)\b/i],
+  ['type', /^(?:account\s*type|loan\s*type|facility\s*type|type\s*of\s*(?:loan|account)|type(?!\s*of\s*collateral)(?=\s*[:\-]|\s*$))/i],
   ['opened', /^(?:date\s*opened(?:\s*\/\s*disbursed)?|opened\s*date|open\s*date|date\s*of\s*disbursal|disbursed\s*date|date\s*opened|opened)\b/i],
   ['closed', /^(?:date\s*closed|closed\s*date|closed)\b/i],
   ['sanctioned', /^(?:high\s*credit\s*\/\s*sanctioned\s*amount|sanctioned\s*amount|sanctioned|high\s*credit|credit\s*limit|loan\s*amount|disbursed\s*amount)\b/i],
@@ -2354,40 +2354,64 @@ const CB_LABELS = [
 ];
 const CB_NOISE = /^(?:https?:\/\/|\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}|page\s*\d|.*\bpage\s*\?enterprise)/i;
 function parseCibilAccountsLines(raw, reportDate) {
-  const lines = String(raw || '').replace(/\u00a0/g, ' ').split(/\n/).map(x => x.replace(/[ \t]+/g, ' ').trim()).filter(x => x && !CB_NOISE.test(x));
-  const start = lines.findIndex(x => /^(?:account\s*(?:information|details|summary)|accounts?)\b/i.test(x) && !/^accounts?\s*\d/i.test(x));
-  const endRel = lines.slice(Math.max(0, start)).findIndex(x => /^enquir(?:y|ies)\b/i.test(x));
-  const body = lines.slice(Math.max(0, start), endRel >= 0 ? Math.max(0, start) + endRel : lines.length);
-  const accts = []; let cur = null;
-  const isLabel = x => CB_LABELS.some(([, rx]) => rx.test(x));
+  const lines = String(raw || '').replace(/ /g, ' ').split(/\n/).map(x => x.replace(/[ \t]+/g, ' ').trim()).filter(x => x && !CB_NOISE.test(x));
+  // Accounts start at "ALL ACCOUNTS" / "OPEN ACCOUNTS" / "ACCOUNT INFORMATION" (not the per-account "ACCOUNT DETAILS")
+  let start = lines.findIndex(x => /^(?:all\s*accounts|open\s*accounts|account\s*information|accounts?\s*information|accounts)$/i.test(x));
+  if (start < 0) start = Math.max(0, lines.findIndex(x => /^member\s*name\b/i.test(x)) - 1);
+  const endRel = lines.slice(start).findIndex(x => /^enquir(?:y|ies)\b/i.test(x));
+  const body = lines.slice(start, endRel >= 0 ? start + endRel : lines.length);
+  const accts = []; let cur = null, section = '';
+  const isLabel = x => CB_LABELS.some(([, rx]) => rx.test(x)) || /^(?:open|closed|all)\s*accounts$/i.test(x);
   for (let i = 0; i < body.length; i++) {
-    const line = body[i], hit = CB_LABELS.find(([, rx]) => rx.test(line)); if (!hit) { if (cur?.histOpen) cur.hist += ' ' + line; continue; }
+    const line = body[i];
+    if (/^open\s*accounts$/i.test(line)) { section = 'open'; if (cur) cur.histOpen = false; continue; }
+    if (/^closed\s*accounts$/i.test(line)) { section = 'closed'; if (cur) cur.histOpen = false; continue; }
+    const hit = CB_LABELS.find(([, rx]) => rx.test(line));
+    if (!hit) { if (cur?.histOpen) cur.hist += '\n' + line; continue; }
     const [k, rx] = hit; let v = line.replace(rx, '').replace(/^[\s:]+/, '').trim();
     if (/^[-–]+$/.test(v)) v = '-'; else v = v.replace(/^[-–]\s+/, '').trim();   // "Date Closed -" means not closed
-    if (!v && body[i + 1] && !isLabel(body[i + 1])) { v = body[i + 1]; i++; }
+    if (!v && k !== 'hist' && body[i + 1] && !isLabel(body[i + 1])) { v = body[i + 1]; i++; }
     if (cur) cur.histOpen = false;
-    if (k === 'hist') { if (cur) { cur.hist = (cur.hist || '') + ' ' + v; cur.histOpen = true; } continue; }
-    if (!cur || (['lender', 'type', 'opened', 'sanctioned', 'balance'].includes(k) && cur[k] != null && cur[k] !== '') || (k === 'lender' && !cur.lender && (cur.balance != null || cur.sanctioned != null))) { cur = {hist: ''}; accts.push(cur); }
-    cur[k] = v;
+    if (k === 'hist') { if (cur) { cur.hist = (cur.hist || '') + '\n' + v; cur.histOpen = true; } continue; }
+    const filled = x => x != null && x !== '' && x !== '-';
+    if (!cur || (['lender', 'type', 'opened', 'sanctioned', 'balance'].includes(k) && filled(cur[k]) && filled(v)) || (k === 'lender' && !filled(cur.lender) && (filled(cur.balance) || filled(cur.sanctioned)))) { cur = {hist: '', section}; accts.push(cur); }
+    if (!(v === '-' && filled(cur[k]))) cur[k] = v;   // "Credit Limit -" must not hide "Sanctioned Amount 30,00,000"
   }
+  const ref = reportDate ? new Date(reportDate) : new Date(), y1 = new Date(ref); y1.setMonth(y1.getMonth() - 12);
+  const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
   const out = [];
   for (const a of accts) {
     const nil = v => v == null || /^(?:-+|na|n\/a|nil|none|0|0\.00)?$/i.test(String(v).trim());
     let lender = nil(a.lender) ? '' : String(a.lender).replace(/\s+/g, ' ').trim();
     const canon = detectBanks(lender.toLowerCase())[0]; lender = canon || (lender ? titleCase(lender) : '');
-    const kt = ACCT_TYPES.find(x => new RegExp('\\b' + x.replace(/[\- ]/g, '[\\s\\-]*') + '\\b', 'i').test(a.type || ''));
-    const type = kt || (nil(a.type) ? '' : titleCase(String(a.type).trim()).slice(0, 40));
-    const amt = v => nil(v) ? null : cbAmt(v);
+    const rawType = nil(a.type) ? '' : String(a.type).replace(/\s*-\s*/g, ' - ').replace(/\s+/g, ' ').trim();
+    const type = rawType ? titleCase(rawType).replace(/ - $/, '').slice(0, 40) : '';
+    const amt = v => v == null || /^(?:-+|na|n\/a|nil|none)?$/i.test(String(v).trim()) ? null : cbAmt(v);   // "0" is a real zero here
     const opened = nil(a.opened) ? '' : cbDate(a.opened), closed = nil(a.closed) ? '' : cbDate(a.closed);
     const balance = amt(a.balance), sanctioned = amt(a.sanctioned);
-    const h = String(a.hist || '');
-    const dpd = /(?<![\d,.\/])(?:0(?:0[1-9]|[1-9]\d)|[1-9]\d\d)(?![\d,.\/])/.test(h) || /\b(?:SMA|SUB|DBT|LSS)\b/.test(h);
+    // Payment history: "Sep 2025 238" = 238 days past due that month. Only plain numbers / SMA SUB DBT LSS count; STD, XXX and OCR'd tick marks do not.
+    let maxDpd = 0, maxDpdOn = '', dpd12 = false, bad = '';
+    for (const m of String(a.hist || '').matchAll(/\b([A-Za-z]{3})[a-z]*\.?\s*(\d{4})\s+([0-9]{1,3}|SMA|SUB|DBT|LSS)(?=\s|$)/g)) {   // "6}" / "[o]" are tick marks read by OCR, not days
+      const mi = MON.indexOf(m[1].toLowerCase()); if (mi < 0) continue;
+      const when = new Date(+m[2], mi, 1), val = m[3];
+      const days = /^\d+$/.test(val) ? +val : 90;
+      if (/^\d+$/.test(val) && days === 0) continue;
+      if (/^[A-Z]+$/.test(val)) bad = val;
+      if (days > maxDpd) { maxDpd = days; maxDpdOn = `${m[1]} ${m[2]}`; }
+      if (when >= y1) dpd12 = true;
+    }
+    if (!maxDpd && !bad && !/\b[A-Za-z]{3}[a-z]*\.?\s*\d{4}\b/.test(a.hist || '')) {   // grid without month names: "000 030 000 STD"
+      const hl = String(a.hist || '').split('\n').filter(x => !/:/.test(x)).join(' ');
+      for (const m of hl.matchAll(/(?<![\d,.\/])(\d{3}|SMA|SUB|DBT|LSS)(?![\d,.\/])/g)) { const d = /^\d+$/.test(m[1]) ? +m[1] : 90; if (d > 0) { dpd12 = true; if (d > maxDpd) maxDpd = d; if (!/^\d+$/.test(m[1])) bad = m[1]; } }
+    }
     const wo = (!nil(a.woamt) && (cbAmt(a.woamt) || 0) > 0) || (!nil(a.wostatus) && /written|settled|restructured|suit|wilful/i.test(a.wostatus));
     if (!(lender || type) || !(sanctioned != null || balance != null || opened)) continue;
-    out.push({lender: lender.slice(0, 60), type, opened, closed, sanctioned, balance, overdue: amt(a.overdue), emi: amt(a.emi), tenure: amt(a.tenure), dpd, wo, running: !closed && (balance == null || balance > 0)});
+    const isClosed = !!closed || a.section === 'closed';
+    out.push({lender: lender.slice(0, 60), type, opened, closed, sanctioned, balance, overdue: amt(a.overdue), emi: amt(a.emi), tenure: amt(a.tenure),
+      dpd: dpd12, maxDpd, maxDpdOn, dpdCode: bad, wo, open: !isClosed, running: !isClosed && (balance == null || balance > 0)});
     if (out.length >= 60) break;
   }
-  const ref = reportDate ? new Date(reportDate) : new Date(), from = new Date(ref); from.setMonth(from.getMonth() - 6); const fromISO = from.toISOString().slice(0, 10);
+  const from = new Date(ref); from.setMonth(from.getMonth() - 6); const fromISO = from.toISOString().slice(0, 10);
   return out.map(a => ({...a, recent: !!a.opened && a.opened >= fromISO}));
 }
 function parseCibilAccounts(raw, reportDate) {
@@ -2425,12 +2449,12 @@ function parseCibilAccountsInline(raw, reportDate) {
   return out.map(a => ({...a, recent: !!a.opened && a.opened >= fromISO}));
 }
 function cibilLoansHtml(loans) {
-  const L = loans || [], run = L.filter(a => a.running), rec = L.filter(a => a.recent), inr = v => v == null ? '—' : '₹' + Math.round(v).toLocaleString('en-IN');
+  const L = loans || [], run = L.filter(a => a.running), rec = L.filter(a => a.recent), zero = L.filter(a => a.open && !a.running), inr = v => v == null ? '—' : '₹' + Math.round(v).toLocaleString('en-IN');
   if (!L.length) return '';
-  const tbl = (list, title, cls) => `<h4 style="margin:12px 0 6px;font-size:13px">${title} <span class="badge ${cls}">${list.length}</span></h4>${list.length ? `<div class="tw"><table><thead><tr><th>Lender</th><th>Type</th><th>Opened</th><th>Sanctioned</th><th>Balance</th><th>EMI</th><th>Overdue</th><th></th></tr></thead><tbody>${list.map(a => `<tr><td><b>${esc(a.lender || '—')}</b></td><td>${esc(a.type || '—')}</td><td class="nowrap">${a.opened ? esc(fmtDate(a.opened)) : '—'}${a.closed ? `<div class="small muted">closed ${esc(fmtDate(a.closed))}</div>` : ''}</td><td>${inr(a.sanctioned)}</td><td>${inr(a.balance)}</td><td>${inr(a.emi)}</td><td>${a.overdue ? `<span class="badge b-bad">${inr(a.overdue)}</span>` : '—'}</td><td>${a.dpd ? '<span class="badge b-warn">Late payment</span>' : ''}${a.wo ? ' <span class="badge b-bad">Written-off / settled</span>' : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="small muted">None.</div>'}`;
+  const tbl = (list, title, cls) => `<h4 style="margin:12px 0 6px;font-size:13px">${title} <span class="badge ${cls}">${list.length}</span></h4>${list.length ? `<div class="tw"><table><thead><tr><th>Lender</th><th>Type</th><th>Opened</th><th>Sanctioned</th><th>Balance</th><th>EMI</th><th>Overdue</th><th></th></tr></thead><tbody>${list.map(a => `<tr><td><b>${esc(a.lender || '—')}</b></td><td>${esc(a.type || '—')}</td><td class="nowrap">${a.opened ? esc(fmtDate(a.opened)) : '—'}${a.closed ? `<div class="small muted">closed ${esc(fmtDate(a.closed))}</div>` : ''}</td><td>${inr(a.sanctioned)}</td><td>${inr(a.balance)}</td><td>${inr(a.emi)}</td><td>${a.overdue ? `<span class="badge b-bad">${inr(a.overdue)}</span>` : '—'}</td><td>${a.maxDpd ? `<span class="badge ${a.dpd ? 'b-bad' : 'b-warn'}" title="Worst month in payment history">${a.dpdCode || a.maxDpd + ' days late'}${a.maxDpdOn ? ' · ' + esc(a.maxDpdOn) : ''}${a.dpd && a.maxDpdOn ? ' (last 12 m)' : ''}</span>` : (a.dpd ? '<span class="badge b-warn">Late payment</span>' : '')}${a.wo ? ' <span class="badge b-bad">Written-off / settled</span>' : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="small muted">None.</div>'}`;
   const emi = run.reduce((s, a) => s + num(a.emi), 0), bal = run.reduce((s, a) => s + num(a.balance), 0);
   return `<div class="small" style="margin-top:10px"><b>${L.length}</b> accounts in the report · <b>${run.length}</b> running · outstanding ${inr(bal)} · running EMIs ${inr(emi)}/month</div>
-    ${tbl(run, 'Running loans', 'b-info')}${tbl(rec, 'Loans taken in the last 6 months', rec.length ? 'b-warn' : '')}`;
+    ${tbl(run, 'Running loans', 'b-info')}${tbl(rec, 'Loans taken in the last 6 months', rec.length ? 'b-warn' : '')}${zero.length ? tbl(zero, 'Open accounts with zero balance (check if closed)', '') : ''}${L.filter(a => !a.open).length ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">Closed accounts · ${L.filter(a => !a.open).length}</summary>${tbl(L.filter(a => !a.open), 'Closed accounts', '')}</details>` : ''}`;
 }
 async function pdfOcr(file, password, maxPages = 2, onPage) {
   const lib = await loadPdfJs(), T = await loadTesseract();
@@ -2460,7 +2484,7 @@ async function cibilFromPdf(input) {
   catch (e) { input.value = ''; return say(/password/i.test(e?.name + e?.message) ? 'This PDF is password protected. Type the password in the box and choose the file again.' : (e.message || 'Could not read this PDF.'), true); }
   let r = parseCibilText(text), how = 'text';
   if (text.replace(/\s+/g, '').length < 400) {   // scanned / image-only report: read every page as an image
-    try { say('This report is made of images, reading every page… (a few seconds per page)'); const o = await pdfOcr(file, form.querySelector('#cb_pw')?.value || '', 15, (i, n) => say(`Reading page ${i} of ${n}…`)); text += '\n' + o; r = parseCibilText(text); if (r.score != null) how = 'image'; }
+    try { say('This report is made of images, reading every page… (a few seconds per page)'); const o = await pdfOcr(file, form.querySelector('#cb_pw')?.value || '', 80, (i, n) => say(`Reading page ${i} of ${n}…`)); text += '\n' + o; r = parseCibilText(text); if (r.score != null) how = 'image'; }
     catch (e) { console.warn('CIBIL OCR', e); }
   }
   if (r.score == null) {   // score drawn as a picture (common on the score page): read the first pages like a screenshot
