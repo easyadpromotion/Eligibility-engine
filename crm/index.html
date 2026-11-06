@@ -2772,12 +2772,99 @@ function vBankers() {
     const groups = [...map.entries()].sort((a,b) => (a[0] === 'Location not known') - (b[0] === 'Location not known') || b[1].length - a[1].length || a[0].localeCompare(b[0]));
     body = `<div class="cards">${groups.map(([loc, list]) => `<div class="card"><h3>${esc(loc)} <span class="badge b-info">${list.length}</span><span class="small muted" style="margin-left:auto;font-weight:500">${uniq(list.map(b => b.bank)).length} lenders</span></h3><div class="list">${list.map(b => `<div class="li"><div class="grow"><b>${esc(b.bank || 'Unknown lender')}</b><div class="small muted">${esc([b.name, b.designation, b.product].filter(Boolean).join(' · ') || '—')}${b.geo ? ` · ${esc(b.geo)}` : ''}</div></div>${b.dnc ? '<span class="badge b-bad">DNC</span>' : `<a class="btn sm" href="${esc(telLink(b.phone))}" title="Call ${esc(showPhone(b.phone))}">${ic('phone')}</a><button class="btn sm wa" data-action="bk-wa" data-id="${esc(b.id)}" data-generic="1" title="WhatsApp with a policy-request draft">${ic('msg')}</button>`}</div>`).join('')}</div></div>`).join('')}</div>`;
   } else body = `<div class="cards">${rows.map(bkCard).join('')}</div>`;
-  return header('Banker Directory', `${rows.length} contacts · ${banks.length} lenders · ${locs.length} locations`, can ? `<a class="btn" href="#/import">${ic('upload')} Import chat</a><button class="btn primary" data-action="bk-new">${ic('plus')} Add contact</button>${state.user.role === 'Admin' ? `<button class="btn" data-action="bk-dedupe">Remove duplicates</button>` : ''}` : '') +
+  return header('Banker Directory', `${rows.length} contacts · ${banks.length} lenders · ${locs.length} locations`, can ? `<a class="btn" href="#/import">${ic('upload')} Import chat</a><button class="btn" data-action="pc-open">${ic('phone')} Import phone contacts</button><button class="btn primary" data-action="bk-new">${ic('plus')} Add contact</button>${state.user.role === 'Admin' ? `<button class="btn" data-action="bk-dedupe">Remove duplicates</button>` : ''}` : '') +
   `<div class="notice info">${ic('shield')}<div>Business contacts shared in professional DSA groups. Use them only for loan work, and mark <b>Do not contact</b> if someone asks to be removed.</div></div>
   <div class="toolbar"><div class="search">${ic('search')}<input id="bk_q" data-bind="f.bk.q" data-rerender value="${esc(f.q)}" placeholder="Search name, lender, location, product…" aria-label="Search contacts"></div>
     <select id="bk_bank" data-bind="f.bk.bank" data-rerender aria-label="Lender"><option value="">All lenders</option>${banks.map(b => `<option ${b === f.bank ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
     <select id="bk_loc" data-bind="f.bk.loc" data-rerender aria-label="Location"><option value="">All locations</option>${locs.map(l => `<option ${l === f.loc ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
   ${tabs}${body}`;
+}
+// ---- Phone contacts → bankers. Reads a .vcf (Android / iPhone export) or a Google Contacts .csv in the browser,
+// keeps only contacts that look like bankers (lender name, banking designation, company), and saves the ones you tick.
+function vcfUnfold(t) { return String(t).replace(/\r\n/g, '\n').replace(/=\n/g, '').replace(/\n[ \t]/g, ''); }
+function qpDecode(v) { try { return decodeURIComponent(v.replace(/=([0-9A-F]{2})/gi, '%$1')); } catch (e) { return v.replace(/=([0-9A-F]{2})/gi, (m, h) => String.fromCharCode(parseInt(h, 16))); } }
+function parseVcf(text) {
+  const out = [];
+  for (const card of vcfUnfold(text).split(/BEGIN:VCARD/i).slice(1)) {
+    const c = {name: '', phones: [], org: '', title: '', email: '', note: '', city: ''};
+    for (const line of card.split('\n')) {
+      const m = line.match(/^(?:item\d+\.)?([A-Z\-]+)((?:;[^:]*)?):(.*)$/i); if (!m) continue;
+      const key = m[1].toUpperCase(), params = m[2] || ''; let v = m[3].trim();
+      if (/QUOTED-PRINTABLE/i.test(params)) v = qpDecode(v);
+      v = v.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/gi, ' ');
+      if (key === 'FN') c.name = v;
+      else if (key === 'N' && !c.name) c.name = v.split(';').filter(Boolean).reverse().join(' ');
+      else if (key === 'TEL') { const d = digits10(v); if (d && /^[6-9]/.test(d) && !c.phones.includes(d)) c.phones.push(d); }
+      else if (key === 'ORG') c.org = v.split(';').filter(Boolean).join(' ');
+      else if (key === 'TITLE' || key === 'ROLE') c.title = c.title || v;
+      else if (key === 'EMAIL') c.email = c.email || v;
+      else if (key === 'NOTE') c.note = v;
+      else if (key === 'ADR') c.city = c.city || (v.split(';')[3] || '');
+    }
+    if (c.phones.length) out.push(c);
+  }
+  return out;
+}
+function parseCsvRows(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) { const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true; else if (ch === ',') { row.push(cell); cell = ''; } else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; } else if (ch !== '\r') cell += ch; }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function parseContactsCsv(text) {
+  const rows = parseCsvRows(String(text).replace(/^﻿/, '')); if (rows.length < 2) return [];
+  const H = rows[0].map(h => h.toLowerCase().trim()), idx = f => H.map((h, i) => f(h) ? i : -1).filter(i => i >= 0);
+  const nameCols = idx(h => /^(?:name|display name|full name)$/.test(h)), partCols = idx(h => /^(?:first name|given name|middle name|additional name|last name|family name)$/.test(h));
+  const phoneCols = idx(h => /phone|mobile|tel/.test(h) && !/type|label/.test(h)), orgCols = idx(h => /organi[sz]ation(?: 1)? - name|^organi[sz]ation name$|^company$|^organi[sz]ation$/.test(h));
+  const titleCols = idx(h => /title|job|designation/.test(h) && !/organi[sz]ation(?: 1)? - (?:name|department)/.test(h)), mailCols = idx(h => /e-?mail/.test(h) && !/type|label/.test(h));
+  const noteCols = idx(h => /^notes?$/.test(h)), cityCols = idx(h => /city|locality/.test(h));
+  const get = (r, cols) => cols.map(i => (r[i] || '').trim()).filter(Boolean);
+  return rows.slice(1).map(r => {
+    const phones = []; get(r, phoneCols).join(' ::: ').split(/:::/).forEach(x => { const d = digits10(x); if (d && /^[6-9]/.test(d) && !phones.includes(d)) phones.push(d); });
+    return {name: get(r, nameCols)[0] || get(r, partCols).join(' '), phones, org: get(r, orgCols)[0] || '', title: get(r, titleCols)[0] || '', email: get(r, mailCols)[0] || '', note: get(r, noteCols)[0] || '', city: get(r, cityCols)[0] || ''};
+  }).filter(c => c.phones.length);
+}
+// Banker test: a lender name anywhere (name, company, title, email domain, note) or banking words + a role.
+const BANKERISH = /\b(?:bank|finance|financ(?:e|ial)|fincorp|finserv|capital|nbfc|hfc|housing|credit|loans?|lending|fin)\b/i;
+const ROLEISH = /\b(?:rm|asm|bm|sm|tl|dsm|cluster|branch\s*manager|sales\s*manager|relationship|credit\s*manager|area\s*manager|zonal|regional|bde|bdm|executive|officer|manager|dsa\s*manager|channel)\b/i;
+function classifyContact(c) {
+  const blob = [c.name, c.org, c.title, c.note, (c.email || '').split('@')[1] || ''].join(' ').replace(/[_.\-]+/g, ' ');
+  const low = blob.toLowerCase(), bank = detectBanks(low)[0] || '';
+  const desig = detectDesig(low) || (c.title && c.title.length < 50 ? titleCase(c.title) : '');
+  const city = detectCity(low) || (c.city ? titleCase(c.city) : '');
+  let level = '', why = '';
+  if (bank) { level = 'yes'; why = `Lender: ${bank}`; }
+  else if (BANKERISH.test(blob) && (ROLEISH.test(blob) || c.org)) { level = 'yes'; why = 'Banking company / role'; }
+  else if (BANKERISH.test(blob) || (ROLEISH.test(blob) && /\b(?:rm|asm|bm|bdm|credit|dsa)\b/i.test(blob))) { level = 'maybe'; why = 'Banking word in name'; }
+  // the person's name without the lender / role words people add ("Ravi HDFC BL RM" → "Ravi")
+  let person = String(c.name || '').replace(/\b(?:hdfc|icici|axis|kotak|sbi|idfc|bajaj|tata|aditya|birla|yes|indusind|au|ujjivan|equitas|chola|cholamandalam|shriram|muthoot|mahindra|lic|pnb|bob|canara|union|federal|rbl|bandhan|hero|piramal|poonawalla|lendingkart|kinara|neogrowth|flexiloans|ugro|protium|indifi|clix|fullerton|smfg|iifl|aavas|aadhar|aadhaar|home\s*first|can\s*fin|godrej|sundaram|capri|five\s*star|incred|dcb|esaf|hdb|bank|finance|financial|fincorp|finserv|capital|housing|hfc|nbfc|ltd|limited|pvt|bl|pl|hl|lap|ubl|sbl|rm|asm|bm|sm|tl|dsm|bdm|bde|sales|manager|credit|branch|area|cluster|executive|officer|loan|loans)\b/gi, ' ').replace(/[^A-Za-z .']/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const [, rx] of CITIES) person = person.replace(new RegExp(rx.source, 'gi'), ' ');   // "Lakshmi Kotak Vizag" → "Lakshmi"
+  person = person.replace(/\s+/g, ' ').trim();
+  if (!goodName(person)) person = '';
+  return {level, why, bank, desig, city, person: person ? titleCase(person).slice(0, 80) : ''};
+}
+function phoneContactsModal() {
+  const P = state.pc || {list: [], show: 'bankers'}, bk = S.all('bankers');
+  const L = P.list, shown = L.filter(x => P.show === 'all' ? true : P.show === 'maybe' ? x.level === 'maybe' : x.level === 'yes');
+  const sel = L.filter(x => x.sel).length;
+  const body = !L.length ? `<p class="small muted" style="margin-top:0">Export the contacts from your phone, then choose the file here. Only contacts that look like bankers are kept for review; nothing is saved until you press Save.</p>
+      <ul class="small" style="margin:0 0 12px;padding-left:18px"><li><b>Android:</b> Contacts app → ☰ / Settings → Export → .vcf file (or contacts.google.com → Export → vCard / Google CSV)</li><li><b>iPhone:</b> icloud.com/contacts → select all → Export vCard</li></ul>
+      <input type="file" accept=".vcf,.vcard,.csv,text/vcard,text/x-vcard,text/csv" data-change="pc-file" aria-label="Contacts file">
+      <p class="small muted" style="margin:10px 0 0">The file is read in this browser only.</p>`
+    : `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><span class="small"><b>${L.length}</b> contacts read · <b>${L.filter(x => x.level === 'yes').length}</b> bankers · ${L.filter(x => x.level === 'maybe').length} maybe · ${L.filter(x => x.saved).length} already in the directory</span><span style="flex:1"></span>
+        ${[['bankers', 'Bankers'], ['maybe', 'Maybe'], ['all', 'All contacts']].map(([v, l]) => `<button class="btn sm ${P.show === v ? 'primary' : ''}" data-action="pc-show" data-v="${v}">${l}</button>`).join('')}
+        <button class="btn sm" data-action="pc-sel" data-v="shown">Select shown</button><button class="btn sm" data-action="pc-sel" data-v="none">Clear</button></div>
+      <div class="tw" style="max-height:52vh;overflow:auto"><table><thead><tr><th></th><th>Contact (as saved in phone)</th><th>Mobile</th><th>Name</th><th>Lender</th><th>Designation</th><th>City</th><th>Why</th></tr></thead><tbody>${shown.slice(0, 600).map(x => { const i = L.indexOf(x);
+        return `<tr><td><input type="checkbox" data-change="pc-tick" data-i="${i}" ${x.sel ? 'checked' : ''} aria-label="Select ${esc(x.raw)}"></td><td class="small">${esc(x.raw)}${x.org ? `<div class="muted">${esc(x.org)}</div>` : ''}</td><td class="nowrap small">${esc(showPhone('+91' + x.phone))}${x.saved ? '<div><span class="badge">Saved · fills blanks</span></div>' : ''}</td>
+          <td><input data-change="pc-edit" data-i="${i}" data-k="name" value="${esc(x.name)}" style="min-width:110px"></td><td><input data-change="pc-edit" data-i="${i}" data-k="bank" value="${esc(x.bank)}" list="dl-bank" style="min-width:120px"></td>
+          <td><input data-change="pc-edit" data-i="${i}" data-k="desig" value="${esc(x.desig)}" style="min-width:100px"></td><td><input data-change="pc-edit" data-i="${i}" data-k="city" value="${esc(x.city)}" list="dl-city" style="min-width:90px"></td>
+          <td class="small"><span class="badge ${x.level === 'yes' ? 'b-ok' : x.level === 'maybe' ? 'b-warn' : ''}">${esc(x.why || 'Not a banker')}</span></td></tr>`; }).join('')}</tbody></table></div>
+      ${shown.length > 600 ? `<p class="small muted">Showing the first 600 of ${shown.length}.</p>` : ''}
+      <datalist id="dl-bank">${uniq([...BANKS.map(b => b[0]), ...bk.map(b => b.bank)]).filter(Boolean).sort().map(b => `<option value="${esc(b)}">`).join('')}</datalist><datalist id="dl-city">${CITY_NAMES.map(c => `<option value="${esc(c)}">`).join('')}</datalist>`;
+  const foot = L.length ? `<button class="btn" data-action="pc-reset">Choose another file</button><button class="btn primary" data-action="pc-save" ${sel && !P.saving ? '' : 'disabled'}>${P.saving ? 'Saving…' : `${ic('check')} Save ${sel} banker${sel === 1 ? '' : 's'}`}</button>` : '';
+  return modal('Import bankers from phone contacts', body, foot);
 }
 function bkForm(b = {}) {
   const can = CAN.editBankers(state.user.role);
@@ -3214,6 +3301,25 @@ const actions = {
   'rep-person': el => openModal(personReport(el.dataset.id)),
   'rep-csv': () => reportCsv(),
   'bk-new': () => openModal(bkForm()),
+  'pc-open': () => { state.pc = {list: [], show: 'bankers'}; openModal(phoneContactsModal()); },
+  'pc-reset': () => { state.pc = {list: [], show: 'bankers'}; openModal(phoneContactsModal()); },
+  'pc-show': el => { state.pc.show = el.dataset.v; openModal(phoneContactsModal()); },
+  'pc-sel': el => { const P = state.pc; P.list.forEach(x => { if (el.dataset.v === 'none') x.sel = false; else if (P.show === 'all' || (P.show === 'maybe' ? x.level === 'maybe' : x.level === 'yes')) x.sel = true; }); openModal(phoneContactsModal()); },
+  'pc-save': () => guard(async () => {
+    const P = state.pc, pick = P.list.filter(x => x.sel); if (!pick.length) return;
+    if (!['Admin','Operations'].includes(state.user.role)) return toast('Only Admin / Operations can add bankers', 'bad');
+    P.saving = true; openModal(phoneContactsModal());
+    let added = 0, updated = 0;
+    try {
+      for (const x of pick) {
+        const ex = S.all('bankers').find(b => digits10(b.phone) === x.phone), city = x.city || '';
+        const data = {name: goodName(x.name) ? clip(x.name, 80) : '', bank: clip(x.bank, 60), designation: clip(x.desig, 60), city: clip(city, 40), email: clip(x.email, 120)};
+        if (ex) { const patch = {}; for (const [k, v] of Object.entries(data)) if (v && (!ex[k] || (k === 'name' && !goodName(ex[k])))) patch[k] = v; if (Object.keys(patch).length) { await S.update('bankers', ex.id, patch); updated++; } }
+        else { await S.add('bankers', {...data, product: '', locations: CITY_NAMES.includes(city) ? [city] : [], geo: '', phone: '+91' + x.phone, notes: `Phone contact: ${clip(x.raw, 80)}`, sourceGroup: 'Phone contacts', verified: false, dnc: false, firstSeen: nowISO(), lastSeen: nowISO(), createdAt: nowISO()}); added++; }
+      }
+    } finally { P.saving = false; }
+    closeModal(); state.pc = null; toast(`${added} bankers added${updated ? ` · ${updated} existing cards filled` : ''}`, 'ok');
+  }),
   'bk-view': el => { state.f.bk.view = el.dataset.v; render(); },
   'bk-edit': el => openModal(bkForm(byId('bankers', el.dataset.id))),
   'bk-del': async el => { const b = byId('bankers', el.dataset.id); if (b && confirm(`Delete ${b.name || 'this contact'}?`)) await guard(async () => { await S.remove('bankers', b.id); closeModal(); toast('Contact deleted'); }); },
@@ -3480,6 +3586,21 @@ const changes = {
     state.elig.results = null; render();
   },
   'cibil-pdf': el => cibilFromPdf(el),
+  'pc-file': async el => {
+    const f = el.files?.[0]; if (!f) return;
+    if (f.size > 25e6) return toast('File too large (max 25 MB)', 'bad');
+    const text = await f.text(), raw = /\.csv$/i.test(f.name) || /^[^\n]*,/.test(text.split('\n')[0]) && !/BEGIN:VCARD/i.test(text) ? parseContactsCsv(text) : parseVcf(text);
+    if (!raw.length) return toast('No contacts with an Indian mobile number found in this file', 'bad');
+    const bk = S.all('bankers'), list = [];
+    for (const c of raw) { const k = classifyContact(c);
+      for (const ph of c.phones.slice(0, 3)) list.push({raw: c.name || '(no name)', org: c.org, phone: ph, email: c.email, name: k.person || '', bank: k.bank || (c.org && BANKERISH.test(c.org) ? titleCase(c.org).slice(0, 60) : ''), desig: k.desig, city: k.city, level: k.level, why: k.why,
+        saved: bk.some(b => digits10(b.phone) === ph), sel: k.level === 'yes'}); }
+    list.sort((a, b) => ({yes: 0, maybe: 1, '': 2})[a.level] - ({yes: 0, maybe: 1, '': 2})[b.level] || String(a.raw).localeCompare(String(b.raw)));
+    state.pc = {list, show: 'bankers'}; openModal(phoneContactsModal());
+    toast(`${raw.length} contacts read · ${list.filter(x => x.level === 'yes').length} look like bankers`, 'ok');
+  },
+  'pc-tick': el => { const x = state.pc?.list[+el.dataset.i]; if (!x) return; x.sel = el.checked; const n = state.pc.list.filter(y => y.sel).length, bt = $('[data-action="pc-save"]'); if (bt) { bt.disabled = !n; bt.innerHTML = `${ic('check')} Save ${n} banker${n === 1 ? '' : 's'}`; } },
+  'pc-edit': el => { const x = state.pc?.list[+el.dataset.i]; if (x) x[el.dataset.k] = el.value.trim().slice(0, 80); },
   'imp-file': async el => {
     const file = el.files?.[0]; if (!file) return;
     if (file.size > 15e6) return toast('File too large (max 15 MB)', 'bad');
