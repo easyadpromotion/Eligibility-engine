@@ -385,12 +385,12 @@ const BANKS = [
   ['IDFC First Bank',/\bidfc\b/],['Yes Bank',/\byes\s*bank\b/],['IndusInd Bank',/\bindus[il]nd\b/],
   ['Aditya Birla Capital',/\baditya\s*birla\b|\babfl\b/],['Lendingkart',/\blending\s*kart\b/],['NeoGrowth',/\bneo\s*growth\b/],
   ['FlexiLoans',/\bflexi\s*loans?\b/],['UGRO Capital',/\bu\s*gro\b/],['Hero FinCorp',/\bhero\s*fin\s*corp\b/],
-  ['Poonawalla Fincorp',/\bpoonawalla\b/],['L&T Finance',/\bl\s*&\s*t\s*fin|\bltfs\b/],['Piramal Finance',/\bpiramal\b/],
+  ['Poonawalla Fincorp',/\bpoonawalla\b/],['L&T Finance',/\bl\s*&\s*t\b|\bltfs?\b|ltfinance/],['Piramal Finance',/\bpiramal\b/],
   ['Chola',/\bchola(?:mandalam)?\b/],['Shriram Finance',/\bshriram\b/],['AU Small Finance Bank',/\bau\s*(?:small\s*finance|sfb|bank)\b/],
   ['Federal Bank',/\bfederal\s*bank\b/],['Bandhan Bank',/\bbandhan\b/],['Equitas SFB',/\bequitas\b/],['Ujjivan SFB',/\bujjivan\b/],
   ['Canara Bank',/\bcanara\b/],['Union Bank of India',/\bunion\s*bank\b/],['Bank of Baroda',/\bbank\s*of\s*baroda\b/],
   ['Punjab National Bank',/\bpnb\b(?!\s*housing)|punjab\s*national/],['Indian Bank',/\bindian\s*bank\b/],['Godrej Capital',/\bgodrej\s*cap/],
-  ['Protium',/\bprotium\b/],['Muthoot Fincorp',/\bmuthoot\s*fin\s*corp\b/],['Muthoot Finance',/\bmuthoot(?!\s*fin\s*corp)/],['Kinara Capital',/\bkinara/],['Mahindra Finance',/\bmahindra\s*(?:&\s*mahindra\s*)?(?:finance|financial)\b/],
+  ['Protium',/\bprotium\b/],['Muthoot Fincorp',/\bmuthoot\s*fin\s*corp\b/],['Muthoot Finance',/\bmuthoot(?!\s*fin\s*corp)/],['Kinara Capital',/\bkinara/],['Credit Saison',/\bcredit\s*sa[iy]?s[io]on\b|\bcredit\s*session\b/],['Aptus',/\baptus\b/],['Fibe',/\bfibe\b/],['Oro Money',/\boro\s*money\b/],['Faircent',/\bfaircent\b/],['Moneyview',/\bmoney\s*view\b/],['KreditBee',/\bkredit\s*bee\b/],['Mahindra Finance',/\bmahindra\s*(?:&\s*mahindra\s*)?(?:finance|financial)\b/],
   ['Can Fin Homes',/\bcan\s*fin\b|canfinhomes/],['Aadhar Housing Finance',/\baadh?aa?r\s*housing\b|aadharhousing/],['PNB Housing Finance',/\bpnb\s*housing\b|pnbhousing/],
   ['LIC Housing Finance',/\blic\s*(?:housing|hfl)\b/],['Truhome Finance',/\btru\s*home\b/],['Aavas Financiers',/\baavas\b/],['Home First Finance',/\bhome\s*first\b/],
   ['IIFL Finance',/\biifl\b/],['Sundaram Finance',/\bsundaram\b/],['Godrej Housing Finance',/\bgodrej\s*housing\b/],['Shubham Housing',/\bshubham\b/],
@@ -2839,7 +2839,7 @@ function classifyContact(c) {
   else if (BANKERISH.test(blob) && (ROLEISH.test(blob) || c.org)) { level = 'yes'; why = 'Banking company / role'; }
   else if (BANKERISH.test(blob) || (ROLEISH.test(blob) && /\b(?:rm|asm|bm|bdm|credit|dsa)\b/i.test(blob))) { level = 'maybe'; why = 'Banking word in name'; }
   // the person's name without the lender / role words people add ("Ravi HDFC BL RM" → "Ravi")
-  let person = String(c.name || '').replace(/\b(?:hdfc|icici|axis|kotak|sbi|idfc|bajaj|tata|aditya|birla|yes|indusind|au|ujjivan|equitas|chola|cholamandalam|shriram|muthoot|mahindra|lic|pnb|bob|canara|union|federal|rbl|bandhan|hero|piramal|poonawalla|lendingkart|kinara|neogrowth|flexiloans|ugro|protium|indifi|clix|fullerton|smfg|iifl|aavas|aadhar|aadhaar|home\s*first|can\s*fin|godrej|sundaram|capri|five\s*star|incred|dcb|esaf|hdb|bank|finance|financial|fincorp|finserv|capital|housing|hfc|nbfc|ltd|limited|pvt|bl|pl|hl|lap|ubl|sbl|rm|asm|bm|sm|tl|dsm|bdm|bde|sales|manager|credit|branch|area|cluster|executive|officer|loan|loans)\b/gi, ' ').replace(/[^A-Za-z .']/g, ' ').replace(/\s+/g, ' ').trim();
+  let person = String(c.name || '').replace(/\b(?:hdfc|icici|axis|kotak|sbi|idfc|bajaj|tata|aditya|birla|yes|indusind|au|ujjivan|equitas|chola|cholamandalam|shriram|muthoot|mahindra|lic|pnb|bob|canara|union|federal|rbl|bandhan|hero|piramal|poonawalla|lendingkart|kinara|neogrowth|flexiloans|ugro|protium|indifi|clix|fullerton|smfg|iifl|aavas|aadhar|aadhaar|home\s*first|can\s*fin|godrej|sundaram|capri|five\s*star|incred|dcb|esaf|hdb|bank|finance|financial|fincorp|finserv|capital|housing|hfc|nbfc|ltd|limited|pvt|bl|pl|hl|lap|ubl|sbl|rm|asm|bm|sm|tl|dsm|bdm|bde|sales|manager|credit|branch|area|cluster|executive|officer|loan|loans|lo|so|ro|co|fo|hod|hr|mh|sme|msme|state|head|zonal|regional|national|car|cars|gold|business|personal|home|top\s*up|kinaray|u\s*gro|ugro|saison|session|aptus|fibe|faircent|sir|garu|madam|mam|ji|team|office|support|abfl|abcl|rsm|zsm|nsm|csm|mpl|prime|card|cards|idol|admin|mahendra|l\s*&?\s*t|ops|operations|login|disbursement|collection|collections)\b/gi, ' ').replace(/[^A-Za-z .']/g, ' ').replace(/\s+/g, ' ').trim();
   for (const [, rx] of CITIES) person = person.replace(new RegExp(rx.source, 'gi'), ' ');   // "Lakshmi Kotak Vizag" → "Lakshmi"
   person = person.replace(/\s+/g, ' ').trim();
   if (!goodName(person)) person = '';
@@ -3588,12 +3588,12 @@ const changes = {
   'cibil-pdf': el => cibilFromPdf(el),
   'pc-file': async el => {
     const f = el.files?.[0]; if (!f) return;
-    if (f.size > 25e6) return toast('File too large (max 25 MB)', 'bad');
+    if (f.size > 60e6) return toast('File too large (max 60 MB)', 'bad');
     const text = await f.text(), raw = /\.csv$/i.test(f.name) || /^[^\n]*,/.test(text.split('\n')[0]) && !/BEGIN:VCARD/i.test(text) ? parseContactsCsv(text) : parseVcf(text);
     if (!raw.length) return toast('No contacts with an Indian mobile number found in this file', 'bad');
-    const bk = S.all('bankers'), list = [];
+    const bk = S.all('bankers'), list = [], seenPh = new Set();
     for (const c of raw) { const k = classifyContact(c);
-      for (const ph of c.phones.slice(0, 3)) list.push({raw: c.name || '(no name)', org: c.org, phone: ph, email: c.email, name: k.person || '', bank: k.bank || (c.org && BANKERISH.test(c.org) ? titleCase(c.org).slice(0, 60) : ''), desig: k.desig, city: k.city, level: k.level, why: k.why,
+      for (const ph of c.phones.slice(0, 3)) if (!seenPh.has(ph) && seenPh.add(ph)) list.push({raw: c.name || '(no name)', org: c.org, phone: ph, email: c.email, name: k.person || '', bank: k.bank || (c.org && BANKERISH.test(c.org) ? titleCase(c.org).slice(0, 60) : ''), desig: k.desig, city: k.city, level: k.level, why: k.why,
         saved: bk.some(b => digits10(b.phone) === ph), sel: k.level === 'yes'}); }
     list.sort((a, b) => ({yes: 0, maybe: 1, '': 2})[a.level] - ({yes: 0, maybe: 1, '': 2})[b.level] || String(a.raw).localeCompare(String(b.raw)));
     state.pc = {list, show: 'bankers'}; openModal(phoneContactsModal());
@@ -3603,6 +3603,13 @@ const changes = {
   'pc-edit': el => { const x = state.pc?.list[+el.dataset.i]; if (x) x[el.dataset.k] = el.value.trim().slice(0, 80); },
   'imp-file': async el => {
     const file = el.files?.[0]; if (!file) return;
+    if (/\.(?:vcf|vcard)$/i.test(file.name)) {   // phone contacts, not a chat
+      if (!['Admin','Operations'].includes(state.user.role)) return toast('This is a phone contacts file. Ask Admin to import it in Banker Directory.', 'bad');
+      toast('This is a phone contacts file: opening Import phone contacts', '');
+      go('bankers'); state.pc = {list: [], show: 'bankers'}; openModal(phoneContactsModal());
+      setTimeout(() => { const inp = $('input[data-change="pc-file"]'); if (inp) { const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; inp.dispatchEvent(new Event('change', {bubbles: true})); } }, 300);
+      el.value = ''; return;
+    }
     if (file.size > 15e6) return toast('File too large (max 15 MB)', 'bad');
     try {
       let text;
