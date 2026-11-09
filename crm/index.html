@@ -1583,17 +1583,18 @@ function planRow(x, showWho) {
   const ec = x.type === 'recall' ? (x.next || x.was) : null;
   return `<tr>${showWho ? `<td class="nowrap">${esc(staff?.name || x.was?.createdByName || x.f?.assignedName || '—')}</td>` : ''}<td><b>${esc(x.name)}</b><div class="small muted">${esc(showPhone(x.phone))}</div>${showWho && ec ? `<div style="margin-top:4px">${editBtn(ec)}</div>` : ''}</td><td>${what}</td><td><span class="badge ${st[0]}">${st[1]}</span></td><td>${res}</td><td>${client}</td></tr>`;
 }
-function callsCalendar(all, ppl) {
+function callsCalendar(all, ppl, mine = false) {
   const t = todayStr(), F = state.f.callsCal, month = F.month || t.slice(0, 7), sel = F.date || t, show = F.show || 'all';
   const [y, m] = month.split('-').map(Number), first = new Date(y, m - 1, 1), startPad = (first.getDay() + 6) % 7, dim = new Date(y, m, 0).getDate();
   const done = {}, plan = {};
-  all.forEach(c => { if (callDone(c)) { const d = dayOf(c.calledAt); if (d) done[d] = (done[d] || 0) + 1; if (c.recallDate && !c.leadId) plan[c.recallDate] = (plan[c.recallDate] || 0) + 1; } });
-  S.all('followups').forEach(f => { if (f.date) plan[f.date] = (plan[f.date] || 0) + 1; });
+  const me = state.user?.phone;
+  all.forEach(c => { if (mine && c.createdBy !== me) return; if (callDone(c)) { const d = dayOf(c.calledAt); if (d) done[d] = (done[d] || 0) + 1; if (c.recallDate && !c.leadId) plan[c.recallDate] = (plan[c.recallDate] || 0) + 1; } });
+  S.all('followups').forEach(f => { if (f.date && (!mine || f.assignedTo === me)) plan[f.date] = (plan[f.date] || 0) + 1; });
   const cells = [];
   for (let i = 0; i < startPad; i++) cells.push('<span></span>');
   for (let d = 1; d <= dim; d++) {
     const ds = `${month}-${String(d).padStart(2, '0')}`, fut = ds > t;
-    const nd = !fut && done[ds] ? `<span class="n" title="calls done">${done[ds]}</span>` : '', np = (fut || ds === t) && plan[ds] ? `<span class="n p" title="planned">${plan[ds]}</span>` : '';
+    const nd = !fut && done[ds] ? `<span class="n" title="calls done">${done[ds]}</span>` : '', np = plan[ds] ? `<span class="n p" title="recalls + follow-ups planned">${plan[ds]}</span>` : '';
     cells.push(`<button type="button" class="${fut ? 'future' : ''} ${ds === t ? 'today' : ''} ${ds === sel ? 'sel' : ''}" data-action="cal-pick" data-v="${ds}" aria-label="${esc(fmtDate(ds))}"><span>${d}</span>${nd}${np}</button>`);
   }
   const fut = sel > t;
@@ -1617,7 +1618,7 @@ function callsCalendar(all, ppl) {
   const list = items.length ? `<div style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0;flex:1;font-size:15px">Customer status · ${esc(fmtDate(sel))}</h3>
       ${[['all', `All ${items.length}`], ['open', `${fut ? 'Planned' : 'Not called'} ${cnt('pending') + cnt('missed')}`], ['done', `Called ${cnt('done')}`]].map(([v, l]) => `<button class="btn sm ${show === v ? 'primary' : ''}" data-action="cal-show" data-v="${v}">${l}</button>`).join('')}</div>
     ${shown.length ? `<div class="tw"><table><thead><tr><th>Team member</th><th>Customer</th><th>Why planned</th><th>Status</th><th>Latest result &amp; remarks</th><th>Client status</th></tr></thead><tbody>${shown.map(x => planRow(x, true)).join('')}</tbody></table></div>` : '<div class="empty small">None in this view.</div>'}</div>` : '';
-  return `<div class="card" style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">Team calendar</h3>
+  return `<div class="card" style="margin-top:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">${mine ? 'My calendar · recalls &amp; follow-ups' : 'Team calendar'}</h3>
       <button class="btn sm" data-action="cal-month" data-v="-1" aria-label="Previous month">‹</button><b>${esc(mName)}</b><button class="btn sm" data-action="cal-month" data-v="1" aria-label="Next month">›</button>
       <button class="btn sm" data-action="cal-pick" data-v="${addDays(t, -1)}">Yesterday</button><button class="btn sm" data-action="cal-pick" data-v="${t}">Today</button><button class="btn sm" data-action="cal-pick" data-v="${addDays(t, 1)}">Tomorrow</button></div>
     <div class="grid g2" style="align-items:start"><div><div class="cal">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<span class="dh">${d}</span>`).join('')}${cells.join('')}</div>
@@ -1679,7 +1680,7 @@ function vCalls() {
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h3>${team ? 'Team' : 'My'} calls today <span class="badge">${today.length}</span></h3>${today.length ? `<div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Time</th><th>Customer</th><th>Result</th><th>Recall</th>${team ? '<th>By</th>' : ''}<th></th></tr></thead><tbody>${today.slice(0, 150).map(c => { const o = outcomeById(c.outcome); return `<tr><td class="small nowrap">${new Date(c.calledAt).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</td><td><b>${esc(c.name || '—')}</b><div class="small muted">${esc(showPhone(c.phone))}</div></td><td><span class="badge ${o?.cls || ''}">${esc(o?.label || c.outcome)}</span>${c.leadId ? ' <span class="badge b-ok">Lead</span>' : ''}</td><td class="small nowrap">${c.recallDate ? esc(fmtDate(c.recallDate)) : '—'}${c.editedAt ? `<div class="muted" title="Edited ${esc(fmtDT(c.editedAt))}">edited</div>` : ''}</td>${team ? `<td class="small">${esc(c.createdByName || '')}</td>` : ''}<td class="right">${editBtn(c)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty small">No calls logged yet today.</div>'}</div>
     <div class="grid">${teamCard}<div class="card"><h3>Today's results</h3>${byOutcome.length ? `<div class="bars">${byOutcome.map(([o, n]) => `<div class="bar" style="grid-template-columns:170px 1fr 34px"><span>${esc(o.label)}</span><span class="t"><i style="width:${n / maxO * 100}%;background:${o.cls === 'b-ok' ? 'var(--ok-strong)' : o.cls === 'b-bad' ? 'var(--bad-strong)' : o.cls === 'b-warn' ? 'var(--warn-strong)' : 'var(--brand)'}"></i></span><b>${n}</b></div>`).join('')}</div>` : '<div class="empty small">Nothing yet.</div>'}</div></div>
-  </div>${isLead ? callsCalendar(all, S.all('staff').filter(x => x.status === 'Approved' && x.role)) : ''}`;
+  </div>${callsCalendar(all, isLead ? S.all('staff').filter(x => x.status === 'Approved' && x.role) : [{id: u.phone, name: u.name, role: u.role, branch: u.branch}], !isLead)}`;
 }
 
 // ---- Customer care: EMI reminders, top-up offers, rejected-file re-try
@@ -1761,8 +1762,9 @@ function vWhatsApp() {
   const previewText = w.mode === 'single' && lead ? w.text : fillTpl(t.body, sample);
   const aud = waAudience(), canEditTpl = ['Admin','Branch Manager'].includes(state.user.role);
   const log = S.all('leads').flatMap(l => (l.waLog || []).map(x => ({...x, lead: l}))).sort((a,b) => String(b.at).localeCompare(String(a.at))).slice(0, 12);
-  const modeBtns = [['single','Single customer'],['broadcast','Broadcast'],['numbers','Enter numbers']].map(([v,lab]) => `<button class="btn sm ${w.mode === v ? 'primary' : ''}" data-action="wa-mode" data-v="${v}">${lab}</button>`).join('');
+  const modeBtns = [['single','Single customer'],['broadcast','Broadcast'],['numbers','Enter numbers'],['festival','🎉 Festival wishes']].map(([v,lab]) => `<button class="btn sm ${w.mode === v ? 'primary' : ''}" data-action="wa-mode" data-v="${v}">${lab}</button>`).join('');
   if (w.mode === 'numbers') return vWaNumbers(w, tpls, modeBtns, log, canEditTpl);
+  if (w.mode === 'festival') return vWaFestival(w, modeBtns);
   const left = w.mode === 'single'
     ? `<div><label for="wa_lead">Select customer</label><select id="wa_lead" data-change="wa-pick"><option value="">— Choose a lead —</option>${leads.map(l => `<option value="${esc(l.id)}" ${l.id === w.leadId ? 'selected' : ''}>${esc(l.name)} (${esc(l.product)} · ${esc(l.stage)})</option>`).join('')}</select></div>
        <div style="margin-top:12px"><label for="wa_tpl">Message template</label><select id="wa_tpl" data-change="wa-tpl">${tpls.map(x => `<option value="${esc(x.id)}" ${x.id === w.tpl ? 'selected' : ''}>${esc(x.name)}${x.stage ? ` · ${esc(x.stage)}` : ''}</option>`).join('')}</select>${lead ? `<p class="small muted" style="margin:6px 0 0">Suggested for "${esc(lead.stage)}": <b>${esc(tplForStage(lead.stage).name)}</b></p>` : ''}</div>
@@ -1855,6 +1857,67 @@ function outreachCard() {
           <a class="btn sm wa" href="${esc(waLink(o.phone))}" target="_blank" rel="noopener" title="Open chat to read the reply">${ic('msg')}</a>`}</td></tr>`; }).join('')}</tbody></table></div>`
       : `<div class="empty small">${all.length ? 'Nothing in this view.' : 'Messages sent from "Enter numbers" appear here.'}</div>`}
     <p class="small muted" style="margin:8px 0 0">WhatsApp does not let any app read replies on a personal number, so open the chat (green button), then mark the reply here. Interested replies get a Convert to lead button; the new lead keeps the link.</p></div>`;
+}
+// ---- Festival wishes: one message to every customer group and/or every banker, sent one by one from your own WhatsApp
+const FESTIVALS = [
+  ['sankranti', 'Sankranti', 'Happy Sankranti {name}! 🪁🌾\n\nMay this harvest festival fill your home with joy, good health and prosperity.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['ugadi', 'Ugadi', 'Ugadi Subhakankshalu {name}! 🌸\n\nWishing you and your family a new year full of happiness, health and success.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['vinayaka', 'Vinayaka Chavithi', 'Happy Vinayaka Chavithi {name}! 🙏\n\nMay Lord Ganesha remove every obstacle and bless your family and business with success.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['dasara', 'Dasara', 'Happy Dasara {name}! 🌼\n\nMay the victory of good over evil bring you strength, prosperity and new beginnings.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['diwali', 'Deepavali', 'Happy Deepavali {name}! 🪔✨\n\nMay the festival of lights brighten your home and business with happiness and prosperity.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['christmas', 'Christmas', 'Merry Christmas {name}! 🎄\n\nWishing you and your family peace, joy and happiness this season.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['newyear', 'New Year', 'Happy New Year {name}! 🎉\n\nThank you for your trust. Wishing you a successful and prosperous year ahead.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['eid', 'Ramzan / Eid', 'Eid Mubarak {name}! 🌙\n\nMay this blessed day bring peace, happiness and prosperity to you and your family.\n\nWarm wishes from {executive} and the {company} team.'],
+  ['independence', 'Independence Day', 'Happy Independence Day {name}! 🇮🇳\n\nWarm wishes from {executive} and the {company} team.'],
+  ['republic', 'Republic Day', 'Happy Republic Day {name}! 🇮🇳\n\nWarm wishes from {executive} and the {company} team.'],
+  ['custom', 'Your own message', 'Dear {name},\n\n\n\nWarm wishes from {executive} and the {company} team.'],
+];
+const FEST_GROUPS = [
+  ['recalls', 'Recall customers', 'Calls with a recall date still open'],
+  ['today', 'My calls today', 'Everyone called today'],
+  ['called', 'All called customers', 'Every number in Daily Calls'],
+  ['open', 'Open leads', 'New · Contacted · Docs Pending · Eligibility Done'],
+  ['login', 'Logged in / Sanctioned', 'Files with the bank'],
+  ['disbursed', 'Disbursed customers', 'All disbursed loans'],
+  ['rejected', 'Rejected / Lost', 'Keep in touch for next time'],
+  ['followups', 'Follow-up customers', 'Open follow-ups, any date'],
+  ['wa', 'WhatsApp outreach numbers', 'Numbers messaged from "Enter numbers"'],
+  ['bankers', 'Bankers (Banker Directory)', 'All bankers not marked Do not contact'],
+];
+function festAudience(groups) {
+  const t = todayStr(), out = new Map(), add = (phone, name, kind) => { const d = digits10(phone); if (!d || !/^[6-9]/.test(d)) return; const ex = out.get(d); if (ex) { if (!ex.name && name) ex.name = name; ex.kinds.add(kind); } else out.set(d, {phone: '+91' + d, name: name || '', kinds: new Set([kind])}); };
+  const leads = S.all('leads'), calls = S.all('calls').filter(callDone);
+  for (const g of groups) {
+    if (g === 'recalls') calls.filter(c => c.recallDate && !c.recallDone && !c.leadId).forEach(c => add(c.phone, c.name, 'Recall'));
+    if (g === 'today') calls.filter(c => dayOf(c.calledAt) === t).forEach(c => add(c.phone, c.name, 'Called today'));
+    if (g === 'called') calls.forEach(c => add(c.phone, c.name, 'Called'));
+    if (g === 'open') leads.filter(l => ['New','Contacted','Docs Pending','Eligibility Done'].includes(l.stage)).forEach(l => add(l.phone, l.name, 'Lead'));
+    if (g === 'login') leads.filter(l => ['Logged In','Sanctioned'].includes(l.stage)).forEach(l => add(l.phone, l.name, 'Login'));
+    if (g === 'disbursed') leads.filter(l => l.stage === 'Disbursed' || loanDisbursals(l).length).forEach(l => add(l.phone, l.name, 'Disbursed'));
+    if (g === 'rejected') leads.filter(l => ['Rejected','Lost'].includes(l.stage)).forEach(l => add(l.phone, l.name, 'Rejected'));
+    if (g === 'followups') S.all('followups').filter(f => !f.done).forEach(f => { const l = byId('leads', f.leadId); add(f.leadPhone || l?.phone, f.leadName || l?.name, 'Follow-up'); });
+    if (g === 'wa') S.all('outreach').forEach(o => add(o.phone, o.name, 'WhatsApp'));
+    if (g === 'bankers') S.all('bankers').filter(b => !b.dnc).forEach(b => add(b.phone, goodName(b.name) ? b.name : '', 'Banker'));
+  }
+  return [...out.values()].map(x => ({...x, kinds: [...x.kinds]})).sort((a, b) => String(a.name || 'zz').localeCompare(String(b.name || 'zz')));
+}
+function vWaFestival(w, modeBtns) {
+  const F = state.fest || (state.fest = {fest: 'diwali', groups: ['recalls', 'today', 'open', 'login', 'disbursed', 'rejected', 'followups'], body: '', sentTo: []});
+  const fe = FESTIVALS.find(x => x[0] === F.fest) || FESTIVALS[0]; if (!F.body) F.body = fe[2];
+  const aud = festAudience(F.groups), sent = new Set(F.sentTo), left = aud.filter(x => !sent.has(digits10(x.phone)));
+  const cnt = g => festAudience([g]).length;
+  const prev = fillTpl(F.body, {name: aud[0]?.name || 'Ramesh'});
+  return header('WhatsApp Messages', 'Template messages for every pipeline stage, sent from your own WhatsApp') +
+  `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><h3 style="margin:0;flex:1">Festival wishes</h3><div class="chips">${modeBtns}</div></div>
+    <div class="grid g2" style="align-items:start"><div>
+      <label>Festival</label><div class="chips" style="margin-bottom:12px">${FESTIVALS.map(([id, n]) => `<button class="btn sm ${F.fest === id ? 'primary' : ''}" data-action="fest-pick" data-v="${id}">${esc(n)}</button>`).join('')}</div>
+      <label>Send to</label><div class="list" style="margin-bottom:12px">${FEST_GROUPS.map(([g, n, h]) => `<label class="check" style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="checkbox" data-change="fest-group" data-v="${g}" ${F.groups.includes(g) ? 'checked' : ''}><span style="flex:1"><b>${esc(n)}</b> <span class="small muted">· ${esc(h)}</span></span><span class="badge">${cnt(g)}</span></label>`).join('')}</div>
+      <label for="fest_body">Message ({name} fills per person)</label><textarea id="fest_body" rows="8" data-bind="fest.body" data-rerender>${esc(F.body)}</textarea></div>
+    <div><label>Live preview</label><div class="wa-wrap"><div class="wa-bubble">${esc(prev)}<span class="tm">now ✓</span></div></div>
+      <div class="notice info" style="margin-top:12px">${ic('users')}<div><b>${aud.length}</b> people selected (same number in two groups is counted once)${sent.size ? ` · <b>${aud.length - left.length}</b> already sent in this session · <b>${left.length}</b> left` : ''}.</div></div>
+      <button class="btn wa" style="width:100%;margin-top:12px" data-action="fest-start" ${left.length ? '' : 'disabled'}>${ic('send')} Start sending (${left.length})</button>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm" data-action="fest-export" data-v="vcf" ${aud.length ? '' : 'disabled'}>${ic('download')} Save as phone contacts (.vcf)</button><button class="btn sm" data-action="fest-export" data-v="csv" ${aud.length ? '' : 'disabled'}>${ic('download')} Numbers list (.csv)</button></div>
+      <p class="small muted" style="margin:8px 0 0">WhatsApp lets each message go only after you press Send, so the list opens one by one. For hundreds of people, the faster way is a WhatsApp <b>broadcast list</b>: save the .vcf to your phone, then WhatsApp → ⋮ → New broadcast → pick up to 256 contacts per list (they receive it only if they have your number saved).</p></div></div></div>`;
 }
 function tplForm(t = {}) {
   return modal(t.id ? `Edit template · ${t.name}` : 'New template', `<form id="tpl-form" data-form="tpl-save" class="fg" style="grid-template-columns:1fr 1fr"><input type="hidden" name="id" value="${esc(t.id || '')}">
@@ -3097,7 +3160,7 @@ const actions = {
   'fu-queue': () => { const t = todayStr(); startQueue('Due follow-ups', S.all('followups').filter(f => !f.done && f.date <= t).sort(byDate).filter(f => byId('leads', f.leadId)).map(f => ({leadId: f.leadId, fuId: f.id, remarks: f.remarks}))); },
   'q-send': () => {
     const Q = state.waQueue; if (!Q) return; const it = Q.items[Q.i], text = $('#q_text')?.value || '';
-    if (it.adhoc) { if (text.trim()) { window.open(waLink(it.adhoc.phone, text), '_blank', 'noopener'); it.sent = true; recordOutreach(it.adhoc, text, it.tpl); } Q.i++; const h = queueModal(); if (h) openModal(h); else closeModal(); return; }
+    if (it.adhoc) { if (text.trim()) { window.open(waLink(it.adhoc.phone, text), '_blank', 'noopener'); it.sent = true; if (it.fest) state.fest?.sentTo.push(digits10(it.adhoc.phone)); else recordOutreach(it.adhoc, text, it.tpl); } Q.i++; const h = queueModal(); if (h) openModal(h); else closeModal(); return; }
     const l = byId('leads', it.leadId);
     const t = tplById(it.tpl) || tplForStage(l?.stage);
     if (l && text.trim() && openWhatsApp(l, text, t?.id, it.fuId, it.kind ? careExtra(it.kind, l, it.li) : {})) { it.sent = true; const done = $('#q_done'); if (it.fuId && done?.checked) guard(() => S.update('followups', it.fuId, {done: true, doneAt: nowISO(), doneBy: state.user.phone})); if (done) Q.markDone = done.checked; }
@@ -3106,6 +3169,18 @@ const actions = {
   'q-skip': () => { const Q = state.waQueue; if (!Q) return; Q.i++; const html = queueModal(); if (html) openModal(html); else closeModal(); },
   'q-stop': () => { const Q = state.waQueue; if (Q) toast(`Stopped: ${Q.items.filter(x => x.sent).length} sent`, ''); state.waQueue = null; closeModal(); },
   'wa-mode': el => { state.wa.mode = el.dataset.v; render(); },
+  'fest-pick': el => { const F = state.fest; F.fest = el.dataset.v; F.body = (FESTIVALS.find(x => x[0] === F.fest) || FESTIVALS[0])[2]; render(); },
+  'fest-start': () => {
+    const F = state.fest, body = $('#fest_body')?.value || F.body, sent = new Set(F.sentTo);
+    const list = festAudience(F.groups).filter(x => !sent.has(digits10(x.phone)));
+    if (!list.length) return toast('Nobody left to send to', ''); if (!String(body).trim()) return toast('Type the message first', 'bad');
+    startQueue(`${(FESTIVALS.find(x => x[0] === F.fest) || [])[1] || 'Festival'} wishes`, list.map(x => ({adhoc: {phone: x.phone, name: x.name}, body, fest: true})), false);
+  },
+  'fest-export': el => {
+    const aud = festAudience(state.fest.groups), fe = (FESTIVALS.find(x => x[0] === state.fest.fest) || [])[1] || 'Festival';
+    if (el.dataset.v === 'csv') { const rows = [['Name', 'Mobile', 'Group'], ...aud.map(x => [x.name, x.phone, x.kinds.join(' / ')])]; saveBlob(new Blob(['﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')], {type: 'text/csv'}), `${fe}-list.csv`); }
+    else saveBlob(new Blob([aud.map(x => `BEGIN:VCARD\nVERSION:3.0\nFN:${(x.name || 'Customer ' + digits10(x.phone).slice(-4)).replace(/[,;\n]/g, ' ')} (${x.kinds[0]})\nTEL;TYPE=CELL:${x.phone}\nEND:VCARD\n`).join('')], {type: 'text/vcard'}), `${fe}-contacts.vcf`);
+  },
   'or-show': el => { (state.f.or ||= {show: 'open', q: ''}).show = el.dataset.v; render(); },
   'or-status': el => { const o = byId('outreach', el.dataset.id); if (!o) return;
     const v = el.dataset.v, note = v === 'no_reply' ? '' : (prompt(v === 'interested' ? 'What did they say? (optional, e.g. needs 10 L top-up)' : 'Reason (optional)', o.note || '') ?? o.note ?? '');
@@ -3586,6 +3661,7 @@ const changes = {
     state.elig.results = null; render();
   },
   'cibil-pdf': el => cibilFromPdf(el),
+  'fest-group': el => { const F = state.fest, g = el.dataset.v; F.groups = el.checked ? uniq([...F.groups, g]) : F.groups.filter(x => x !== g); render(); },
   'pc-file': async el => {
     const f = el.files?.[0]; if (!f) return;
     if (f.size > 60e6) return toast('File too large (max 60 MB)', 'bad');
