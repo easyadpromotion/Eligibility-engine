@@ -1447,7 +1447,7 @@ function vDash() {
   return header(`Hello, ${u.name.split(' ')[0]}`, `${u.role} · ${u.branch} · ${fmtDate(t)}`, `<a class="btn primary" href="#/eligibility">${ic('calc')} New eligibility check</a>`) +
   `<div class="kpis">
     ${showLeads ? kp('Open leads', open.length, `${fmtL(pipe)} in pipeline`) : ''}
-    ${showLeads ? kp('Disbursed', fmtL(disb.reduce((a,l) => a + num(l.amountLakh), 0)), `${disb.length} file${disb.length === 1 ? '' : 's'}`) : ''}
+    ${showLeads ? (() => { let md = monthDisbursals(t.slice(0, 7)); if (u.role === 'Branch Manager') md = md.filter(x => (x.l.branch || '') === u.branch); else if (!['Admin','Operations'].includes(u.role)) md = md.filter(x => x.who === u.phone); return kp('Disbursed this month', fmtL(md.reduce((a, x) => a + x.amount, 0)), `${md.length} loan${md.length === 1 ? '' : 's'} · ${new Date().toLocaleDateString('en-IN', {month: 'short'})}`); })() : ''}
     ${showFu ? kp('Follow-ups due', due.length, overdue.length ? `<span style="color:var(--bad)">${overdue.length} overdue</span>` : 'all on time') : ''}
     ${canSee('calls') ? (() => { const mine = S.all('calls').filter(c => callDone(c) && dayOf(c.calledAt) === t && c.createdBy === u.phone); const tgt = num(settings().callTarget) || 50; return kp('My calls today', `${mine.length}<span class="small muted"> / ${tgt}</span>`, `${mine.filter(c => c.outcome === 'interested').length} interested · <a href="#/calls">open</a>`); })() : ''}
     ${canSee('care') ? (() => { const D = careData(); return kp('Customer care due', D.emiUnsent.length + D.retryDue.length, `${D.emiUnsent.length} EMI reminders · ${D.retryDue.length} re-try · <a href="#/care">open</a>`); })() : ''}
@@ -1455,7 +1455,7 @@ function vDash() {
     ${kp('Active policies', pols.length, stale.length ? `<span style="color:var(--warn)">${stale.length} need refresh</span>` : 'all fresh')}
     ${kp('Banker contacts', bks.length, `${new Set(bks.map(b => b.bank).filter(Boolean)).size} lenders`)}
   </div>
-  ${['Admin','Branch Manager'].includes(u.role) ? teamEodCard() : ''}${canSee('calls') && u.role !== 'Admin' ? myTargetsCard() : ''}
+  ${['Admin','Branch Manager'].includes(u.role) ? disbMonthCard() + teamEodCard() : ''}${canSee('calls') && u.role !== 'Admin' ? myTargetsCard() : ''}
   <div class="grid g2">
     <div class="card"><h3>Latest policy changes</h3>${upd.length ? `<div class="list">${upd.map(h => `<div class="li"><div class="grow"><div class="strong">${esc(h.bank)} · ${esc(h.product)} <span class="badge b-info">v${esc(h.version)}</span></div><div class="chips" style="margin-top:5px">${diffChips(h.changes)}</div><div class="small muted" style="margin-top:4px">${esc(h.source || '')}${h.sourceGroup ? ` · ${esc(h.sourceGroup)}` : ''} · ${esc(ago(h.at))}</div></div><button class="btn sm" data-action="policy-view" data-id="${esc(h.pid)}">View</button></div>`).join('')}</div>` : '<div class="empty">No changes yet. Import a DSA group chat to pick up updates.</div>'}</div>
     ${showLeads ? `<div class="card"><h3>Pipeline by stage</h3><div class="bars">${STAGES.map(s => { const c = leads.filter(l => l.stage === s).length; return `<div class="bar"><span>${esc(s)}</span><span class="t"><i style="width:${c/maxS*100}%"></i></span><b>${c}</b></div>`; }).join('')}</div></div>` : ''}
@@ -1948,6 +1948,34 @@ function leadTat(l) {
   return {days, closed: !!end, over: !end && days > limit, limit};
 }
 const stageEvents = l => (l.stageHistory && l.stageHistory.length) ? l.stageHistory : [{stage: l.stage, at: l.updatedAt || l.createdAt}];
+// Disbursements in a month, by the loan's own disbursement date (else the day the file moved to Disbursed).
+// One row per disbursed bank login, so a file disbursed in two banks counts both loans.
+function monthDisbursals(month) {
+  const out = [];
+  for (const l of S.all('leads')) {
+    const stAt = [...stageEvents(l)].reverse().find(h => h.stage === 'Disbursed')?.at || '';
+    for (const {d, li} of loanDisbursals(l)) {
+      const date = d.disbDate || dayOf(stAt) || '';
+      if (String(date).slice(0, 7) !== month) continue;
+      out.push({l, li, lender: d.lender || l.bank || '', amount: num(d.amountLakh) || (li < 0 || loanDisbursals(l).length === 1 ? num(l.amountLakh) : 0), date, who: l.assignedTo, whoName: l.assignedName || ''});
+    }
+  }
+  return out.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+function disbMonthCard() {
+  const u = state.user, t = todayStr(), month = state.f.disbMonth || t.slice(0, 7);
+  let list = monthDisbursals(month); if (u.role === 'Branch Manager') list = list.filter(x => (x.l.branch || '') === u.branch);
+  const staff = new Map(S.all('staff').map(p => [p.id, p])), by = new Map();
+  for (const x of list) { const k = x.who || '—'; if (!by.has(k)) by.set(k, {name: staff.get(k)?.name || x.whoName || 'Unassigned', branch: staff.get(k)?.branch || x.l.branch || '', n: 0, amt: 0}); const r = by.get(k); r.n++; r.amt += x.amount; }
+  const rows = [...by.values()].sort((a, b) => b.amt - a.amt), tot = list.reduce((a, x) => a + x.amount, 0);
+  const [y, m] = month.split('-').map(Number), label = new Date(y, m - 1, 1).toLocaleDateString('en-IN', {month: 'long', year: 'numeric'});
+  const prev = new Date(y, m - 2, 1), next = new Date(y, m, 1), mk = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;flex:1">Disbursements · ${esc(label)} <span class="badge b-ok">${fmtL(tot)} · ${list.length} loan${list.length === 1 ? '' : 's'}</span></h3>
+      <button class="btn sm" data-action="disb-month" data-v="${mk(prev)}" aria-label="Previous month">‹</button><button class="btn sm ${month === t.slice(0, 7) ? 'primary' : ''}" data-action="disb-month" data-v="${t.slice(0, 7)}">This month</button>${month < t.slice(0, 7) ? `<button class="btn sm" data-action="disb-month" data-v="${mk(next)}" aria-label="Next month">›</button>` : ''}</div>
+    ${list.length ? `<div class="grid g2" style="align-items:start"><div class="tw"><table><thead><tr><th>Team member</th><th>Loans</th><th>Amount</th><th>Share</th></tr></thead><tbody>${rows.map(r => `<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.branch)}</div></td><td>${r.n}</td><td><b>${fmtL(r.amt)}</b></td><td><div class="bar" style="min-width:90px"><span class="t"><i style="width:${tot ? Math.round(r.amt / tot * 100) : 0}%"></i></span></div><span class="small muted">${tot ? Math.round(r.amt / tot * 100) : 0}%</span></td></tr>`).join('')}</tbody></table></div>
+      <div class="tw" style="max-height:320px;overflow:auto"><table><thead><tr><th>Customer</th><th>Lender</th><th>Amount</th><th>Date</th></tr></thead><tbody>${list.map(x => `<tr><td><a role="button" tabindex="0" style="cursor:pointer" data-action="lead-edit" data-id="${esc(x.l.id)}"><b>${esc(x.l.name)}</b></a><div class="small muted">${esc(staff.get(x.who)?.name || x.whoName || '')}</div></td><td>${esc(x.lender || '—')}</td><td>${fmtL(x.amount)}</td><td class="nowrap small">${x.date ? esc(fmtDate(x.date)) : '—'}</td></tr>`).join('')}</tbody></table></div></div>`
+      : `<div class="empty small">No disbursements in ${esc(label)} yet.</div>`}</div>`;
+}
 function teamStats(r) {
   const inR = iso => iso && iso >= r.s && iso < r.e, t = todayStr();
   const people = S.all('staff').filter(p => p.role || p.status !== 'Pending');
@@ -3209,6 +3237,7 @@ const actions = {
     window.open(CIBIL_URL, 'cibil', 'noopener');
     toast('myscore.cibil.com opened in a new tab. The customer enters their own OTP there.', 'ok');
   },
+  'disb-month': el => { state.f.disbMonth = el.dataset.v; render(); },
   'eod-date': el => { state.f.eod.date = el.dataset.v; render(); },
   'eod-send': el => {
     const date = el.dataset.date || todayStr(), u = state.user;
