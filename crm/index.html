@@ -1218,6 +1218,8 @@ const closeModal = () => { $('#modal-root').innerHTML = ''; };
 // WhatsApp message templates (sent through the user's own WhatsApp via wa.me)
 // ---------------------------------------------------------------------
 const DEFAULT_TEMPLATES = [
+  {id:'festfund_en', name:'Festival Funding – shops (English)', stage:'', body:"Hello {name},\n\n🎄 Christmas, 🪁 Sankranti / Pongal and 🎉 New Year are coming – the busiest selling season for readymade, fashion and cloth stores!\n\nFill your shop with festival stock now with *Festival Funding*:\n✅ Business loan / working capital for festival stock\n✅ Loans up to ₹50 lakh*\n✅ Minimum documents – quick approval and disbursal\n✅ Easy EMIs to repay after the season\n✅ Top-up on your running loan also available\n\nDon't lose festival sales because of short stock. Reply *YES* and we will check your eligibility at no cost.\n\nCall / WhatsApp: {executive} – {myphone}\n{company}\n\n*Subject to the lender's eligibility norms."},
+  {id:'festfund_te', name:'Festival Funding – shops (తెలుగు)', stage:'', body:"నమస్కారం {name} గారు,\n\n🎄 క్రిస్మస్, 🪁 సంక్రాంతి, 🎉 న్యూ ఇయర్ వస్తున్నాయి – రెడీమేడ్, ఫ్యాషన్, బట్టల షాపులకు ఇదే అత్యధిక అమ్మకాల సీజన్!\n\n*Festival Funding* తో మీ షాపులో పండుగ స్టాక్ ఇప్పుడే నింపుకోండి:\n✅ పండుగ స్టాక్ కోసం బిజినెస్ లోన్ / వర్కింగ్ క్యాపిటల్\n✅ ₹50 లక్షల వరకు లోన్*\n✅ తక్కువ డాక్యుమెంట్స్ – త్వరగా అప్రూవల్, డిస్బర్స్‌మెంట్\n✅ సీజన్ తర్వాత సులభమైన EMI లు\n✅ ఇప్పటికే లోన్ ఉంటే టాప్-అప్ కూడా\n\nస్టాక్ తక్కువై పండుగ అమ్మకాలు మిస్ అవ్వకండి. *YES* అని రిప్లై ఇవ్వండి – మీ eligibility ఉచితంగా చెక్ చేస్తాం.\n\nకాల్ / WhatsApp: {executive} – {myphone}\n{company}\n\n*బ్యాంక్ / NBFC నిబంధనలకు లోబడి."},
   {id:'ack', name:'Lead received acknowledgment', stage:'New', body:'Hello {name},\n\nThank you for reaching out to {company}. We have recorded your enquiry for a {product} of ₹{amount}. I will contact you shortly.\n\nRegards,\n{executive}\n{company}'},
   {id:'contact', name:'First call follow-up', stage:'Contacted', body:'Hello {name},\n\nThis is {executive} from {company}. Thank you for your time on the call about your {product}. To check your eligibility, please share these documents:\n{docs}\n\nRegards,\n{executive}'},
   {id:'docs', name:'Missing documents reminder', stage:'Docs Pending', body:'Hello {name},\n\nTo move your {product} application forward we still need:\n{docs}\n\nPlease share them on this WhatsApp number at the earliest.\n\nRegards,\n{executive}, {company}'},
@@ -1243,7 +1245,7 @@ const DOCS_BY_PRODUCT = {
   'LAP':'KYC\nITR (2 years)\n12-month bank statement\nProperty documents (sale deed, EC, tax receipt)',
   default:'KYC (PAN, Aadhaar)\n6-month bank statement\nIncome proof',
 };
-const SYSTEM_TPLS = ['emi','topup','retry','nurture'];
+const SYSTEM_TPLS = ['emi','topup','retry','nurture','festfund_en','festfund_te'];
 const templates = () => { const t = settings().templates; if (!(Array.isArray(t) && t.length)) return DEFAULT_TEMPLATES; const ids = new Set(t.map(x => x.id)); return [...t, ...DEFAULT_TEMPLATES.filter(x => SYSTEM_TPLS.includes(x.id) && !ids.has(x.id))]; };
 const tplById = id => templates().find(t => t.id === id);
 const tplForStage = stage => templates().find(t => t.stage === stage) || tplById('followup') || templates()[0];
@@ -1251,7 +1253,7 @@ function fillTpl(body, l = {}) {
   const st = settings();
   const docs = String(l.pendingDocs || DOCS_BY_PRODUCT[l.product] || DOCS_BY_PRODUCT.default).split(/[,\n]+/).map(x => x.trim()).filter(Boolean).map(x => '• ' + x).join('\n');
   const v = {name: l.name || 'Sir/Madam', product: l.product || 'loan', amount: num(l.amountLakh) ? Math.round(num(l.amountLakh)*1e5).toLocaleString('en-IN') : '—',
-    bank: l.bank || 'our partner bank', loginId: l.loginId || 'will be shared shortly', docs, executive: l.assignedName || l.createdByName || state.user?.name || '', company: st.company || '', branch: l.branch || state.user?.branch || '', date: fmtDate(todayStr())};
+    bank: l.bank || 'our partner bank', loginId: l.loginId || 'will be shared shortly', docs, executive: l.assignedName || l.createdByName || state.user?.name || '', myphone: state.user?.phone ? showPhone(state.user.phone) : '', company: st.company || '', branch: l.branch || state.user?.branch || '', date: fmtDate(todayStr())};
   const D = l._loan || loanDisbursals(l)[0]?.d || l.disbursal || {}, e = emiInfo(D);
   Object.assign(v, {lender: D.lender || l.bank || 'the bank', emi: num(D.emi) ? Math.round(num(D.emi)).toLocaleString('en-IN') : '—', emiDate: e?.next ? fmtDate(e.next) : '—',
     paid: e ? e.paid : '—', pending: e ? e.pending : '—', tenure: D.tenure || '—', reasons: (l.rejection?.reasons || []).join(', ')});
