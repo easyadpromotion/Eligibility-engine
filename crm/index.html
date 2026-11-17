@@ -306,6 +306,8 @@ const FB_VER = '10.12.2';
 const OTP_PROVIDER = '2factor';
 // Base URL of the deployed functions, e.g. 'https://asia-south1-your-project.cloudfunctions.net'
 const OTP_API = 'https://asia-south1-credir-engine-new.cloudfunctions.net';
+// WhatsApp Business inbox (Vercel webhook). Needs the staff Firebase login; the server only allows listed staff numbers.
+const INBOX_API = 'https://cheyutha-whatsapp-webhook.vercel.app/api/inbox';
 // Open the page with ?demo at the end of the address to try the demo even when Firebase is configured.
 const FORCE_DEMO = new URLSearchParams(location.search).has('demo');
 
@@ -344,6 +346,7 @@ const NAV = [
   {id:'care',       label:'Customer Care',      icon:'heart',    roles:['Admin','Branch Manager','Operations','Sales Executive']},
   {id:'eligibility',label:'Eligibility Engine', icon:'calc',     roles:ROLES},
   {id:'whatsapp',   label:'WhatsApp Messages',  icon:'send',     roles:['Admin','Branch Manager','Operations','Sales Executive']},
+  {id:'inbox',      label:'WhatsApp Inbox',     icon:'msg',      roles:['Admin']},
   {sec:'Market intel'},
   {id:'policies',   label:'Bank Policies',      icon:'file',     roles:ROLES},
   {id:'bankers',    label:'Banker Directory',   icon:'phone',    roles:ROLES},
@@ -564,6 +567,7 @@ const state = {
   calls: {phone:'', name:'', product:'Business Loan', city:'', outcome:'', recall:'', notes:'', paste:'', editId:'', fromId:''},
   docUp: {type:'Aadhaar', files:[], consent:false, busy:false, lead:''},
   wa: {mode:'single', leadId:'', tpl:'', text:'', stage:'', product:'', nums:'', body:''}, waQueue: null,
+  inbox: {status:'idle', data:null, sel:'', q:'', t:0, err:''},
 };
 let S = null;   // data store (LocalStore in demo, FireStoreAdapter live)
 let FB = null;  // firebase handles
@@ -1428,7 +1432,7 @@ function viewShell() {
 }
 function resolvedRoute() { return canSee(state.route) ? state.route : 'dashboard'; }
 function viewContent(route) {
-  return ({dashboard:vDash, calls:vCalls, care:vCare, whatsapp:vWhatsApp, reports:vReports, leads:vLeads, followups:vFollow, eligibility:vElig, policies:vPolicies, bankers:vBankers, groups:vGroups, import:vImport, admin:vAdmin})[route]();
+  return ({dashboard:vDash, calls:vCalls, care:vCare, whatsapp:vWhatsApp, inbox:vInbox, reports:vReports, leads:vLeads, followups:vFollow, eligibility:vElig, policies:vPolicies, bankers:vBankers, groups:vGroups, import:vImport, admin:vAdmin})[route]();
 }
 
 // ---- Dashboard
@@ -3017,6 +3021,63 @@ function vGroups() {
   (imps.length ? `<div class="card" style="margin-top:16px"><h3>Import log</h3><div class="tw"><table><thead><tr><th>When</th><th>Group</th><th>File</th><th>Messages</th><th>By</th></tr></thead><tbody>${imps.map(i => `<tr><td class="nowrap small">${fmtDate(i.at)}</td><td>${esc(i.group)}</td><td class="small muted">${esc(i.file || '')}</td><td>${esc(i.messages || 0)}</td><td class="small">${esc(i.by || '')}</td></tr>`).join('')}</tbody></table></div></div>` : '');
 }
 
+// ---- WhatsApp inbox: customer chats received on the WhatsApp Business number, with the automatic replies sent.
+function inboxLoad(force) {
+  const I = state.inbox;
+  if (I.status === 'loading') return;
+  if (!force && Date.now() - I.t < 30000) return;
+  if (state.mode !== 'live' || !FB?.auth?.currentUser) { I.status = 'demo'; return; }
+  I.status = 'loading'; I.t = Date.now();
+  (async () => {
+    try {
+      const tok = await FB.auth.currentUser.getIdToken();
+      const r = await fetch(INBOX_API + '?limit=500', {headers: {Authorization: 'Bearer ' + tok}});
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 403) throw new Error('Your number is not allowed to open the WhatsApp inbox. Ask the owner to add it.');
+      if (!r.ok) throw new Error(j.error || 'Could not load the inbox');
+      I.data = j; I.status = 'ok'; I.err = '';
+    } catch (e) { I.status = 'err'; I.err = e.message || 'Could not load the inbox'; }
+    I.t = Date.now();
+    if (state.route === 'inbox') render();
+  })();
+}
+function inboxThreads() {
+  const d = state.inbox.data; if (!d) return [];
+  const by = new Map();
+  for (const m of d.messages || []) { if (!by.has(m.phone)) by.set(m.phone, {phone: m.phone, msgs: []}); by.get(m.phone).msgs.push(m); }
+  const out = [...by.values()].map(t => { t.msgs.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))); t.last = t.msgs[t.msgs.length - 1]; t.inCount = t.msgs.filter(x => x.direction === 'in').length; return t; });
+  out.sort((a, b) => String(b.last.created_at).localeCompare(String(a.last.created_at)));
+  return out;
+}
+const inTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); };
+function vInbox() {
+  const I = state.inbox; inboxLoad(false);
+  const head = header('WhatsApp Inbox', 'Messages customers send to your WhatsApp Business number, and the automatic replies', `<button class="btn" data-action="inbox-refresh">${ic('send')} Refresh</button>`);
+  if (I.status === 'demo') return head + `<div class="card"><div class="empty small">The inbox works in the live app only (it needs the staff login).</div></div>`;
+  if (I.status === 'err') return head + `<div class="card"><div class="empty small">${esc(I.err)}</div></div>`;
+  if (!I.data) return head + `<div class="card"><div class="empty small">Loading messages…</div></div>`;
+  const opt = new Set((I.data.optouts || []).map(digits10)), leads = S.all('leads');
+  const q = String(I.q || '').toLowerCase().trim();
+  const threads = inboxThreads().filter(t => !q || t.phone.includes(q.replace(/\D/g, '') || '§') || t.msgs.some(m => String(m.body || '').toLowerCase().includes(q)));
+  const sel = threads.find(t => t.phone === I.sel) || threads[0];
+  const leadOf = t => leads.find(l => digits10(l.phone) === digits10(t.phone));
+  const list = threads.map(t => { const l = leadOf(t); return `<div class="li" data-action="inbox-open" data-phone="${esc(t.phone)}" style="cursor:pointer${sel && sel.phone === t.phone ? ';background:var(--hover,rgba(0,0,0,.05))' : ''}">
+      <div class="grow"><b>${esc(l ? l.name : showPhone(t.phone))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${l ? '<span class="badge b-ok">Lead</span>' : ''}
+      <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(t.last.direction === 'out' ? 'You: ' : '')}${esc(String(t.last.body || '').slice(0, 70))}</div></div>
+      <span class="small muted">${esc(inTime(t.last.created_at))}</span></div>`; }).join('') || `<div class="empty small">No messages yet.</div>`;
+  let thread = `<div class="empty small">Select a conversation.</div>`;
+  if (sel) {
+    const l = leadOf(sel);
+    const bub = m => { const out = m.direction === 'out'; return `<div style="display:flex;justify-content:${out ? 'flex-end' : 'flex-start'};margin:6px 0"><div style="max-width:78%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;${out ? 'background:#dcf8c6;color:#111' : 'background:var(--card,#fff);border:1px solid var(--line,#ddd)'}">${esc(m.body || '')}<div class="small muted" style="margin-top:4px;text-align:right">${out && m.auto_reply ? 'auto-reply · ' : ''}${esc(inTime(m.created_at))}${out && m.status ? ' · ' + esc(m.status) : ''}</div></div></div>`; };
+    thread = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b>${esc(l ? l.name : showPhone(sel.phone))}</b><span class="small muted">${esc(showPhone(sel.phone))}</span>
+      <span style="margin-left:auto;display:flex;gap:6px"><a class="btn sm" href="${esc(telLink(sel.phone))}" title="Call">${ic('phone')}</a>${l ? `<span class="badge b-ok">Lead · ${esc(l.stage)}</span>` : `<button class="btn sm primary" data-action="inbox-lead" data-phone="${esc(sel.phone)}">${ic('plus')} Convert to lead</button>`}</span></div>
+      <div style="max-height:60vh;overflow:auto;padding:4px 2px">${sel.msgs.map(bub).join('')}</div>
+      <p class="small muted" style="margin:10px 0 0">Replies here are the automatic menu replies. To message a customer yourself, use the number's WhatsApp or send an approved template.</p>`;
+  }
+  return head + `<div class="split" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px">
+    <div class="card"><input id="inbox_q" type="search" placeholder="Search number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px"><div class="list">${list}</div></div>
+    <div class="card">${thread}</div></div>`;
+}
 // ---- WhatsApp import
 function draftView(d) {
   const pol = d.policies, con = d.contacts, bankers = S.all('bankers');
@@ -3237,6 +3298,12 @@ const actions = {
     if (el.dataset.v === 'csv') { const rows = [['Name', 'Mobile', 'Group'], ...aud.map(x => [x.name, x.phone, x.kinds.join(' / ')])]; saveBlob(new Blob(['﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')], {type: 'text/csv'}), `${fe}-list.csv`); }
     else saveBlob(new Blob([aud.map(x => `BEGIN:VCARD\nVERSION:3.0\nFN:${(x.name || 'Customer ' + digits10(x.phone).slice(-4)).replace(/[,;\n]/g, ' ')} (${x.kinds[0]})\nTEL;TYPE=CELL:${x.phone}\nEND:VCARD\n`).join('')], {type: 'text/vcard'}), `${fe}-contacts.vcf`);
   },
+  'inbox-refresh': () => { inboxLoad(true); render(); },
+  'inbox-open': el => { state.inbox.sel = el.dataset.phone; render(); },
+  'inbox-lead': el => { const ph = el.dataset.phone;
+    const ex = S.all('leads').find(l => digits10(l.phone) === digits10(ph));
+    if (ex) return openModal(leadForm(ex));
+    openModal(leadForm({name: '', phone: ph, product: 'Business Loan', source: 'WhatsApp', stage: 'New', notes: 'Messaged on the WhatsApp Business number'})); },
   'or-show': el => { (state.f.or ||= {show: 'open', q: ''}).show = el.dataset.v; render(); },
   'or-status': el => { const o = byId('outreach', el.dataset.id); if (!o) return;
     const v = el.dataset.v, note = v === 'no_reply' ? '' : (prompt(v === 'interested' ? 'What did they say? (optional, e.g. needs 10 L top-up)' : 'Reason (optional)', o.note || '') ?? o.note ?? '');
