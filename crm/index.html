@@ -3031,7 +3031,7 @@ function inboxLoad(force) {
   (async () => {
     try {
       const tok = await FB.auth.currentUser.getIdToken();
-      const r = await fetch(INBOX_API + '?limit=500', {headers: {Authorization: 'Bearer ' + tok}});
+      const r = await fetch(INBOX_API + '?limit=1000', {headers: {Authorization: 'Bearer ' + tok}});
       const j = await r.json().catch(() => ({}));
       if (r.status === 403) throw new Error('Your number is not allowed to open the WhatsApp inbox. Ask the owner to add it.');
       if (!r.ok) throw new Error(j.error || 'Could not load the inbox');
@@ -3049,11 +3049,28 @@ function inboxThreads() {
   out.sort((a, b) => String(b.last.created_at).localeCompare(String(a.last.created_at)));
   return out;
 }
+const inboxSeen = () => { try { return JSON.parse(localStorage.getItem('dsa_inbox_seen') || '{}'); } catch { return {}; } };
+const inboxMarkSeen = (phone, iso) => { try { const s = inboxSeen(); if (iso && s[phone] !== iso) { s[phone] = iso; localStorage.setItem('dsa_inbox_seen', JSON.stringify(s)); } } catch {} };
+const istDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'}); };
 const inboxName = phone => (state.inbox.data && state.inbox.data.names && state.inbox.data.names[phone]) || '';
 const inTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); };
 function vInbox() {
   const I = state.inbox; inboxLoad(false);
-  const head = header('WhatsApp Inbox', 'Messages customers send to your WhatsApp Business number, and the automatic replies', `<button class="btn" data-action="inbox-refresh">${ic('send')} Refresh</button>`);
+  let stats = '';
+  if (I.data) {
+    // Unread = customer messages newer than the last time this browser opened that chat.
+    const seen = inboxSeen(), allThreads = inboxThreads();
+    const cur = allThreads.find(t => t.phone === I.sel) || allThreads[0];
+    if (cur) inboxMarkSeen(cur.phone, cur.last.created_at);
+    const seen2 = inboxSeen();
+    const unread = (I.data.messages || []).filter(m => m.direction === 'in' && (!seen2[m.phone] || String(m.created_at) > String(seen2[m.phone]))).length;
+    const today = istDay(new Date().toISOString()), tm = (I.data.messages || []).filter(m => istDay(m.created_at) === today);
+    const sentT = tm.filter(m => m.direction === 'out'), inT = tm.filter(m => m.direction === 'in');
+    const failedT = sentT.filter(m => m.status === 'failed').length;
+    const stat = (label, val, warn) => `<div style="padding:5px 12px;border:1px solid var(--line,#ddd);border-radius:10px;text-align:center;background:var(--card,#fff)"><div style="font-size:18px;font-weight:700;line-height:1.15${warn ? ';color:#c0392b' : ''}">${val}</div><div class="small muted" style="white-space:nowrap">${label}</div></div>`;
+    stats = stat('Sent today', sentT.length) + stat('Total today', tm.length) + stat('Replies today', inT.length) + stat('Unread', unread, unread > 0) + stat('Failed today', failedT, failedT > 0);
+  }
+  const head = header('WhatsApp Inbox', 'Messages customers send to your WhatsApp Business number, and the automatic replies', `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">${stats}<button class="btn" data-action="inbox-refresh">${ic('send')} Refresh</button></div>`);
   if (I.status === 'demo') return head + `<div class="card"><div class="empty small">The inbox works in the live app only (it needs the staff login).</div></div>`;
   if (I.status === 'err') return head + `<div class="card"><div class="empty small">${esc(I.err)}</div></div>`;
   if (!I.data) return head + `<div class="card"><div class="empty small">Loading messages…</div></div>`;
@@ -3063,21 +3080,21 @@ function vInbox() {
   const sel = threads.find(t => t.phone === I.sel) || threads[0];
   const leadOf = t => leads.find(l => digits10(l.phone) === digits10(t.phone));
   const list = threads.map(t => { const l = leadOf(t); return `<div class="li" data-action="inbox-open" data-phone="${esc(t.phone)}" style="cursor:pointer${sel && sel.phone === t.phone ? ';background:var(--hover,rgba(0,0,0,.05))' : ''}">
-      <div class="grow"><b>${esc(l ? l.name : (inboxName(t.phone) || showPhone(t.phone)))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${l ? '<span class="badge b-ok">Lead</span>' : ''}
+      <div class="grow"><b>${esc(l ? l.name : (inboxName(t.phone) || showPhone(t.phone)))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${(() => { const sn = inboxSeen()[t.phone]; const u = t.msgs.filter(x => x.direction === 'in' && (!sn || String(x.created_at) > String(sn))).length; return u ? `<span class="badge b-warn">${u} new</span>` : ''; })()}${l ? '<span class="badge b-ok">Lead</span>' : ''}
       <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(t.last.direction === 'out' ? 'You: ' : '')}${esc(String(t.last.body || '').slice(0, 70))}</div></div>
       <span class="small muted">${esc(inTime(t.last.created_at))}</span></div>`; }).join('') || `<div class="empty small">No messages yet.</div>`;
   let thread = `<div class="empty small">Select a conversation.</div>`;
   if (sel) {
     const l = leadOf(sel);
-    const bub = m => { const out = m.direction === 'out'; return `<div style="display:flex;justify-content:${out ? 'flex-end' : 'flex-start'};margin:6px 0"><div style="max-width:78%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;${out ? 'background:#dcf8c6;color:#111' : 'background:var(--card,#fff);border:1px solid var(--line,#ddd)'}">${esc(m.body || '')}<div class="small muted" style="margin-top:4px;text-align:right">${out && m.auto_reply ? 'auto-reply · ' : ''}${esc(inTime(m.created_at))}${out && m.status ? ' · ' + esc(m.status) : ''}</div></div></div>`; };
+    const bub = m => { const out = m.direction === 'out'; return `<div style="display:flex;justify-content:${out ? 'flex-end' : 'flex-start'};margin:6px 0"><div style="max-width:78%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;${out ? 'background:#dcf8c6;color:#111' : 'background:var(--card,#fff);border:1px solid var(--line,#ddd)'}">${esc(m.body || '')}<div class="small muted" style="margin-top:4px;text-align:right">${out && m.auto_reply ? 'auto-reply · ' : ''}${esc(inTime(m.created_at))}${out && m.status ? ' · ' + esc(m.status) : ''}${out && m.status === 'failed' && m.error ? `<div style="color:#c0392b">${esc(m.error)}</div>` : ''}</div></div></div>`; };
     thread = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b>${esc(l ? l.name : (inboxName(sel.phone) || showPhone(sel.phone)))}</b><span class="small muted">${esc(showPhone(sel.phone))}</span>
       <span style="margin-left:auto;display:flex;gap:6px"><a class="btn sm" href="${esc(telLink(sel.phone))}" title="Call">${ic('phone')}</a>${l ? `<span class="badge b-ok">Lead · ${esc(l.stage)}</span>` : `<button class="btn sm primary" data-action="inbox-lead" data-phone="${esc(sel.phone)}">${ic('plus')} Convert to lead</button>`}</span></div>
       <div style="max-height:60vh;overflow:auto;padding:4px 2px">${sel.msgs.map(bub).join('')}</div>
       <p class="small muted" style="margin:10px 0 0">Replies here are the automatic menu replies. To message a customer yourself, use the number's WhatsApp or send an approved template.</p>`;
   }
   return head + `<div class="split" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px">
-    <div class="card"><input id="inbox_q" type="search" placeholder="Search name, number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px"><div class="list">${list}</div></div>
-    <div class="card">${thread}</div></div>`;
+    <div class="card"><input id="inbox_q" type="search" placeholder="Search name, number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px"><div class="list" style="max-height:calc(100vh - 240px);overflow-y:auto;padding-right:4px">${list}</div></div>
+    <div class="card" style="align-self:start;position:sticky;top:8px">${thread}</div></div>`;
 }
 // ---- WhatsApp import
 function draftView(d) {
