@@ -3049,6 +3049,7 @@ function inboxThreads() {
   out.sort((a, b) => String(b.last.created_at).localeCompare(String(a.last.created_at)));
   return out;
 }
+const inboxName = phone => (state.inbox.data && state.inbox.data.names && state.inbox.data.names[phone]) || '';
 const inTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); };
 function vInbox() {
   const I = state.inbox; inboxLoad(false);
@@ -3058,24 +3059,24 @@ function vInbox() {
   if (!I.data) return head + `<div class="card"><div class="empty small">Loading messages…</div></div>`;
   const opt = new Set((I.data.optouts || []).map(digits10)), leads = S.all('leads');
   const q = String(I.q || '').toLowerCase().trim();
-  const threads = inboxThreads().filter(t => !q || t.phone.includes(q.replace(/\D/g, '') || '§') || t.msgs.some(m => String(m.body || '').toLowerCase().includes(q)));
+  const threads = inboxThreads().filter(t => !q || t.phone.includes(q.replace(/\D/g, '') || '§') || inboxName(t.phone).toLowerCase().includes(q) || t.msgs.some(m => String(m.body || '').toLowerCase().includes(q)));
   const sel = threads.find(t => t.phone === I.sel) || threads[0];
   const leadOf = t => leads.find(l => digits10(l.phone) === digits10(t.phone));
   const list = threads.map(t => { const l = leadOf(t); return `<div class="li" data-action="inbox-open" data-phone="${esc(t.phone)}" style="cursor:pointer${sel && sel.phone === t.phone ? ';background:var(--hover,rgba(0,0,0,.05))' : ''}">
-      <div class="grow"><b>${esc(l ? l.name : showPhone(t.phone))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${l ? '<span class="badge b-ok">Lead</span>' : ''}
+      <div class="grow"><b>${esc(l ? l.name : (inboxName(t.phone) || showPhone(t.phone)))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${l ? '<span class="badge b-ok">Lead</span>' : ''}
       <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(t.last.direction === 'out' ? 'You: ' : '')}${esc(String(t.last.body || '').slice(0, 70))}</div></div>
       <span class="small muted">${esc(inTime(t.last.created_at))}</span></div>`; }).join('') || `<div class="empty small">No messages yet.</div>`;
   let thread = `<div class="empty small">Select a conversation.</div>`;
   if (sel) {
     const l = leadOf(sel);
     const bub = m => { const out = m.direction === 'out'; return `<div style="display:flex;justify-content:${out ? 'flex-end' : 'flex-start'};margin:6px 0"><div style="max-width:78%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;${out ? 'background:#dcf8c6;color:#111' : 'background:var(--card,#fff);border:1px solid var(--line,#ddd)'}">${esc(m.body || '')}<div class="small muted" style="margin-top:4px;text-align:right">${out && m.auto_reply ? 'auto-reply · ' : ''}${esc(inTime(m.created_at))}${out && m.status ? ' · ' + esc(m.status) : ''}</div></div></div>`; };
-    thread = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b>${esc(l ? l.name : showPhone(sel.phone))}</b><span class="small muted">${esc(showPhone(sel.phone))}</span>
+    thread = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b>${esc(l ? l.name : (inboxName(sel.phone) || showPhone(sel.phone)))}</b><span class="small muted">${esc(showPhone(sel.phone))}</span>
       <span style="margin-left:auto;display:flex;gap:6px"><a class="btn sm" href="${esc(telLink(sel.phone))}" title="Call">${ic('phone')}</a>${l ? `<span class="badge b-ok">Lead · ${esc(l.stage)}</span>` : `<button class="btn sm primary" data-action="inbox-lead" data-phone="${esc(sel.phone)}">${ic('plus')} Convert to lead</button>`}</span></div>
       <div style="max-height:60vh;overflow:auto;padding:4px 2px">${sel.msgs.map(bub).join('')}</div>
       <p class="small muted" style="margin:10px 0 0">Replies here are the automatic menu replies. To message a customer yourself, use the number's WhatsApp or send an approved template.</p>`;
   }
   return head + `<div class="split" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px">
-    <div class="card"><input id="inbox_q" type="search" placeholder="Search number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px"><div class="list">${list}</div></div>
+    <div class="card"><input id="inbox_q" type="search" placeholder="Search name, number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px"><div class="list">${list}</div></div>
     <div class="card">${thread}</div></div>`;
 }
 // ---- WhatsApp import
