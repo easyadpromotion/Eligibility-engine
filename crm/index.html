@@ -3054,21 +3054,30 @@ const inboxMarkSeen = (phone, iso) => { try { const s = inboxSeen(); if (iso && 
 const istDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'}); };
 const inboxName = phone => (state.inbox.data && state.inbox.data.names && state.inbox.data.names[phone]) || '';
 const inTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); };
+// Each counter at the top of the inbox is also a filter: clicking it lists only those chats.
+const INBOX_FILTERS = {sent: 'Sent today', total: 'Total today', replies: 'Replies today', unread: 'Unread', failed: 'Failed today'};
+function inboxMatchers() {
+  const today = istDay(new Date().toISOString()), seen = inboxSeen(), isToday = m => istDay(m.created_at) === today;
+  return {
+    sent: m => m.direction === 'out' && isToday(m),
+    total: m => isToday(m),
+    replies: m => m.direction === 'in' && isToday(m),
+    unread: m => m.direction === 'in' && (!seen[m.phone] || String(m.created_at) > String(seen[m.phone])),
+    failed: m => m.direction === 'out' && m.status === 'failed' && isToday(m),
+  };
+}
 function vInbox() {
   const I = state.inbox; inboxLoad(false);
+  const F = INBOX_FILTERS[I.filter] ? I.filter : '';
   let stats = '';
   if (I.data) {
     // Unread = customer messages newer than the last time this browser opened that chat.
-    const seen = inboxSeen(), allThreads = inboxThreads();
+    const allThreads = inboxThreads();
     const cur = allThreads.find(t => t.phone === I.sel) || allThreads[0];
     if (cur) inboxMarkSeen(cur.phone, cur.last.created_at);
-    const seen2 = inboxSeen();
-    const unread = (I.data.messages || []).filter(m => m.direction === 'in' && (!seen2[m.phone] || String(m.created_at) > String(seen2[m.phone]))).length;
-    const today = istDay(new Date().toISOString()), tm = (I.data.messages || []).filter(m => istDay(m.created_at) === today);
-    const sentT = tm.filter(m => m.direction === 'out'), inT = tm.filter(m => m.direction === 'in');
-    const failedT = sentT.filter(m => m.status === 'failed').length;
-    const stat = (label, val, warn) => `<div style="padding:5px 12px;border:1px solid var(--line,#ddd);border-radius:10px;text-align:center;background:var(--card,#fff)"><div style="font-size:18px;font-weight:700;line-height:1.15${warn ? ';color:#c0392b' : ''}">${val}</div><div class="small muted" style="white-space:nowrap">${label}</div></div>`;
-    stats = stat('Sent today', sentT.length) + stat('Total today', tm.length) + stat('Replies today', inT.length) + stat('Unread', unread, unread > 0) + stat('Failed today', failedT, failedT > 0);
+    const M = inboxMatchers(), msgs = I.data.messages || [];
+    const stat = (key, warn) => { const n = msgs.filter(M[key]).length, on = F === key; return `<button type="button" data-action="inbox-filter" data-f="${key}" title="Show these chats" style="cursor:pointer;font:inherit;color:inherit;padding:5px 12px;border:1px solid ${on ? 'var(--accent,#1f4e8c)' : 'var(--line,#ddd)'};${on ? 'box-shadow:0 0 0 1px var(--accent,#1f4e8c);' : ''}border-radius:10px;text-align:center;background:var(--card,#fff)"><div style="font-size:18px;font-weight:700;line-height:1.15${warn && n > 0 ? ';color:#c0392b' : ''}">${n}</div><div class="small muted" style="white-space:nowrap">${INBOX_FILTERS[key]}</div></button>`; };
+    stats = stat('sent') + stat('total') + stat('replies') + stat('unread', true) + stat('failed', true);
   }
   const head = header('WhatsApp Inbox', 'Messages customers send to your WhatsApp Business number, and the automatic replies', `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">${stats}<button class="btn" data-action="inbox-refresh">${ic('send')} Refresh</button></div>`);
   if (I.status === 'demo') return head + `<div class="card"><div class="empty small">The inbox works in the live app only (it needs the staff login).</div></div>`;
@@ -3076,13 +3085,26 @@ function vInbox() {
   if (!I.data) return head + `<div class="card"><div class="empty small">Loading messages…</div></div>`;
   const opt = new Set((I.data.optouts || []).map(digits10)), leads = S.all('leads');
   const q = String(I.q || '').toLowerCase().trim();
-  const threads = inboxThreads().filter(t => !q || t.phone.includes(q.replace(/\D/g, '') || '§') || inboxName(t.phone).toLowerCase().includes(q) || t.msgs.some(m => String(m.body || '').toLowerCase().includes(q)));
+  const match = F && F !== 'unread' ? inboxMatchers()[F] : null;
+  const snap = new Set(I.snap || []);
+  let threads = inboxThreads();
+  if (F === 'unread') threads = threads.filter(t => snap.has(t.phone));
+  else if (match) threads = threads.filter(t => t.msgs.some(match));
+  threads = threads.filter(t => !q || t.phone.includes(q.replace(/\D/g, '') || '§') || inboxName(t.phone).toLowerCase().includes(q) || t.msgs.some(m => String(m.body || '').toLowerCase().includes(q)));
   const sel = threads.find(t => t.phone === I.sel) || threads[0];
   const leadOf = t => leads.find(l => digits10(l.phone) === digits10(t.phone));
-  const list = threads.map(t => { const l = leadOf(t); return `<div class="li" data-action="inbox-open" data-phone="${esc(t.phone)}" style="cursor:pointer${sel && sel.phone === t.phone ? ';background:var(--hover,rgba(0,0,0,.05))' : ''}">
-      <div class="grow"><b>${esc(l ? l.name : (inboxName(t.phone) || showPhone(t.phone)))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${(() => { const sn = inboxSeen()[t.phone]; const u = t.msgs.filter(x => x.direction === 'in' && (!sn || String(x.created_at) > String(sn))).length; return u ? `<span class="badge b-warn">${u} new</span>` : ''; })()}${l ? '<span class="badge b-ok">Lead</span>' : ''}
-      <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(t.last.direction === 'out' ? 'You: ' : '')}${esc(String(t.last.body || '').slice(0, 70))}</div></div>
-      <span class="small muted">${esc(inTime(t.last.created_at))}</span></div>`; }).join('') || `<div class="empty small">No messages yet.</div>`;
+  // The line shown under a chat's name: in a filtered view, the message that put it there.
+  const preview = t => {
+    if (F === 'unread') { const ins = t.msgs.filter(x => x.direction === 'in'); return ins[ins.length - 1] || t.last; }
+    if (match) { const hit = t.msgs.filter(match); return hit[hit.length - 1] || t.last; }
+    return t.last;
+  };
+  const filterBar = F ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="small">Showing <b>${esc(INBOX_FILTERS[F])}</b> · ${threads.length} chat${threads.length === 1 ? '' : 's'}</span><button type="button" class="btn sm" data-action="inbox-filter" data-f="" style="margin-left:auto">Show all</button></div>` : '';
+  const list = threads.map(t => { const l = leadOf(t), pv = preview(t); return `<div class="li" data-action="inbox-open" data-phone="${esc(t.phone)}" style="cursor:pointer${sel && sel.phone === t.phone ? ';background:var(--hover,rgba(0,0,0,.05))' : ''}">
+      <div class="grow"><b>${esc(l ? l.name : (inboxName(t.phone) || showPhone(t.phone)))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${(() => { const sn = inboxSeen()[t.phone]; const u = t.msgs.filter(x => x.direction === 'in' && (!sn || String(x.created_at) > String(sn))).length; return u ? `<span class="badge b-warn">${u} new</span>` : ''; })()}${F === 'failed' ? '<span class="badge b-bad">failed</span>' : ''}${l ? '<span class="badge b-ok">Lead</span>' : ''}
+      <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(pv.direction === 'out' ? 'You: ' : '')}${esc(String(pv.body || '').slice(0, 70))}</div>
+      ${F === 'failed' ? `<div class="small" style="color:#c0392b">${esc(pv.error || 'Not delivered (reason not recorded)')}</div>` : ''}</div>
+      <span class="small muted">${esc(inTime(pv.created_at))}</span></div>`; }).join('') || `<div class="empty small">${F ? 'No chats in this view.' : 'No messages yet.'}</div>`;
   let thread = `<div class="empty small">Select a conversation.</div>`;
   if (sel) {
     const l = leadOf(sel);
@@ -3093,7 +3115,7 @@ function vInbox() {
       <p class="small muted" style="margin:10px 0 0">Replies here are the automatic menu replies. To message a customer yourself, use the number's WhatsApp or send an approved template.</p>`;
   }
   return head + `<div class="split" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px">
-    <div class="card"><input id="inbox_q" type="search" placeholder="Search name, number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px"><div class="list" style="max-height:calc(100vh - 240px);overflow-y:auto;padding-right:4px">${list}</div></div>
+    <div class="card"><input id="inbox_q" type="search" placeholder="Search name, number or text" data-bind="inbox.q" data-rerender value="${esc(I.q)}" style="width:100%;margin-bottom:8px">${filterBar}<div class="list" style="max-height:calc(100vh - 240px);overflow-y:auto;padding-right:4px">${list}</div></div>
     <div class="card" style="align-self:start;position:sticky;top:8px">${thread}</div></div>`;
 }
 // ---- WhatsApp import
@@ -3318,6 +3340,13 @@ const actions = {
   },
   'inbox-refresh': () => { inboxLoad(true); render(); },
   'inbox-open': el => { state.inbox.sel = el.dataset.phone; render(); },
+  'inbox-filter': el => {
+    const I = state.inbox, f = el.dataset.f || '';
+    I.filter = I.filter === f ? '' : f; I.sel = '';
+    // Freeze the unread list when it is opened, so a chat stays listed after you read it.
+    if (I.filter === 'unread') { const u = inboxMatchers().unread; I.snap = [...new Set((I.data?.messages || []).filter(u).map(m => m.phone))]; }
+    render();
+  },
   'inbox-lead': el => { const ph = el.dataset.phone;
     const ex = S.all('leads').find(l => digits10(l.phone) === digits10(ph));
     if (ex) return openModal(leadForm(ex));
