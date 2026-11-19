@@ -3052,6 +3052,21 @@ function inboxThreads() {
 const inboxSeen = () => { try { return JSON.parse(localStorage.getItem('dsa_inbox_seen') || '{}'); } catch { return {}; } };
 const inboxMarkSeen = (phone, iso) => { try { const s = inboxSeen(); if (iso && s[phone] !== iso) { s[phone] = iso; localStorage.setItem('dsa_inbox_seen', JSON.stringify(s)); } } catch {} };
 const istDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'}); };
+// Customer photos / PDFs: show the picture (click to open full size) or a file card, each with Download.
+const MEDIA_ICON = { image: '🖼️ Photo', document: '📄 Document', video: '🎬 Video', audio: '🎧 Audio', sticker: '🖼️ Sticker' };
+function inboxMedia(m) {
+  const body = String(m.body || '');
+  const caption = /^\[(image|document|video|audio|sticker)\]$/.test(body) ? '' : body;
+  const kind = MEDIA_ICON[m.msg_type];
+  if (!kind) return esc(body);
+  if (!m.media_url) return `<span class="small muted">${kind} · file not saved</span>${caption ? '<br>' + esc(caption) : ''}`;
+  const dl = `<a class="btn sm" href="${esc(m.media_download_url || m.media_url)}" download="${esc(m.media_name || 'file')}">⬇ Download</a>`;
+  const isImg = /^image\//.test(m.media_mime || '') || m.msg_type === 'image';
+  const head = isImg
+    ? `<a href="${esc(m.media_url)}" target="_blank" rel="noopener"><img src="${esc(m.media_url)}" alt="${esc(m.media_name || 'photo')}" loading="lazy" style="display:block;max-width:100%;max-height:280px;border-radius:8px;margin-bottom:6px"></a>`
+    : `<div style="margin-bottom:6px"><b>${kind}</b><div class="small muted" style="word-break:break-all">${esc(m.media_name || '')}</div></div>`;
+  return `${head}${caption ? esc(caption) + '<br>' : ''}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"><a class="btn sm" href="${esc(m.media_url)}" target="_blank" rel="noopener">Open</a>${dl}</div>`;
+}
 const inboxName = phone => (state.inbox.data && state.inbox.data.names && state.inbox.data.names[phone]) || '';
 const inTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); };
 // Each counter at the top of the inbox is also a filter: clicking it lists only those chats.
@@ -3102,13 +3117,13 @@ function vInbox() {
   const filterBar = F ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="small">Showing <b>${esc(INBOX_FILTERS[F])}</b> · ${threads.length} chat${threads.length === 1 ? '' : 's'}</span><button type="button" class="btn sm" data-action="inbox-filter" data-f="" style="margin-left:auto">Show all</button></div>` : '';
   const list = threads.map(t => { const l = leadOf(t), pv = preview(t); return `<div class="li" data-action="inbox-open" data-phone="${esc(t.phone)}" style="cursor:pointer${sel && sel.phone === t.phone ? ';background:var(--hover,rgba(0,0,0,.05))' : ''}">
       <div class="grow"><b>${esc(l ? l.name : (inboxName(t.phone) || showPhone(t.phone)))}</b> ${opt.has(digits10(t.phone)) ? '<span class="badge b-bad">STOP</span>' : ''}${(() => { const sn = inboxSeen()[t.phone]; const u = t.msgs.filter(x => x.direction === 'in' && (!sn || String(x.created_at) > String(sn))).length; return u ? `<span class="badge b-warn">${u} new</span>` : ''; })()}${F === 'failed' ? '<span class="badge b-bad">failed</span>' : ''}${l ? '<span class="badge b-ok">Lead</span>' : ''}
-      <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(pv.direction === 'out' ? 'You: ' : '')}${esc(String(pv.body || '').slice(0, 70))}</div>
+      <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">${esc(pv.direction === 'out' ? 'You: ' : '')}${esc(MEDIA_ICON[pv.msg_type] && /^\[\w+\]$/.test(String(pv.body || '')) ? MEDIA_ICON[pv.msg_type] : String(pv.body || '').slice(0, 70))}</div>
       ${F === 'failed' ? `<div class="small" style="color:#c0392b">${esc(pv.error || 'Not delivered (reason not recorded)')}</div>` : ''}</div>
       <span class="small muted">${esc(inTime(pv.created_at))}</span></div>`; }).join('') || `<div class="empty small">${F ? 'No chats in this view.' : 'No messages yet.'}</div>`;
   let thread = `<div class="empty small">Select a conversation.</div>`;
   if (sel) {
     const l = leadOf(sel);
-    const bub = m => { const out = m.direction === 'out'; return `<div style="display:flex;justify-content:${out ? 'flex-end' : 'flex-start'};margin:6px 0"><div style="max-width:78%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;${out ? 'background:#dcf8c6;color:#111' : 'background:var(--card,#fff);border:1px solid var(--line,#ddd)'}">${esc(m.body || '')}<div class="small muted" style="margin-top:4px;text-align:right">${out && m.auto_reply ? 'auto-reply · ' : ''}${esc(inTime(m.created_at))}${out && m.status ? ' · ' + esc(m.status) : ''}${out && m.status === 'failed' && m.error ? `<div style="color:#c0392b">${esc(m.error)}</div>` : ''}</div></div></div>`; };
+    const bub = m => { const out = m.direction === 'out'; return `<div style="display:flex;justify-content:${out ? 'flex-end' : 'flex-start'};margin:6px 0"><div style="max-width:78%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;${out ? 'background:#dcf8c6;color:#111' : 'background:var(--card,#fff);border:1px solid var(--line,#ddd)'}">${inboxMedia(m)}<div class="small muted" style="margin-top:4px;text-align:right">${out && m.auto_reply ? 'auto-reply · ' : ''}${esc(inTime(m.created_at))}${out && m.status ? ' · ' + esc(m.status) : ''}${out && m.status === 'failed' && m.error ? `<div style="color:#c0392b">${esc(m.error)}</div>` : ''}</div></div></div>`; };
     thread = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b>${esc(l ? l.name : (inboxName(sel.phone) || showPhone(sel.phone)))}</b><span class="small muted">${esc(showPhone(sel.phone))}</span>
       <span style="margin-left:auto;display:flex;gap:6px"><a class="btn sm" href="${esc(telLink(sel.phone))}" title="Call">${ic('phone')}</a>${l ? `<span class="badge b-ok">Lead · ${esc(l.stage)}</span>` : `<button class="btn sm primary" data-action="inbox-lead" data-phone="${esc(sel.phone)}">${ic('plus')} Convert to lead</button>`}</span></div>
       <div style="max-height:60vh;overflow:auto;padding:4px 2px">${sel.msgs.map(bub).join('')}</div>
